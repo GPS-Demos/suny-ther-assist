@@ -1,0 +1,55 @@
+export interface SessionContext {
+  session_type: string;
+  primary_concern: string;
+  current_approach: string;
+}
+
+export interface Alert {
+  level: 'critical' | 'suggestion' | 'info';
+  category: 'safety' | 'technique' | 'pathway_change' | 'engagement';
+  title: string;
+  message: string;
+  evidence?: string[];
+  recommendation?: string;
+  manual_reference?: {
+    source: string;
+    page?: number;
+    section?: string;
+  };
+  urgency?: 'immediate' | 'next_pause' | 'end_of_topic';
+  timestamp?: string;
+}
+
+export interface SessionMetrics {
+  engagement_level: number;
+  therapeutic_alliance: 'weak' | 'moderate' | 'strong';
+  techniques_detected: string[];
+  emotional_state: 'calm' | 'anxious' | 'distressed' | 'dissociated';
+  phase_appropriate: boolean;
+}
+
+export interface PathwayIndicators {
+  current_approach_effectiveness: 'effective' | 'struggling' | 'ineffective';
+  alternative_pathways: string[];
+  change_urgency: 'none' | 'monitor' | 'consider' | 'recommended';
+}
+
+export interface AnalysisResponse {
+  alerts: Alert[];
+  session_metrics: SessionMetrics;
+  pathway_indicators: PathwayIndicators;
+  timestamp: string;
+  session_phase: string;
+}
+
+export interface TranscriptEntry {
+  speaker: string;
+  text: string;
+  timestamp: string;
+}
+
+export interface TranscriptionConfig {
+  sample_rate: number;
+  encoding: string;
+  chunk_size_ms: number;
+}

@@ -1,0 +1,573 @@
+Output file: test_grounding_output_20250718_172343.txt
+================================================================================
+FULL ANALYSIS PROMPT:
+================================================================================
+<thinking>
+Analyze this social work parent interview transcript step by step:
+1. Review each interaction and identify key behaviors
+2. Match behaviors to the assessment criteria
+3. Consider which training materials from the curriculum would be relevant
+4. Focus on providing specific, actionable feedback
+</thinking>
+
+You are an expert social work educator analyzing a parent interview transcript. Use the Arkansas child welfare training materials and best practices to provide feedback.
+
+IMPORTANT: Actively reference specific training concepts and best practices from the curriculum.
+
+Analyze this social work parent interview transcript against these key criteria:
+1. Introduction & Identification
+2. Reason for Contact
+3. Responsive to Parent
+4. Permission to Enter
+5. Information Gathering
+6. Process & Next Steps
+
+Transcript:
+user: Hi, I'm from CPS. We got a call about your kids. I need to come in and look around.
+model: What? Who are you? Do you have some ID? What call?
+user: Look, we know there's been violence in the home and drug use. Your daughter told her teacher. I need to see the kids now and check the house. This is serious.
+model: I don't have to let you in! You can't just show up here making accusations! Where's your warrant? My kids are fine!
+
+Self-Assessment:
+{
+  "reflection": "I realize my approach was too confrontational and I failed to properly introduce myself."
+}
+
+Provide a brief analysis in JSON format with these fields:
+- overallSummary (string)
+- strengths (array of strings)
+- areasForImprovement (array of objects with area and suggestion)
+
+Keep the response concise but reference training materials.
+
+================================================================================
+
+Starting grounding metadata test at 2025-07-18 17:23:43.523978
+================================================================================
+
+CHUNK 1:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  THINKING CONTENT (FULL):
+  ============================================================
+  **Reviewing Interview Protocols**
+  
+  I'm currently reviewing the interview transcript and starting to identify key elements from the provided text. I'm aligning those elements with the Arkansas child welfare training materials. I'm actively looking at best practices to inform the categories and content of the JSON output. I plan to map the data appropriately to the required format, starting with a general overview.
+  
+  
+  
+  ============================================================
+
+CHUNK 2:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  THINKING CONTENT (FULL):
+  ============================================================
+  **Mapping Initial Behaviors**
+  
+  I've started mapping the initial interactions. The social worker's opening lacks crucial elements like a full introduction, the reason for the visit, and a permission request, as per best practices in engagement, as outlined in the Arkansas child welfare training. I'm now identifying the parent's reactions and noting how the social worker's approach is perceived, specifically the accusatory tone and revealing of sensitive information.
+  
+  
+  
+  ============================================================
+
+CHUNK 3:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  THINKING CONTENT (FULL):
+  ============================================================
+  **Evaluating First Impressions**
+  
+  I've identified the first few interactions and have begun categorizing them based on assessment criteria. The social worker's introduction and the parent's response are crucial areas for improvement, showing a lack of adherence to best practices in introductory engagement. I'm now assessing the parent's defense mechanisms, which seem highly triggered by the social worker's approach, specifically the accusation of violence and drug use without establishing trust.
+  
+  
+  
+  ============================================================
+
+CHUNK 4:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  THINKING CONTENT (FULL):
+  ============================================================
+  **Refining Data Extraction**
+  
+  I'm now focused on extracting data directly from the provided interview transcript. Specifically, I'm identifying examples of best practices and their absence. For example, I've noted the failure to fully introduce the social worker and the lack of a clear purpose for the visit, which violates crucial engagement techniques. My current focus is on ensuring the JSON output accurately captures both the strengths and weaknesses identified during the review.
+  
+  
+  
+  ============================================================
+
+CHUNK 5:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  THINKING CONTENT (FULL):
+  ============================================================
+  **Synthesizing Assessment Findings**
+  
+  I'm currently outlining the anticipated JSON output structure. I'm now focused on the expected content for the `overallSummary`, `strengths`, and `areasForImprovement` fields. Specifically, I'm focusing on the required language in the "areas for improvement" recommendations, which should link directly back to the relevant Arkansas child welfare training modules and core practices, and offer actionable steps to improve those practices.
+  
+  
+  
+  ============================================================
+
+CHUNK 6:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  THINKING CONTENT (FULL):
+  ============================================================
+  **Constructing the JSON Structure**
+  
+  I'm now ready to outline the JSON structure. It will encompass an overall summary of the interview, alongside identified strengths and specific areas for improvement. Within 'areasForImprovement', each point will include a suggestion and a direct reference to relevant modules within the Arkansas child welfare training curriculum, using clear language. This aims to create a useful and actionable assessment.
+  
+  
+  
+  ============================================================
+
+CHUNK 7:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  THINKING CONTENT (FULL):
+  ============================================================
+  **Outlining the JSON Output**
+  
+  I'm now organizing the JSON structure, integrating the assessment elements: the overall summary of the interview, identified strengths, and areas for improvement with specific recommendations. I'm using direct references to Arkansas child welfare training modules, ensuring the JSON content facilitates actionable learning and practical application.
+  
+  
+  
+  ============================================================
+
+CHUNK 8:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  THINKING CONTENT (FULL):
+  ============================================================
+  **Developing JSON Output**
+  
+  I'm focusing on creating the JSON output based on the assessment, ensuring a structured and easily understandable format. I am confirming the 'areasForImprovement' section includes specific, actionable recommendations tied directly to Arkansas child welfare training modules. I'm double-checking that references are clear and specific.
+  
+  
+  
+  ============================================================
+
+CHUNK 9:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  THINKING CONTENT (FULL):
+  ============================================================
+  **Generating the JSON Structure**
+  
+  I'm now creating the JSON output to communicate the assessment's findings in an organized way. The structure includes an overall summary, strengths, and areas for improvement. Each area for improvement includes concrete, actionable recommendations linked to relevant Arkansas child welfare training modules. The focus is on making it easy for the social worker to understand and implement the suggested improvements.
+  
+  
+  
+  ============================================================
+
+CHUNK 10:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+  ```json
+  {
+    
+  ============================================================
+
+CHUNK 11:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+  "overallSummary": "The social worker's initial contact was highly confrontational and accus
+  ============================================================
+
+CHUNK 12:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+  atory, leading to immediate defensiveness and resistance from the parent. This approach failed to establish rapport
+  ============================================================
+
+CHUNK 13:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+  , provide necessary information, or gain voluntary cooperation, severely hindering the ability to conduct a proper child welfare assessment. The self-assessment correctly identifies the core issues of confront
+  ============================================================
+
+CHUNK 14:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+  ational approach and lack of proper introduction.",
+    "strengths": [
+      "The social worker's self-reflection demonstrates an awareness of the confront
+  ============================================================
+
+CHUNK 15:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+  ational approach and the failure to properly introduce themselves, which is a critical first step towards professional growth and adherence to best practices."
+    ],
+    "areasForImprovement": [
+      {
+        "area": "Introduction & Identification",
+  
+  ============================================================
+    ^ Content references training materials
+
+CHUNK 16:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+        "suggestion": "The social worker failed to provide a complete and clear introduction. According to Arkansas child welfare training, a proper introduction includes stating your full name, agency (Arkansas Department of Human Services, Division of Children and Family Services),
+  ============================================================
+    ^ Content references training materials
+
+CHUNK 17:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+   and specific role (e.g., Child Protective Services Investigator). Presenting official identification immediately is crucial for establishing legitimacy and trust. (Refer to 'Initial Contact Guide' [14] and 'Screening and Initial Contact' curriculum [9], specifically the section on 'Making Initial Contact with a Family')."
+      },
+      
+  ============================================================
+    ^ Content references training materials
+
+CHUNK 18:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+  {
+        "area": "Reason for Contact & Transparency",
+        "suggestion": "The social worker's statement 'We got a call about your kids' was vague, and the subsequent 'Look, we know there's been violence in the home and drug use' was accusatory and lacked transparency. Best practices emphasize
+  ============================================================
+    ^ Content references training materials
+
+CHUNK 19:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+   clearly and calmly stating the purpose of the visit, framing it as a need to understand concerns reported to the agency rather than an accusation. Transparency in sharing information, including the DHS 1536 pamphlet outlining parent rights, is vital from the outset. (Refer to 'Initial Contact Guide' [14] and 'Gather
+  ============================================================
+
+CHUNK 20:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+  ing Information Curriculum' [5], which highlights transparency as a way to build rapport)."
+      },
+      {
+        "area": "Responsiveness to Parent & De-escalation",
+        "suggestion": "The social worker ignored the parent's immediate questions ('Who are you? Do you have some ID?
+  ============================================================
+    ^ Content references training materials
+
+CHUNK 21:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+   What call?'). Training materials emphasize that acknowledging and responding to these questions calmly and respectfully is essential for de-escalation and building rapport. Ignoring them escalates tension and resistance. (Refer to 'Screening and Initial Contact' curriculum [9] on 'Engaging at Initial Contact' and 'Working Respectfully with Families' [
+  ============================================================
+    ^ Content references training materials
+
+CHUNK 22:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+  17])."
+      },
+      {
+        "area": "Permission to Enter & Voluntary Cooperation",
+        "suggestion": "The social worker demanded entry ('I need to come in and look around,' 'I need to see the kids now and check the house') rather than requesting permission. Arkansas policy prioritizes
+  ============================================================
+    ^ Content references training materials
+
+CHUNK 23:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+   voluntary cooperation. The 'Initial Contact Guide' [14] and 'Screening and Initial Contact' curriculum [9] stress explaining the need to see the children and the home environment, and *requesting* permission to enter. If permission is denied, the next steps (e.g., obtaining a court order) should
+  ============================================================
+    ^ Content references training materials
+
+CHUNK 24:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+   be explained clearly and calmly, without threat."
+      },
+      {
+        "area": "Information Gathering & Professional Demeanor",
+        "suggestion": "Revealing the source of the report ('Your daughter told her teacher') is a breach of trust and can alienate the parent. Child welfare training emphasizes maintaining
+  ============================================================
+    ^ Content references training materials
+
+CHUNK 25:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+   confidentiality and adopting an objective, non-judgmental approach. The focus should be on gathering facts through observation and open-ended questions, not making accusatory statements based on initial reports. (Refer to 'Gathering Information Curriculum' [5] on interviewing techniques and professional ethics)."
+      },
+      {
+        "area
+  ============================================================
+    ^ Content references training materials
+
+CHUNK 26:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+  ": "Process & Next Steps",
+        "suggestion": "The social worker failed to explain the child welfare process or what would happen next. It is crucial to inform parents about their rights, the purpose of the investigation, potential outcomes, and what to expect. Providing the DHS 1536 pamphlet and reviewing
+  ============================================================
+
+CHUNK 27:
+----------------------------------------
+  ✗ grounding_metadata has no grounding_chunks
+
+  CONTENT (FULL):
+  ============================================================
+   it with the parent is a key part of this transparency. (Refer to 'Initial Contact Guide' [14] and 'Screening and Initial Contact' curriculum [9])."
+      }
+    ]
+  }
+  
+  ============================================================
+    ^ Content references training materials
+
+CHUNK 28:
+----------------------------------------
+  ✓ HAS GROUNDING METADATA: 17 chunks
+
+  Grounding Chunk 1:
+    Source: 6_CW_DV_Prac._Guide_HT_2023-10-16
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/4__Gathering_Information/4__Participant_Material_Handouts/Self-Paced_Learning/6_CW_DV_Prac._Guide_HT_2023-10-16.pdf
+    Full text content:
+    ------------------------------------------------------------
+    The PCA then determines whether the parents and the Department can agree on what change is needed. Domestic violence may not have been initially identified as a present danger safety threat or impending danger safety threat in the assessment process when other abuse and neglect issues were present. Building rapport with the adult victim during the PCA can facilitate the sharing of information about domestic violence. This discovery can lead to a change in the ongoing safety plan and in the conditions for return. The following material relates to families for which domestic violence has specifically been identified as an impending danger safety threat; in other words, one or both parents' or caregivers' behavior is violent and/or they are acting (behaving) dangerously. Other impending danger safety threats and diminished protective capacities may also exist in families where domestic violence is present.CHILD WELFARE PRACTICES FOR CASES WITH DOMESTIC VIOLENCE58 # Back to TOC There are four stages in the initial PCA: preparation, introduction, exploration, and change strategy and case planning. The first stage is undertaken by the caseworker to thoughtfully prepare to engage the parents in the process. The second stage is intended to introduce the concepts of the PCA to the parents and to request their willingness to engage in the process. 
+    ...
+    Payments to replace personal items that had to be left behind when fleeing abuse (clothes for victim and children, etc.), if such items are not available from other sources.CHILD WELFARE PRACTICES FOR CASES WITH DOMESTIC VIOLENCE92 # Back to TOC The program is opened for 90 days to allow time for the adult victim and children to stabilize their living situation and address immediate safety concerns. Participants may receive services more than once a year based upon current safety issues. Payments are generally made directly to landlords or to specific providers. When a client accesses Child Welfare and TANF services, DHS Child Welfare and Self- Sufficiency staff are encouraged to work together on service and case plans. This reduces the likelihood that the client is given conflicting expectations. ## Family Support and Connections program Family Support and Connections is available for TANF and Child Welfare clients. Staff provide families with advocacy for services in the community, supports to strengthen parenting, coping skills and other necessary skills to support the healthy development of their children. Services include: Home visits; Strengths/needs-based family assessments; Advocacy; Individualized family plans; Outcome-based case planning; and Emergency services. Services are designed to increase the parental protective factors of: Nurturing and attachment; Knowledge of parenting and child development; Parental resilience;CHILD WELFARE PRACTICES FOR CASES WITH DOMESTIC VIOLENCE93 
+    ...
+    Do not allow the child to be used to exchange information, gifts or other property or tell the batterer about the non-offending parent.CHILD WELFARE PRACTICES FOR CASES WITH DOMESTIC VIOLENCE56 # Back to TOC 
+    ...
+    Refer the non-offending parent to a domestic violence advocate for domestic violence safety planning (see section on domestic violence safety planning); Help the non-offending parent access resources (domestic violence shelters and 4 Based on "Safe & Together Model” by David Mandel at www.endingviolence.comCHILD WELFARE PRACTICES FOR CASES WITH DOMESTIC VIOLENCE # Back to TOC support services, Temporary Assistance for Needy Families, other DHS services, housing, financial assistance, drug and alcohol treatment, etc.). Whether or not you are able to work directly with the batterer (who is a legal parent or who will continue to affect the household) in the context of domestic violence it is important to document: The batterer's pattern of coercive control; Actions taken by the batterer to harm the children; Adverse impact of the batterer's behavior on the children.5 If you are able to work directly with the batterer, it is optimal to: Assess the batterer's ability and willingness to protect the children Assess the batterer's active engagement as a parent is that individual meeting the children's basic physical and emotional needs, participating in the children's education, ensuring that the children have a stable and predictable home life, etc.?; Assess the batterer's ability to remain safely involved in the family whether in the home or through visitation; 
+    ------------------------------------------------------------
+
+  Grounding Chunk 2:
+    Source: 2_Self-paced_learning_SW_2023-05-16
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/4__Gathering_Information/4__Participant_Material_Handouts/7_Gathering_Information/2_Self-paced_learning_SW_2023-05-16.pdf
+    Full text content:
+    ------------------------------------------------------------
+    # Self-Paced Learning ## #4: Introduction and Building Rapport with Children Just like your introduction or greeting with a parent, there are some steps to include when building a trusting relationship with a child. Time spent in this area can create a valuable return on investment later on in the interview when gathering abuse specific information. Introducing and explaining the process: We need to let children know who we are right away. We share our name and affiliation. An example might be; "Hi, my name is I work for a place called child welfare. My job is to help children and families. I work with all kinds of kids and families and talk to them at home or at school. I ask a lot of questions and talk to lots of people. But before I start, do you have any questions for me?" Asking Permission: Children should know that they have a choice to talk with us or not talk with us. Of course, we want them to talk with us so that we can ensure their safety, but we do not want them to feel that they are being held against their will. Checking in with the child: “What were you just doing?" It's important to know if we are interrupting something important in the child/teens day. 
+    ...
+    Note that the Cooper case is a domestic violence case and there are special considerations in making initial contact including: *Explore how to do the assessment when the alleged batterer is not home. If possible, call first to determine who is at home and how safe it is go to the home. *Consider meeting at a DHS Self-Sufficiency office, school or other neutral setting. *Immediately ask the alleged adult victim if it is safe to conduct an interview and, if not, ask what might be a safe way. *Never ask the alleged adult victim about domestic violence in front of the alleged batterer. Disclosures may make the alleged adult victim unsafe if the alleged batterer is in the vicinity. These suggestions are taken from the Child Welfare Practices for Cases with Domestic Violence. Case practice in cases involving domestic violence will be discussed more in Week 2 of training. How would you share information about the report of concern with Sara Cooper, after confirming that the alleged perpetrator of domestic violence is not present? 
+    ...
+    If interviewing a child at school and they were just getting ready to go to lunch, they may not want to talk with us. Instructions: letting the child know what is expected, so there are no surprises. Setting rules for the interview should also help put the child at ease. (reference the tips and rules half sheet included here and found in the back pocket of your binder) Notes: An important part of the introduction is to also let children know that we will be taking notes. One way to do this is to say, “While we are talking, I am going to be taking notes, because what you have to say is very important, and I don't want to forget." Rapport Building/ Narrative Practice: The last step of building rapport is to engage the child talking about something that interests them or is important to them. There are various ways to do this. One method is called a practice narrative. This rapport-building strategy utilizes an opportunity to get to know the child, show interest, and gauge the child's ability to recall an event. 
+    ------------------------------------------------------------
+
+  Grounding Chunk 3:
+    Source: 6_Vision_Mission_Goals_KP_2025-05-07
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/1__Introduction_to_Essential_Elements/1__Participant_Materials_Handouts/6_Vision_Mission_Goals_KP_2025-05-07.pdf
+    Full text content:
+    ------------------------------------------------------------
+    # ODHS Child Welfare Vision for Transformation¹ We believe children and young adults do best when they grow up in a family. We value fairness, equity, inclusion, accessibility, diversity, and transparency in our work. We value the voices, experiences, cultures, intellect and uniqueness of the children and families we serve. We believe that communities often already have the wisdom and assets to provide safe, stable and healthy lives for their children. Thus, Child Welfare needs to partner, listen and lift up community voices and their decision-making powers. This builds on existing resources, creates pathways to new resources and promotes community interdependence rather than a system of dependence. We value building authentic relationships and being accountable to communities of color and other marginalized communities by elevating their voices and proactively engaging with individuals, families and communities. This builds their power so Child Welfare and its partners can better ensure people's safety, health and well-being. We believe providing earlier, less-intrusive support for parents and families means more children can remain safe and healthy at home and in school. This helps children and young adults have better long-term outcomes and keep the bonds and connections critical to their well-being. 
+    ...
+    Portland State Child Welfare Partnership 1 
+    ...
+    We believe families and communities working together in a more proactive, holistic way will allow ODHS and its partners to allocate resources where they have the greatest impact for children, young adults, parents and families. Comprehensive services outside of ODHS will decrease the need for costly foster care, residential placements and other crisis support. This will create opportunities for more innovation, creative solutions and new business models. We believe when families and communities are strong, fewer children experience abuse and neglect. We recognize the importance of challenges and struggles of transforming the current system into one that is fair and just. Anti-racist principles guide us. We recognize that white supremacy and systemic racism are deeply embedded in the history, fabric and institutions of our country, including child welfare systems. Long-lasting social change comes from co from communities of color and other marginalized communities' leadership and power in social movements and systems transformation. To this end, we will leverage our resources, technical knowledge and role within the broader ODHS and child welfare systems to support transformation. Our Vision for Transformation is based on a belief that children do best growing up in a family and on values related to honoring and supporting cultural wisdom, building community resilience and voice, and ensuring the self-determination of our communities of color. The goal is an absolute transformation. 
+    ------------------------------------------------------------
+
+  Grounding Chunk 4:
+    Source: DCFS_Arkansas_Practice_Model
+    URI: gs://wz-case-worker-mentor-rag/DCFS_Arkansas_Practice_Model.pdf
+    Full text content:
+    ------------------------------------------------------------
+    # VISION Every child has a safe and stable family every day. ## FROM THE DIRECTOR: Several years ago, the Arkansas Division of Children & Family Services (DCFS) began a journey to strengthen the child welfare system's approach to serving children and families by implementing safety organized practice (SOP). Safety organized practice engages families, their networks, and stakeholders as collaborative partners in making decisions about their children's safety. We worked with partners across the child welfare system and created an opportunity to build on that collaboration by clearly articulating the vision and values that serve as the heart of our work. We recognized that DCFS cannot support families alone and collaboration with a family's network and DCFS' community partners are necessary for sustainability. At One Table is Arkansas's practice model representing the culmination of our collective vision that every child deserves a safe, stable, and nurturing family every day. This overview of the practice model illustrates how we work every day to translate our vision and values into DCFS' practice with children and families by providing supervisors, managers, and field staff with concrete examples of the practices that best reflect our child welfare culture. 
+    ...
+    # VISION Every child has a safe and stable family every day. ## DCFS PRIORITIES The Arkansas Division of Children and Family Services (DCFS) has collaboratively designed a practice framework to guide the top three priorities of the agency. 1. Safely stabilize and preserve families; and if that is not possible ... 2. Safely care for children and quickly reunify children to their families of origin. If children must be removed from the home, relative and fictive kin caregivers will be considered immediately and throughout the entire engagement with the family; and if reunification is not possible . . . 3. Safely support child permanency, well-being, and development of culturally safe, lifelong relationships. Here is a description of the image: The image shows a pattern of overlapping circles in various shades of green, with one circle in blue. The circles are arranged in rows, with a darker green band across the bottom obscuring the lower halves of the circles in that row. The background is a lighter shade of green. The circles appear to have a brushstroke texture around their edges. 
+    ...
+    # VALUE 3 ## HELPING CHILDREN AND YOUTH ACHIEVE THEIR FULL POTENTIAL AND DEVELOP LIFELONG RELATIONSHIPS ### AGENCY PRACTICE Maintain a holistic view of the child/youth. Include and build on a family's strengths and resiliencies in order to maintain children/youth in their own home. Continuously assess safety throughout our involvement with children and families. Identify ways to lessen trauma to children/youth by using a trauma- informed perspective to promote healing. Maintain connections to important people, activities, and cultural traditions in the child/youth's life. Value placements with connections to the child/youth and family. Consider family culture when assessing permanency. 3. Identify living situations that support children and their relationships as soon as work with the family begins. 4. 5. Move toward child permanency every day. Continually focus on children's safety and well-being while they are in their own homes or in our care. Ensure the voice of the child/ youth is heard. Value the most permanent option for the child/youth, including reunification, adoption, and guardianship. Understand and value concurrent planning from day one. Establish legal permanency for children/youth, while having other support and lifelong connections in place. Value the need to have ongoing holistic needs assessments including developmental, behavioral, educational, dental, medical, psychological, etc. 
+    ------------------------------------------------------------
+
+  Grounding Chunk 5:
+    Source: Gathering_Information_Curriculum_SW_2024-02-15.docx
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/4__Gathering_Information/Gathering_Information_Curriculum_SW_2024-02-15.docx.pdf
+    Full text content:
+    ------------------------------------------------------------
+    # Suggested Start Time: ## Content: Whether interviewing an adult or a child, the interview should begin with building rapport. Ask: Why is rapport building an important step in gathering information about safety? During the rapport building stage of the interview, the task is to demonstrate that you are there to listen as much as ask questions. The interview should begin by communicating that you can be respectful, have genuine curiosity for their lived experience, and are prepared to partner with them in a meaningful way. This is done through what you say in that first part but also what you do. Remember that only 7% of communication is conveyed through verbal means; the other 93% is conveyed through nonverbal means. Being aware of the messages you are sending 25 Portland State Child Welfare Partnership Essential Elements Curriculum and receiving from the moment you begin interacting with a family can go a long way. During the Engagement session on Day 2 of Essential Elements, you discussed ways to build rapport with a parent from the moment they open the door. One of those ways is through transparency in sharing information with the parent. Considering that many families may have previous experience with ODHS Child Welfare in which power and information was not shared, it is important to do this from the very beginning. 
+    ...
+    Participants will then be admitted and someone from the training program will be there to greet them. This person will assist with getting audio and video adjusted and they will briefly review instructions. Each simulation will be 7.5 minutes long. The actors will keep track of time so participants do not need to. The actors will give a cue such as “I need to get ready for work" or "Can we be done now?" This is the cue to close out and wrap up the interview in about a minute. The initial contact and interview with the parent, Tammy Tasi, should include items discussed on the Initial Contact Cheat Sheet from Tuesday's Engagement session. The skills used in the initial contact and interview with the child, Efren Tasi, will be discussed in detail and practiced today. The allotted amount of time will also allow you to begin gathering safety related information in the six domains. This will be discussed in more detail today. Please know that you will not be expected to address all six domains or to gather enough information to make a safety decision. Once the interview is finished, a trainer will appear on screen, and there will be a few minutes to discuss the process and get feedback. 
+    ...
+    # Content: Review the following highlights which are also listed on the Simulations Instructions and Information handout: To participate in simulations, participants will need to have both working audio and video. We suggest arriving a few minutes early to test that these are both in working order. Please contact IT support immediately if there are any concerns for this being an issue. Participants should locate the “Go Out Packet” referenced in the previous day's session on Introduction to the CPS Assessment. Ο Ο Ο There are two important documents for your simulations: the 1270 ICWA form and the 1536 CPS Assessment Pamphlet. As discussed on Tuesday during the Engagement session, you will need to provide the parent with and explain the 1536 pamphlet. You will also need to ask about American Indian or Alaskan Native involvement and explain the reason for the inquiry. The simulation will include two practice interview opportunities. Participants will be making initial contact with Tammy Tasi and Efren Tasi (15) from the Tasi case 7 Portland State Child Welfare Partnership Essential Elements Curriculum scenario. The screening report for this family can be found behind the “Screening” tab of the participant binder. Once logged into the simulation, participants can expect to be in the “waiting room" for a brief period while the person ahead finishes their simulation. 
+    ------------------------------------------------------------
+
+  Grounding Chunk 6:
+    Source: Intro_to_EE_Curriculum_KP_2025-03-24.docx
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/1__Introduction_to_Essential_Elements/Intro_to_EE_Curriculum_KP_2025-03-24.docx.pdf
+    Full text content:
+    ------------------------------------------------------------
+    # What does family engagement mean? ## Content: Π Family Stressors: Family stressors such as an illness in the family, unemployment, or strained relationships could be a barrier to engagement. When people are in crisis or don't have their immediate needs met, it can be hard to fully engage. Position in society or socio-economic status: Social class differences can create gaps in understanding and connection. People who live in poverty may feel like they are misunderstood by people who are not living in poverty; they are focusing on survival, so when we ask them to engage in services it's the last thing on their mind. They may live in the moment and have difficulty thinking ahead to the future. People of high-socio economic status may feel that their problems are not to be shared with a social service agency. They may feel like they have the # Portland State Child Welfare Partnership Essential Elements Curriculum situation under control and are put off by our involvement. Cultural Norms & Formalities: Individuals have different norms around greetings and rapport building. Do we shake hands, kiss someone's cheek or give them a pat on the shoulder? What's proper? It's hard to know unless you have knowledge of someone's culture, so let them lead the way. 
+    ...
+    Follow-up: What could a worker do to address this parent's fears and strive to lessen the impact of the disadvantages the parent faces? o The ODHS Child Welfare Vision for Transformation states, "We value fairness, equity, inclusion, accessibility, diversity, and transparency in our work.” What would it look like to treat this family more equitably? What could the worker have done differently? o The Vision for Transformation also states, "We value the voices, experiences, cultures, intellect and uniqueness of Here's a description of the image: The image shows the logo for the "Portland State Child Welfare Partnership". The logo consists of a green, stylized symbol resembling a four-leaf clover or a cross with intertwined elements. To the right of the symbol is the text "Portland State" in a dark, serif font on the top line, and "Child Welfare Partnership" in a green, sans-serif font on the bottom line. Essential Elements Curriculum the children and families we serve.” What could a worker do in this scenario to show that they value and honor the family's voice and culture? Trainer Note: After the large group discussion, remind participants that they will go into Learning Teams in breakout rooms to consider the second scenario. Slide 13 
+    ------------------------------------------------------------
+
+  Grounding Chunk 7:
+    Source: 8_PPT_Gathering_Info_SW_2024-02-15
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/4__Gathering_Information/4__Participant_Material_Handouts/7_Gathering_Information/8_PPT_Gathering_Info_SW_2024-02-15.pdf
+    Full text content:
+    ------------------------------------------------------------
+    *   **Children:** Questions include "Who are you?", "Are you safe?", "Can I trust you?", and "Do you care about me?". 9 Essential Elements of Child Welfare Practice Week 1: Gathering Info for the CPS Assessment 3 10 11 Building Rapport with Children Introduce self and role Confirm child's identity Ask for permission Instructions/structure Notes Explore interests through narrative practice Practice Introductions & Rapport Building Introduce yourself and your role Confirm child's identity Ask permission to interview Provide instructions Explain and practice note taking Rapport Building using narrative practice Child Functioning Circumstances surrounding maltreatment Adult Functioning Six Domains Culture Trauma Extent of maltreatment Parent Functioning Discipline Practices 12 Essential Elements of Child Welfare Practice Week 1: Gathering Info for the CPS Assessment 4 
+    ------------------------------------------------------------
+
+  Grounding Chunk 8:
+    Source: 1_Sim_Instructions_and_Info_SW_2024-02-15
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/4__Gathering_Information/4__Participant_Material_Handouts/7_Gathering_Information/1_Sim_Instructions_and_Info_SW_2024-02-15.pdf
+    Full text content:
+    ------------------------------------------------------------
+    We understand that this simulation can be nerve-wracking in ideal circumstances, and we hope that by going through these materials you will feel as at ease as possible in the online format. The simulation will include two brief interviews, one with a parent, "Tammy Tasi" and the second with a child, "Efren Tasi.” Please refer to the Tasi screening report for all available case information. Each interview will include a seven-minute interaction, this includes an introduction and one additional minute for closing the interview. Our actors will monitor time, you will not need to. Our actors will let you know when it is time to move into closing by stating ESSENTIAL ELEMENTS OF CHILD WELFARE PRACTICE 12/15/2024something like, "I need to get to work" and "can we be done talking now.” Participants are not expected to be able to cover all six domains or reach a safety decision in seven minutes with the parent or child but are expected to ask questions related to some domains and safety as it presents itself in the interview. Primarily we are looking for a demonstration of engagement skills, listening skills, rapport building, and ability to make our parent and child feel at ease and heard. 
+    ------------------------------------------------------------
+
+  Grounding Chunk 9:
+    Source: Screening_and_Initial_Contact_Curriculum_KP_2025-07-01.docx
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/3__Screening_and_Initial_Contact/Screening_and_Initial_Contact_Curriculum_KP_2025-07-01.docx.pdf
+    Full text content:
+    ------------------------------------------------------------
+    # Screening and Initial Contact Last updated by: Aimee Dickson 06/24/2025 Session Summary Link Time: 3.5 hours Recommended Class Size: Approx. 35 ## Learning Objectives: 1. Become familiar with the purpose of screening, guiding principles, types of calls and screening process. 2. Identify questions and question techniques that begin gathering information relevant to child safety. 3. Know the types of abuse and how they are applied to screening allegations. 4. Become familiar with the Structured Decision Making tool used in screening. 5. Understand the reasons for resistance and identify techniques to work through resistance. 6. Know how to engage with a family during a first encounter. ## Materials: 1 Screening and IC PPT 2 Life of a Case 3 Definitions of Abuse Types 4 Response Timeline Decision Making 5 Closed at Screening Criteria Baskin Case File: Screening Report, page 5 (located in the Case Scenarios Folder for EE) Cooper Case File: Screening Report, page 5 (located in Case Scenarios Folder for EE) Rich Case File: Screening Report, page 5 (located in Case Scenarios Folder for EE) Tasi Case File: Screening Report, page 5 (located in Case Scenarios Folder for EE) 6 Initial Contact Guide # Portland State Child Welfare Partnership Essential Elements Curriculum 7 Hoja de Referencia de Contacto Inicial 
+    ...
+    # Screening and Initial Contact ## Training Content: Slide 1 Here's a description of the image: The image is a presentation slide with a beige background and a black border. The title "Screening and Initial Contact" is prominently displayed in large, bold, black font on the left side of the slide. Below the title is the logo for "Portland State Child Welfare Partnership" in a smaller font. On the right side of the slide is a geometric design. It consists of a green square containing four rounded shapes arranged in a symmetrical pattern. Two of the shapes are blue, and two are black. In the bottom right corner of the slide, the number "1" is printed. Suggested Start Time: 1:00 (2 min) Materials/Links: N/A ### Content: For the first part of the afternoon, we're going to talk about the screening process at the Oregon Child Abuse Hotline (ORCAH). Then we'll spend the rest of the day talking about engaging families at the initial contact of a CPS assessment. Here's a description of the image: The image shows the logo for the "Portland State Child Welfare Partnership". 
+    ...
+    R2 ICWA_ce1270 (located in CPS Assessment Packet within the Handouts folder for Week 1, Day 3, Intro to Assess) L1 (color) Updated Brochure 1536 (located in CPS Assessment Packet within the Handouts folder for Week 1, Day 3, Intro to Assess) 8 Action Items 9 Screening and IC References ## Media/Tools: Trainer PowerPoint Kahoot: Screening Scenarios Video: Big Bang Theory - Please Pass the Butter Video: Initial Contact_audiobalanced.mp4 Video: ICWA Inquiry_audiobalanced.mp4 Video: 1536_audiobalanced.mp4 ## Room Preparation Guide: N/A ## Engagement Legend: ☑ ☑ ☐ ☑ ☐ ☐ ☑ Large Group discussion Small Group Breakout Rooms Polls Quiz Game Animated Slide Written exercise Annotate exercise Video Handout ☐ # Portland State Child Welfare Partnership IdeaBoardz Trainer Notes Panel Essential Elements Curriculum ## Trainer's Agenda: Introduction (5 minutes) Introduction to topics Learning Objectives Screening (55 minutes) Introduction to the Oregon Child Abuse Hotline and its guiding principles Screening report types Information gathered and reviewed at screening Structured Decision Making: Types of Abuse & Response Timelines Kahoot: Screening Scenario Practice Engaging at Initial Contact (40 minutes) Trauma-informed engagement Practicing cultural humility using case scenarios Listening, body language, and the power of silence Making Initial Contact with a Family (90 minutes) Initial Contact Guide Engaging a family through the ICWA Inquiry 
+    ...
+    After practicing one scenario, the partners should switch roles and go through a different scenario. If time allows, they should discuss the remaining two case scenarios and how they would clearly describe the reason for contact. # Essential Elements Curriculum Making Initial Contact 20 # Suggested Start Time: 3:40 (15 min) Materials/Links: N/A # Content: Small Group Breakout Rooms (10 min): Participants will be with a partner for this activity. o Each participant should choose one of the four case scenarios to practice with. The partners are encouraged to choose different scenarios. o Each partner will have a chance to play the caseworker and a chance to play the parent. o Participants will practice the items discussed on the Initial Contact Guide and listed on this slide. o Each person will be given 5 minutes to practice. o As time allows, partners can also discuss the two remaining case scenarios and how they would clearly describe the reason for contact in those scenarios. # Portland State Child Welfare Partnership # Essential Elements Curriculum Slide 21 ICWA Inquiry 1270 Verification of American Indian/Alaska Native Membership or Enrollment 21 
+    ...
+    # Suggested Start Time: 3:30 (10 min) Materials/Links: Initial Contact Brief_audiobalanced.mp4 Content: Initial Contact Brief_audiobalanced (1:54): This video is an example of an initial contact at the door with a parent. o The caseworker will be making initial contact on a report that a 6-month-old has unexplained bruising to the eye. They will be practicing the skills discussed in the Initial Contact Guide. As you watch, pay attention to: o What do you notice about the way the caseworker describes the reason for contact? o Was anything missing? o What questions does this bring up? # Portland State Child Welfare Partnership Slide 20 Here is a description of the image: The image provides instructions for a role-playing exercise to be done in groups of two. Each partner should choose one of four case scenarios and decide who will play the role of the caseworker first. As the caseworker, they should practice the following elements: *   Knock on the door *   Introduce yourself *   Verify you are speaking to the correct person *   Explain the reason for contact (be clear and transparent about the concern!) *   Ask where the parent would like to speak more *   Find out if anyone else is in the home *   Begin asking about the report 
+    ...
+    # Portland State Child Welfare Partnership Essential Elements Curriculum 
+    ------------------------------------------------------------
+
+  Grounding Chunk 10:
+    Source: 3_Helpful_Tips_KP_2024-11-15
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/1__Introduction_to_Essential_Elements/1__Participant_Materials_Handouts/3_Helpful_Tips_KP_2024-11-15.pdf
+    Full text content:
+    ------------------------------------------------------------
+    # Essential Elements - Helpful Tips WELCOME! ## MATERIALS You will receive binders and case files for each of the three weeks of training. Your first binder will be sent to you before Day 1 of Essential Elements. You will also receive a link electronically with copies of all the hand outs for each week (they are located in a Google Drive folder). It is important to have these materials ready to use during training. Trainers will be referencing these materials frequently during each session. Complete this Google Form to receive physical training materials: https://forms.gle/5y74ijuReJgDiAfZ8 LUNCH AND BREAKS Lunch is from 12-1pm each day. There will be frequent breaks during your training days. The times of these breaks will be dependent on your session content. Portland State Child Welfare Partnership 2 ## ATTENDANCE AND MAKE-UPS If you know ahead of time you will miss a session due to a planned absence, notify Tyler Blankenship at tblank2@pdx.edu. If you miss content during a specific session, Tyler will be in contact with you to discuss how to make up that content at a future date. It is our hope to provide you with a great learning experience, and an opportunity to grow personally and professionally. All of the PSU/Child Welfare Partnership staff are very excited to meet you! ## Your PSU training team: 
+    ------------------------------------------------------------
+
+  Grounding Chunk 11:
+    Source: 1_Screening_and_IC_PPT_KP_2025-07-01
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/3__Screening_and_Initial_Contact/3__Participant_Materials_Handouts/Participant_Material_3/1_Screening_and_IC_PPT_KP_2025-07-01.pdf
+    Full text content:
+    ------------------------------------------------------------
+    # Essential Elements Screening and Initial Contact 19 20 21 Here is a description of the image: The image shows a slide from a presentation, likely related to social work or a similar field. The slide is titled "Initial Contact Video" and features a picture of a person in a red sweater knocking on a door with a wreath. To the right of the image, there are three bullet points with questions to consider while watching the video: *   What do you notice about the way the caseworker describes the reason for contact? *   Was anything missed? *   What questions does this bring up? The slide number "19" is visible in the bottom right corner. The slide is designed to prompt reflection and discussion about the initial contact process in social work or a related field. Here is a description of the image: The image is a slide from a presentation or training material, focusing on the topic of "Making Initial Contact," likely in a social work or casework context. The slide is divided into two main sections: 1.  **Instructions for a Group Activity:** This section provides instructions for a group activity involving pairs of participants. The instructions are as follows: *   Each partner should choose one of the four case scenarios to practice with and decide who will play the role of the caseworker first. 
+    ------------------------------------------------------------
+
+  Grounding Chunk 12:
+    Source: 7_Hoja_de_Referencia_de_Contacto_Inicial_KP_2025-07-01
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/3__Screening_and_Initial_Contact/3__Participant_Materials_Handouts/Participant_Material_3/7_Hoja_de_Referencia_de_Contacto_Inicial_KP_2025-07-01.pdf
+    Full text content:
+    ------------------------------------------------------------
+    Nota: Utiliza esta última opción solo si no hay preocupación por el peligro inmediato. Considera siempre los requisitos para un contacto inicial; debes hacer esfuerzos diligentes para cumplir con los plazos de contacto requeridos en fin de garantizar la seguridad de los niños. Si una persona no quiere tener una conversación o si tú no te sientes seguro en cualquier momento, está bien alejarse de la situación. Llama a tu supervisor tan pronto cuando regreses a tu automóvil para recibir más instrucciones. Dependiendo de la inquietud, es posible que tu supervisor quiera que llames a la policía para obtener ayuda. Ten en cuenta que la mayoría de las reacciones se pueden abordar exitosamente cuando tratamos a las personas con respeto y empatía y brindar información sobre el proceso. Pregúntate: "¿Por qué estamos en su puerta? "¿Cuáles son sus derechos en este proceso?" y / o "¿Qué haremos con la información que nos proporcionan?” Portland State Child Welfare Partnership 2 ☐ Proporcionar y revisar el DHS 1536 Antes de salir de casa, proporciona a los padres una copia del 1536 y dedica tiempo a leer el folleto con los padres para asegurarte de que estén al tanto de sus derechos. Sea transparente con los padres sobre lo que pueden esperar de ti durante la evaluación de CPS. 
+    ...
+    Confirma que los padres reciben tu información de contacto y la información de contacto de tu supervisor. ☐ Pregunte sobre ICWA, explica por qué hace esta pregunta y completa el CF 1270 Pregunta a los padres sobre cualquier ascendencia indígena estadounidense o nativa de Alaska, así como sobre su afiliación tribal. Portland State Child Welfare Partnership 3 
+    ------------------------------------------------------------
+
+  Grounding Chunk 13:
+    Source: 3_Rich_Screening_Report_SW_2024-05-13
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/4__Gathering_Information/4__Participant_Material_Handouts/Self-Paced_Learning/3_Rich_Screening_Report_SW_2024-05-13.pdf
+    Full text content:
+    ------------------------------------------------------------
+    Jefferson, OR 97352 Phone: Email: Relationship to Other Participants: mother of Emily, Alberto, Da Name: Ted Rich Relationship: Spouse Reported Aliases: DOB: 04/12/XXXX Age: 24 Race: White Ethnicity: Address: 307 Sunnymeade Ct. Jefferson, OR 97352 Phone: Email: Relationship to Other Participants: spouse to Judith, biological father to Emily and Alberto, adoptive father to Daniel Essential Elements of Child Welfare Practice Week 1: Screening Roles: AP, CN, HM, PR Sex: Female Preferred Language: English Roles: AP, HM, PR Sex: Male Preferred Language: English 7 Adapted from ODHS 307A-V3 (08/22) 05.13.2024 # For Training Purposes Only
+       Roles Description: 
+     AP = Alleged Perpetrator  HM = Household Member 
+     AV = Alleged Victim  NM = Non-Household Member 
+     CN = Case Name  PR = Parent / Caregiver _END_OF_TABLE_ 
+    ------------------------------------------------------------
+
+  Grounding Chunk 14:
+    Source: 6_Initial_Contact_Guide_KP_2025-07-01
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/3__Screening_and_Initial_Contact/3__Participant_Materials_Handouts/Participant_Material_3/6_Initial_Contact_Guide_KP_2025-07-01.pdf
+    Full text content:
+    ------------------------------------------------------------
+    Keep in mind that most reactions can be navigated successfully when we treat people with respect and empathy and provide information about the process. Ask yourself: “Why are we at their doorstep?” “What are their rights in this process?” and/or “What will we do with the information they provide us?” Portland State Child Welfare Partnership 2 ☐ Provide and review the DHS 1536 Prior to leaving the home, provide the parent with a copy of the 1536 and spend time going through the pamphlet with the parent to ensure they are aware of their rights. Be transparent with the parents about what they can expect from you during the CPS assessment. Confirm that parents are provided with your contact information and the contact information for your supervisor. ☐ Inquire about ICWA, share why we ask this question and complete the CF 1270 Ask parents about any American Indian or Alaskan Native ancestry as well as tribal affiliation. Portland State Child Welfare Partnership 3 
+    ------------------------------------------------------------
+
+  Grounding Chunk 15:
+    Source: 9_Screening_and_IC_References_KP_2025-07-01
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/3__Screening_and_Initial_Contact/3__Participant_Materials_Handouts/Participant_Material_3/9_Screening_and_IC_References_KP_2025-07-01.pdf
+    Full text content:
+    ------------------------------------------------------------
+    # Screening and Initial Contact References 1 Child Welfare Division, Oregon Department of Human Services. (n.d.). Ch 2. Child Welfare Procedure Manual. Oregon Department of Human Services. Retrieved 2025, from https://www.oregon.gov/odhs/rules- policy/Documents/cw-procedure-manual.pdf 2 Lorre, C.; Prady, B.; Molaro, S. (Writers), & Rich, A. (Director). (2014). The Indecision Amalgamation [Season 7, Episode 19]. Chuck Lorre Productions. The Big Bang Theory. Warner Bros. Television. 3 Child Welfare Division, Oregon Department of Human Services. (n.d.). Ch 3, Section 21. Child Welfare Procedure Manual. Oregon Department of Human Services. Retrieved 2025, from https://www.oregon.gov/odhs/rules-policy/Documents/cw-procedure- manual.pdf 4 Child Welfare Division, Oregon Department of Human Services. (n.d.). Ch 3, Section 3. Child Welfare Procedure Manual. Oregon Department of Human Services. Retrieved 2024, from https://www.oregon.gov/odhs/rules-policy/Documents/cw-procedure- manual.pdfPortland State Child Welfare Partnership1 
+    ------------------------------------------------------------
+
+  Grounding Chunk 16:
+    Source: 2_Parent_Panel_Worksheet_KP_2024-11-15
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/2__Partnering_for_Engagement/2__Participant_Materials_Handouts/2_Parent_Panel_Worksheet_KP_2024-11-15.pdf
+    Full text content:
+    ------------------------------------------------------------
+    # Parent Panel Worksheet Use this handout to take notes during the parent panel and jot down questions you have for the panelists. Protective Factors mitigate risk and promote healthy development and well-being for all children and families. Everyone benefits when protective factors are built and bolstered. Parental Resilience: managing stress and functioning well- facilitated by individual, relational, community, or societal factors-when faced with stressors, adversity, or trauma. Social Connections: healthy, meaningful, trusting, and sustained relationships with people, institutions, communities, or a higher power that promote a sense of connectedness, belonging, and mattering. Knowledge of Parenting and Child Development: learning about prenatal, infant, and child development, and using developmentally and contextually appropriate parenting practices.Portland State Child Welfare Partnership1 The image lists three concepts: 1. Social and Emotional Competence of Children: providing environments and experiences-grounded in early relational health— that build positive social skills; enable children to regulate thoughts, emotions, and behaviors; and promote effective communication, problem-solving, and decision-making skills. 2. Concrete Support: identifying, accessing, advocating for, and receiving high quality and equitable support including the basic necessities everyone deserves and specialized services to address specific needs. 
+    ------------------------------------------------------------
+
+  Grounding Chunk 17:
+    Source: 3_Working_Respectfully_with_Families_SW_2023-11-02
+    URI: gs://wz-case-worker-mentor-rag/Curriculum/4__Gathering_Information/4__Participant_Material_Handouts/7_Gathering_Information/3_Working_Respectfully_with_Families_SW_2023-11-02.pdf
+    Full text content:
+    ------------------------------------------------------------
+    The image shows the logo for the Colorado Office of Children, Youth & Families, Division of Child Welfare. The logo includes a green triangle with "CO" inside, a gold triangle with "CDHS" inside, and the words "COLORADO Office of Children, Youth & Families Division of Child Welfare" in black text. Child Welfare Training System Engaging With Families 2 
+    ------------------------------------------------------------
+
+  CONTENT (FULL):
+  ============================================================
+  ```
+  ============================================================
+
+================================================================================
+SUMMARY:
+  Total chunks: 28
+  Thinking chunks: 9
+  Content chunks: 19
+  Total grounding chunks found: 17
+  Chunks with grounding metadata: True
+
+Output saved to: test_grounding_output_20250718_172343.txt

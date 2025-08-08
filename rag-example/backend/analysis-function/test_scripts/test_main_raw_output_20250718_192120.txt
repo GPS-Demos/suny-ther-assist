@@ -1,0 +1,5 @@
+
+ERROR: Could not connect to the server.
+Make sure the function is running locally with:
+  cd backend/analysis-function
+  functions-framework --target social_work_ai --debug
