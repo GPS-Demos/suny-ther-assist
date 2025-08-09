@@ -83,22 +83,38 @@ const SessionPhaseIndicator: React.FC<SessionPhaseIndicatorProps> = ({ duration 
         >
           Session Phase
         </Typography>
-        <Chip
-          icon={React.cloneElement(phaseDetails.icon as React.ReactElement, {
-            sx: { fontSize: 18, color: 'white !important' }
-          })}
-          label={phaseDetails.label}
-          size="small"
+        <Box
           sx={{
-            background: phaseDetails.gradient,
-            color: 'white',
-            fontWeight: 600,
-            '& .MuiChip-icon': {
-              color: 'white',
-            },
-            boxShadow: '0 4px 8px -2px rgba(0, 0, 0, 0.1)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.5,
+            px: 1.5,
+            py: 0.5,
+            borderRadius: 0,
+            bgcolor: phaseDetails.label === 'Beginning' 
+              ? 'rgba(16, 185, 129, 0.08)'
+              : phaseDetails.label === 'Middle'
+              ? 'rgba(11, 87, 208, 0.08)'
+              : 'rgba(245, 158, 11, 0.08)',
+            color: phaseDetails.label === 'Beginning' 
+              ? 'rgba(5, 150, 105, 0.9)'
+              : phaseDetails.label === 'Middle'
+              ? 'rgba(0, 99, 155, 0.9)'
+              : 'rgba(217, 119, 6, 0.9)',
+            border: phaseDetails.label === 'Beginning' 
+              ? '1px solid rgba(16, 185, 129, 0.2)'
+              : phaseDetails.label === 'Middle'
+              ? '1px solid rgba(11, 87, 208, 0.2)'
+              : '1px solid rgba(245, 158, 11, 0.2)',
           }}
-        />
+        >
+          {React.cloneElement(phaseDetails.icon as React.ReactElement, {
+            sx: { fontSize: 16, opacity: 0.8 }
+          })}
+          <Typography variant="caption" fontWeight={600}>
+            {phaseDetails.label}
+          </Typography>
+        </Box>
       </Box>
       
       <Box sx={{ mb: 1.5 }}>

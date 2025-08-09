@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Paper,
@@ -20,15 +20,19 @@ import {
   SwapHoriz,
   Psychology,
 } from '@mui/icons-material';
-import { Alert } from '../types/types';
+import { Alert, Citation } from '../types/types';
+import CitationModal from './CitationModal';
 
 interface AlertDisplayProps {
   alert: Alert;
   onDismiss: () => void;
+  citations?: Citation[];
 }
 
-const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss }) => {
-  const [expanded, setExpanded] = React.useState(false);
+const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations = [] }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [citationModalOpen, setCitationModalOpen] = useState(false);
+  const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
 
   const getAlertIcon = () => {
     switch (alert.level) {
@@ -69,8 +73,75 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss }) => {
 
   const alertColor = getAlertColor();
 
+  // Function to parse the message and create clickable citation links
+  const renderMessageWithCitations = (text: string) => {
+    // Regular expression to match citation patterns like [1], [2], [3, 6, 9]
+    const citationPattern = /\[(\d+(?:\s*,\s*\d+)*)\]/g;
+    const parts: (string | JSX.Element)[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = citationPattern.exec(text)) !== null) {
+      // Add text before the citation
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index));
+      }
+
+      // Parse citation numbers
+      const citationNumbers = match[1].split(',').map(num => parseInt(num.trim()));
+      
+      // Create clickable citation chip
+      parts.push(
+        <Chip
+          key={`citation-${match.index}`}
+          label={`[${match[1]}]`}
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            // Find the citation with the first number (for now, just handle single citations)
+            const citation = citations.find(c => citationNumbers.includes(c.citation_number));
+            if (citation) {
+              setSelectedCitation(citation);
+              setCitationModalOpen(true);
+            }
+          }}
+          sx={{
+            height: 20,
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+            color: 'white',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
+              transform: 'scale(1.1)',
+            },
+            transition: 'all 0.2s ease',
+            mx: 0.5,
+            verticalAlign: 'middle',
+          }}
+        />
+      );
+
+      lastIndex = citationPattern.lastIndex;
+    }
+
+    // Add remaining text after the last citation
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+
+    // If no citations found, return the original text
+    if (parts.length === 0) {
+      return text;
+    }
+
+    return <>{parts}</>;
+  };
+
   return (
-    <Fade in timeout={300}>
+    <>
+      <Fade in timeout={300}>
       <Paper
         elevation={alert.level === 'critical' ? 6 : 2}
         sx={{
@@ -117,15 +188,16 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss }) => {
               )}
             </Box>
             
-            <Typography
-              variant="body1"
+            <Box
+              component="span"
               sx={{
                 fontSize: alert.level === 'critical' ? '1rem' : '0.875rem',
                 lineHeight: 1.6,
+                display: 'block',
               }}
             >
-              {alert.message}
-            </Typography>
+              {renderMessageWithCitations(alert.message)}
+            </Box>
 
             {/* Evidence */}
             {alert.evidence && alert.evidence.length > 0 && (
@@ -251,6 +323,17 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss }) => {
         )}
       </Paper>
     </Fade>
+
+    {/* Citation Modal */}
+    <CitationModal
+      open={citationModalOpen}
+      onClose={() => {
+        setCitationModalOpen(false);
+        setSelectedCitation(null);
+      }}
+      citation={selectedCitation}
+    />
+  </>
   );
 };
 

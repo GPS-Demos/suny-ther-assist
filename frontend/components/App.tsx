@@ -1,16 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
-  Container,
   Paper,
   Typography,
   Button,
   IconButton,
   Chip,
-  LinearProgress,
-  Alert,
-  Fade,
-  Grow,
   Collapse,
   Badge,
   Drawer,
@@ -22,7 +17,6 @@ import {
   Mic,
   Stop,
   Info,
-  Psychology,
   TrendingUp,
   FiberManualRecord,
   ExpandLess,
@@ -37,7 +31,6 @@ import AlertDisplay from './AlertDisplay';
 import SessionMetrics from './SessionMetrics';
 import PathwayIndicator from './PathwayIndicator';
 import SessionPhaseIndicator from './SessionPhaseIndicator.tsx';
-import CitationsPanel from './CitationsPanel.tsx';
 import { useAudioRecorderWebSocket } from '../hooks/useAudioRecorderWebSocket';
 import { useTherapyAnalysis } from '../hooks/useTherapyAnalysis';
 import { formatDuration } from '../utils/timeUtils';
@@ -45,9 +38,7 @@ import { SessionContext, Alert as IAlert, Citation } from '../types/types';
 import { testTranscriptData } from '../utils/testTranscript';
 
 const App: React.FC = () => {
-  const theme = useTheme();
-  const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
-  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+  const isDesktop = useMediaQuery(useTheme().breakpoints.up('lg'));
   const isWideScreen = useMediaQuery('(min-width:1024px)');
   
   const [isRecording, setIsRecording] = useState(false);
@@ -55,7 +46,7 @@ const App: React.FC = () => {
   const [sessionDuration, setSessionDuration] = useState(0);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [newTranscriptCount, setNewTranscriptCount] = useState(0);
-  const [sessionContext, setSessionContext] = useState<SessionContext>({
+  const [sessionContext] = useState<SessionContext>({
     session_type: 'CBT',
     primary_concern: 'Anxiety',
     current_approach: 'Cognitive Behavioral Therapy',
@@ -92,16 +83,14 @@ const App: React.FC = () => {
       techniques: string[];
     }>;
   }>({});
-  const [riskLevel, setRiskLevel] = useState<'low' | 'moderate' | 'high' | null>(null);
+  const [riskLevel] = useState<'low' | 'moderate' | 'high' | null>(null);
   
   // Test mode state
   const [isTestMode, setIsTestMode] = useState(false);
-  const [testTranscriptIndex, setTestTranscriptIndex] = useState(0);
   const testIntervalRef = useRef<number | null>(null);
 
   // Audio recording hook with WebSocket streaming
   const { 
-    isRecording: isRecordingAudio, 
     isConnected, 
     startRecording, 
     stopRecording, 
@@ -393,20 +382,19 @@ const App: React.FC = () => {
     setIsRecording(true);
     setSessionStartTime(new Date());
     setTranscript([]);
-    setTestTranscriptIndex(0);
     
+    let currentIndex = 0;
     testIntervalRef.current = setInterval(() => {
-      setTestTranscriptIndex(prevIndex => {
-        if (prevIndex >= testTranscriptData.length) {
+        if (currentIndex >= testTranscriptData.length) {
           if (testIntervalRef.current) {
             clearInterval(testIntervalRef.current);
             testIntervalRef.current = null;
           }
           setIsTestMode(false);
-          return prevIndex;
+          return;
         }
         
-        const entry = testTranscriptData[prevIndex];
+        const entry = testTranscriptData[currentIndex];
         const formattedEntry = {
           text: entry.speaker ? `${entry.speaker}: ${entry.text}` : entry.text,
           timestamp: new Date().toISOString(),
@@ -419,8 +407,7 @@ const App: React.FC = () => {
           setNewTranscriptCount(prev => prev + 1);
         }
         
-        return prevIndex + 1;
-      });
+        currentIndex++;
     }, 2000);
   };
 
@@ -669,10 +656,9 @@ const App: React.FC = () => {
               }}
             >
               <Info sx={{ 
-                fontSize: 32,
-                background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                fontSize: 28,
+                color: 'rgba(11, 87, 208, 0.6)',
+                opacity: 0.8,
               }} /> 
               Real-Time Guidance
             </Typography>
@@ -728,6 +714,7 @@ const App: React.FC = () => {
                       key={`${alerts[0].timestamp}-0`}
                       alert={alerts[0]}
                       onDismiss={() => handleDismissAlert(0)}
+                      citations={citations}
                     />
                   </Box>
 
@@ -780,6 +767,7 @@ const App: React.FC = () => {
                               <AlertDisplay
                                 alert={alert}
                                 onDismiss={() => handleDismissAlert(index + 1)}
+                                citations={citations}
                               />
                             </Box>
                           ))}
@@ -790,13 +778,6 @@ const App: React.FC = () => {
                 </>
               )}
             </Box>
-            
-            {/* Citations Panel */}
-            {citations.length > 0 && (
-              <Box sx={{ flexShrink: 0, mt: 2 }}>
-                <CitationsPanel citations={citations} />
-              </Box>
-            )}
           </Paper>
 
           {/* Middle Panel - Session Metrics & Phase */}
@@ -848,10 +829,9 @@ const App: React.FC = () => {
                 }}
               >
                 <TrendingUp sx={{ 
-                  fontSize: 32,
-                  background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  fontSize: 28,
+                  color: 'rgba(11, 87, 208, 0.6)',
+                  opacity: 0.8,
                 }} /> 
                 Session Metrics
               </Typography>

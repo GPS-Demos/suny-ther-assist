@@ -107,7 +107,7 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
     >
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography 
-          variant="h6" 
+          variant="h5" 
           sx={{ 
             display: 'flex', 
             alignItems: 'center', 
@@ -118,9 +118,8 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
         >
           <SwapHoriz sx={{ 
             fontSize: 28,
-            background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            color: 'rgba(11, 87, 208, 0.6)',
+            opacity: 0.8,
           }} /> 
           Current Pathway
         </Typography>
@@ -165,31 +164,47 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
       </Box>
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Chip
-          icon={getEffectivenessIcon() ? React.cloneElement(getEffectivenessIcon() as React.ReactElement, {
-            sx: {
-              fontSize: 20,
-              color: 'white !important',
-            }
-          }) : undefined}
-          label={effectiveness.charAt(0).toUpperCase() + effectiveness.slice(1)}
+        <Box
           sx={{
-            background: getEffectivenessGradient(),
-            color: 'white',
-            fontWeight: 600,
-            border: 'none',
-            boxShadow: '0 4px 8px -2px rgba(0, 0, 0, 0.1)',
-            '& .MuiChip-icon': {
-              color: 'white',
-            },
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            '&:hover': {
-              transform: 'translateY(-1px)',
-              boxShadow: '0 6px 12px -2px rgba(0, 0, 0, 0.15)',
-            },
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.5,
+            px: 1.5,
+            py: 0.5,
+            borderRadius: 0,
+            bgcolor: effectiveness === 'effective'
+              ? 'rgba(16, 185, 129, 0.08)'
+              : effectiveness === 'struggling'
+              ? 'rgba(245, 158, 11, 0.08)'
+              : effectiveness === 'ineffective'
+              ? 'rgba(239, 68, 68, 0.08)'
+              : 'rgba(107, 114, 128, 0.08)',
+            color: effectiveness === 'effective'
+              ? 'rgba(5, 150, 105, 0.9)'
+              : effectiveness === 'struggling'
+              ? 'rgba(217, 119, 6, 0.9)'
+              : effectiveness === 'ineffective'
+              ? 'rgba(220, 38, 38, 0.9)'
+              : 'rgba(75, 85, 99, 0.9)',
+            border: effectiveness === 'effective'
+              ? '1px solid rgba(16, 185, 129, 0.2)'
+              : effectiveness === 'struggling'
+              ? '1px solid rgba(245, 158, 11, 0.2)'
+              : effectiveness === 'ineffective'
+              ? '1px solid rgba(239, 68, 68, 0.2)'
+              : '1px solid rgba(107, 114, 128, 0.2)',
           }}
-          size="small"
-        />
+        >
+          {getEffectivenessIcon() && React.cloneElement(getEffectivenessIcon() as React.ReactElement, {
+            sx: {
+              fontSize: 16,
+              opacity: 0.8,
+            }
+          })}
+          <Typography variant="caption" fontWeight={600}>
+            {effectiveness.charAt(0).toUpperCase() + effectiveness.slice(1)}
+          </Typography>
+        </Box>
       </Box>
 
       {effectiveness !== 'effective' && effectiveness !== 'unknown' && (

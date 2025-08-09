@@ -1,13 +1,10 @@
 import React from 'react';
 import { Box, Typography, LinearProgress, Chip, Grid } from '@mui/material';
 import {
-  TrendingUp,
   Mood,
   MoodBad,
   SentimentSatisfied,
   SentimentVeryDissatisfied,
-  Lightbulb,
-  Groups,
 } from '@mui/icons-material';
 
 interface SessionMetricsProps {
@@ -83,23 +80,26 @@ const SessionMetrics: React.FC<SessionMetricsProps> = ({ metrics }) => {
 
         {/* Therapeutic Alliance */}
         <Grid item xs={6}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Groups fontSize="small" />
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Therapeutic Alliance
-              </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                <Chip
-                  label={metrics.therapeutic_alliance.charAt(0).toUpperCase() + metrics.therapeutic_alliance.slice(1)}
-                  size="small"
-                  color={getAllianceColor() as any}
-                  sx={{ 
-                    fontWeight: 600,
-                    fontSize: '0.875rem'
-                  }}
-                />
-              </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              Therapeutic Alliance
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+              <Chip
+                label={metrics.therapeutic_alliance.charAt(0).toUpperCase() + metrics.therapeutic_alliance.slice(1)}
+                size="small"
+                sx={{ 
+                  fontWeight: 600,
+                  fontSize: '0.875rem',
+                  background: metrics.therapeutic_alliance === 'strong' 
+                    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                    : metrics.therapeutic_alliance === 'moderate'
+                    ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                    : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  color: 'white',
+                  border: 'none',
+                }}
+              />
             </Box>
           </Box>
         </Grid>
@@ -122,12 +122,9 @@ const SessionMetrics: React.FC<SessionMetricsProps> = ({ metrics }) => {
         {/* Techniques Detected */}
         <Grid item xs={12}>
           <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-              <Lightbulb fontSize="small" color="action" />
-              <Typography variant="caption" color="text.secondary">
-                Techniques Detected
-              </Typography>
-            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1 }}>
+              Techniques Detected:
+            </Typography>
             {metrics.techniques_detected.length > 0 ? (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                 {metrics.techniques_detected.map((technique, idx) => (
@@ -153,10 +150,17 @@ const SessionMetrics: React.FC<SessionMetricsProps> = ({ metrics }) => {
           <Box
             sx={{
               p: 1,
-              borderRadius: 1,
-              bgcolor: metrics.phase_appropriate ? 'success.light' : 'warning.light',
-              color: metrics.phase_appropriate ? 'success.dark' : 'warning.dark',
+              borderRadius: 0,
+              bgcolor: metrics.phase_appropriate 
+                ? 'rgba(16, 185, 129, 0.08)' 
+                : 'rgba(245, 158, 11, 0.08)',
+              color: metrics.phase_appropriate 
+                ? 'rgba(5, 150, 105, 0.9)' 
+                : 'rgba(217, 119, 6, 0.9)',
               textAlign: 'center',
+              border: metrics.phase_appropriate 
+                ? '1px solid rgba(16, 185, 129, 0.2)' 
+                : '1px solid rgba(245, 158, 11, 0.2)',
             }}
           >
             <Typography variant="caption" fontWeight={600}>
