@@ -13,6 +13,10 @@ import {
   Grow,
   Collapse,
   Badge,
+  Drawer,
+  Fab,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   Mic,
@@ -24,28 +28,39 @@ import {
   ExpandLess,
   ExpandMore,
   Article,
+  Shield,
+  Close,
+  Chat,
 } from '@mui/icons-material';
 import TranscriptDisplay from './TranscriptDisplay';
 import AlertDisplay from './AlertDisplay';
 import SessionMetrics from './SessionMetrics';
 import PathwayIndicator from './PathwayIndicator';
+import SessionPhaseIndicator from './SessionPhaseIndicator.tsx';
+import CitationsPanel from './CitationsPanel.tsx';
 import { useAudioRecorderWebSocket } from '../hooks/useAudioRecorderWebSocket';
 import { useTherapyAnalysis } from '../hooks/useTherapyAnalysis';
 import { formatDuration } from '../utils/timeUtils';
-import { SessionContext, Alert as IAlert } from '../types/types';
+import { SessionContext, Alert as IAlert, Citation } from '../types/types';
 import { testTranscriptData } from '../utils/testTranscript';
 
 const App: React.FC = () => {
+  const theme = useTheme();
+  const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+  const isWideScreen = useMediaQuery('(min-width:1024px)');
+  
   const [isRecording, setIsRecording] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [sessionDuration, setSessionDuration] = useState(0);
-  const [transcriptExpanded, setTranscriptExpanded] = useState(false);
+  const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [newTranscriptCount, setNewTranscriptCount] = useState(0);
   const [sessionContext, setSessionContext] = useState<SessionContext>({
     session_type: 'CBT',
     primary_concern: 'Anxiety',
     current_approach: 'Cognitive Behavioral Therapy',
   });
+  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   const [transcript, setTranscript] = useState<Array<{
     text: string;
@@ -54,18 +69,30 @@ const App: React.FC = () => {
   }>>([]);
 
   const [alerts, setAlerts] = useState<IAlert[]>([]);
+  const [citations, setCitations] = useState<Citation[]>([]);
   const [sessionMetrics, setSessionMetrics] = useState({
-    engagement_level: 0.0,  // Start with 0, not hardcoded 0.8
-    therapeutic_alliance: 'moderate' as 'strong' | 'moderate' | 'weak',  // Start neutral
+    engagement_level: 0.0,
+    therapeutic_alliance: 'moderate' as 'strong' | 'moderate' | 'weak',
     techniques_detected: [] as string[],
     emotional_state: 'unknown' as 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'unknown',
-    phase_appropriate: false,  // Start false until analyzed
+    phase_appropriate: false,
   });
   const [pathwayIndicators, setPathwayIndicators] = useState({
     current_approach_effectiveness: 'unknown' as 'effective' | 'struggling' | 'ineffective' | 'unknown',
     alternative_pathways: [] as string[],
     change_urgency: 'monitor' as 'none' | 'monitor' | 'consider' | 'recommended',
   });
+  const [pathwayGuidance, setPathwayGuidance] = useState<{
+    rationale?: string;
+    immediate_actions?: string[];
+    contraindications?: string[];
+    alternative_pathways?: Array<{
+      approach: string;
+      reason: string;
+      techniques: string[];
+    }>;
+  }>({});
+  const [riskLevel, setRiskLevel] = useState<'low' | 'moderate' | 'high' | null>(null);
   
   // Test mode state
   const [isTestMode, setIsTestMode] = useState(false);
@@ -82,7 +109,6 @@ const App: React.FC = () => {
   } = useAudioRecorderWebSocket({
     onTranscript: (newTranscript: any) => {
       if (newTranscript.is_interim) {
-        // For interim results, update or add as the last entry
         setTranscript(prev => {
           const newEntry = {
             text: newTranscript.transcript || '',
@@ -90,15 +116,12 @@ const App: React.FC = () => {
             is_interim: true,
           };
           
-          // If last entry is interim, replace it
           if (prev.length > 0 && prev[prev.length - 1].is_interim) {
             return [...prev.slice(0, -1), newEntry];
           }
-          // Otherwise add it
           return [...prev, newEntry];
         });
       } else {
-        // For final results, remove any interim and add final
         setTranscript(prev => {
           const filtered = prev.filter(entry => !entry.is_interim);
           return [...filtered, {
@@ -108,8 +131,7 @@ const App: React.FC = () => {
           }];
         });
         
-        // Increment new transcript count if panel is collapsed
-        if (!transcriptExpanded) {
+        if (!transcriptOpen) {
           setNewTranscriptCount(prev => prev + 1);
         }
       }
@@ -132,11 +154,12 @@ const App: React.FC = () => {
       console.log('[App] Received analysis:', {
         hasAlerts: !!analysis.alerts,
         hasMetrics: !!analysis.session_metrics,
-        hasPathway: !!analysis.pathway_indicators
+        hasPathway: !!analysis.pathway_indicators,
+        hasCitations: !!analysis.citations
       });
       
       if (analysis.alerts) {
-        setAlerts(prev => [...analysis.alerts, ...prev].slice(0, 5)); // Keep last 5 alerts
+        setAlerts(prev => [...analysis.alerts, ...prev].slice(0, 5));
       }
       if (analysis.session_metrics) {
         setSessionMetrics(prev => ({
@@ -150,15 +173,23 @@ const App: React.FC = () => {
           ...analysis.pathway_indicators
         }));
       }
+      if (analysis.citations) {
+        setCitations(analysis.citations);
+      }
     },
     onPathwayGuidance: (guidance) => {
       console.log('[App] Received pathway guidance:', guidance);
-      // Update pathway indicators based on guidance
       if (guidance) {
         setPathwayIndicators({
           current_approach_effectiveness: guidance.continue_current ? 'effective' : 'ineffective',
-          alternative_pathways: guidance.alternative_pathways || [],
+          alternative_pathways: guidance.alternative_pathways?.map((p: any) => p.approach) || [],
           change_urgency: guidance.continue_current ? 'none' : 'recommended',
+        });
+        setPathwayGuidance({
+          rationale: guidance.rationale,
+          immediate_actions: guidance.immediate_actions,
+          contraindications: guidance.contraindications,
+          alternative_pathways: guidance.alternative_pathways,
         });
       }
     },
@@ -221,14 +252,12 @@ const App: React.FC = () => {
       sessionDuration
     });
     
-    // Only run analysis if we're recording
     if (!isRecording) {
       console.log('[Analysis Effect] Not recording, skipping analysis setup');
       return;
     }
 
-    // For test mode, wait a bit for initial transcript entries
-    const startupDelay = isTestMode ? 4000 : 2000; // Wait 4 seconds in test mode for transcript to populate
+    const startupDelay = isTestMode ? 4000 : 2000;
     
     console.log(`[Analysis Effect] Waiting ${startupDelay}ms before starting analysis...`);
     
@@ -237,22 +266,17 @@ const App: React.FC = () => {
     const startupTimer = setTimeout(() => {
       console.log('[Analysis Effect] Starting analysis intervals after delay');
       
-      // Check if we have transcript entries now
       if (transcript.length === 0) {
         console.log('[Analysis Effect] Still no transcript after delay, but starting intervals anyway');
       }
 
-      // Different intervals for different analysis types
-      const SAFETY_INTERVAL = 5000;  // 5 seconds for critical alerts
-      const METRICS_INTERVAL = 10000; // 10 seconds for metrics
-      const PATHWAY_INTERVAL = 15000; // 15 seconds for pathway evaluation
+      const SAFETY_INTERVAL = 5000;
+      const METRICS_INTERVAL = 10000;
+      const PATHWAY_INTERVAL = 15000;
 
-      // Triple Stream Analysis Architecture
-      
-      // Stream 1: Safety Analysis (Fast, 5s interval)
       intervalRefs.safety = setInterval(() => {
         console.log(`[Safety Stream] ⏰ Interval fired at ${new Date().toISOString()}`);
-        const currentTranscript = transcriptRef.current.slice(-5); // Use ref to get current transcript
+        const currentTranscript = transcriptRef.current.slice(-5);
         console.log(`[Safety Stream] Current transcript length: ${transcriptRef.current.length}, analyzing last 5: ${currentTranscript.length}`);
         
         if (currentTranscript.length > 0) {
@@ -268,7 +292,6 @@ const App: React.FC = () => {
             console.log(`[Safety Stream] 🚨 TRIGGERING SAFETY ANALYSIS`);
             console.log(`[Safety Stream] Formatted entries:`, formattedTranscript);
             
-            // Call with current ref values
             analyzeSegmentRef.current(
               formattedTranscript, 
               sessionContextRef.current, 
@@ -282,13 +305,12 @@ const App: React.FC = () => {
         }
       }, isTestMode ? 3000 : SAFETY_INTERVAL);
 
-      // Stream 2: Metrics Analysis (Moderate, 10s interval)
       intervalRefs.metrics = setInterval(() => {
         console.log(`[Metrics Stream] ⏰ Interval fired at ${new Date().toISOString()}`);
-        const currentTranscript = transcriptRef.current.slice(-10); // Use ref to get current transcript
+        const currentTranscript = transcriptRef.current.slice(-10);
         console.log(`[Metrics Stream] Analyzing last 10 entries: ${currentTranscript.length}`);
         
-        if (currentTranscript.length >= 3) { // Need at least 3 entries for meaningful metrics
+        if (currentTranscript.length >= 3) {
           const formattedTranscript = currentTranscript
             .filter(t => !t.is_interim)
             .map(t => ({
@@ -300,7 +322,6 @@ const App: React.FC = () => {
           if (formattedTranscript.length >= 3) {
             console.log(`[Metrics Stream] 📊 TRIGGERING METRICS ANALYSIS`);
             
-            // Call with current ref values
             analyzeSegmentRef.current(
               formattedTranscript, 
               sessionContextRef.current, 
@@ -312,7 +333,6 @@ const App: React.FC = () => {
         }
       }, isTestMode ? 5000 : METRICS_INTERVAL);
 
-      // Stream 3: Pathway Evaluation (Complex, conditional)
       intervalRefs.pathway = setInterval(() => {
         console.log(`[Pathway Stream] ⏰ Checking pathway conditions...`);
         const currentMetrics = sessionMetricsRef.current;
@@ -352,7 +372,7 @@ const App: React.FC = () => {
       if (intervalRefs.metrics) clearInterval(intervalRefs.metrics);
       if (intervalRefs.pathway) clearInterval(intervalRefs.pathway);
     };
-  }, [isRecording, isTestMode]); // Removed transcript.length and functions from dependencies
+  }, [isRecording, isTestMode]);
 
   const handleStartSession = async () => {
     setSessionStartTime(new Date());
@@ -363,26 +383,21 @@ const App: React.FC = () => {
   const handleStopSession = async () => {
     setIsRecording(false);
     await stopRecording();
-    // Stop test mode if running
     if (isTestMode) {
       stopTestMode();
     }
-    // Generate session summary
   };
 
-  // Load test transcript progressively
   const loadTestTranscript = () => {
     setIsTestMode(true);
-    setIsRecording(true); // Simulate recording state
+    setIsRecording(true);
     setSessionStartTime(new Date());
-    setTranscript([]); // Clear existing transcript
+    setTranscript([]);
     setTestTranscriptIndex(0);
     
-    // Start loading transcript entries progressively
     testIntervalRef.current = setInterval(() => {
       setTestTranscriptIndex(prevIndex => {
         if (prevIndex >= testTranscriptData.length) {
-          // All entries loaded
           if (testIntervalRef.current) {
             clearInterval(testIntervalRef.current);
             testIntervalRef.current = null;
@@ -391,7 +406,6 @@ const App: React.FC = () => {
           return prevIndex;
         }
         
-        // Add the next transcript entry
         const entry = testTranscriptData[prevIndex];
         const formattedEntry = {
           text: entry.speaker ? `${entry.speaker}: ${entry.text}` : entry.text,
@@ -401,14 +415,13 @@ const App: React.FC = () => {
         
         setTranscript(prev => [...prev, formattedEntry]);
         
-        // Increment new transcript count if panel is collapsed
-        if (!transcriptExpanded) {
+        if (!transcriptOpen) {
           setNewTranscriptCount(prev => prev + 1);
         }
         
         return prevIndex + 1;
       });
-    }, 2000); // Add new entry every 2 seconds
+    }, 2000);
   };
 
   const stopTestMode = () => {
@@ -424,10 +437,12 @@ const App: React.FC = () => {
     setAlerts(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleToggleTranscript = () => {
-    setTranscriptExpanded(!transcriptExpanded);
-    if (!transcriptExpanded) {
-      setNewTranscriptCount(0); // Reset count when opening
+  const getRiskIndicatorColor = () => {
+    switch (riskLevel) {
+      case 'low': return '#10b981';
+      case 'moderate': return '#f59e0b';
+      case 'high': return '#ef4444';
+      default: return '#9ca3af';
     }
   };
 
@@ -502,6 +517,28 @@ const App: React.FC = () => {
             >
               {formatDuration(sessionDuration)}
             </Typography>
+
+            {riskLevel && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Shield 
+                  sx={{ 
+                    fontSize: 24,
+                    color: getRiskIndicatorColor(),
+                    filter: `drop-shadow(0 0 8px ${getRiskIndicatorColor()}40)`,
+                  }} 
+                />
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: 'white',
+                    fontWeight: 600,
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {riskLevel} Risk
+                </Typography>
+              </Box>
+            )}
           </Box>
 
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -586,100 +623,24 @@ const App: React.FC = () => {
         display: 'flex', 
         gap: 3, 
         p: 3, 
-        overflow: 'auto',
-        paddingBottom: transcriptExpanded ? '360px' : '60px',
-        transition: 'padding-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        overflow: 'hidden', // Changed from 'auto' to 'hidden' to prevent main scrolling
+        pr: transcriptOpen ? '450px' : '100px', // Space for right sidebar
+        transition: 'padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       }}>
-        {/* Left Panel - Real-Time Guidance */}
-        <Paper 
-          sx={{ 
-            flex: '1 1 50%', 
-            p: 3, 
-            display: 'flex',
-            flexDirection: 'column',
-            background: 'rgba(255, 255, 255, 0.85)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
-            '&:hover': {
-              boxShadow: '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
-            },
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
-        >
-          <Typography 
-            variant="h5" 
-            gutterBottom 
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 1.5,
-              color: 'var(--primary)',
-              fontWeight: 600,
-              mb: 3,
-            }}
-          >
-            <Info sx={{ 
-              fontSize: 32,
-              background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }} /> 
-            Real-Time Guidance
-          </Typography>
-          <Box sx={{ 
-            flex: 1, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: 2,
-            overflow: 'auto',
-          }}>
-            {alerts.length === 0 ? (
-              <Box sx={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textAlign: 'center',
-                py: 6,
-                px: 3,
-                background: 'rgba(250, 251, 253, 0.5)',
-                borderRadius: '12px',
-                border: '1px dashed rgba(196, 199, 205, 0.3)',
-              }}>
-                <Typography 
-                  variant="body1" 
-                  color="text.secondary"
-                  sx={{ fontWeight: 500 }}
-                >
-                  Guidance will appear here during the session
-                </Typography>
-              </Box>
-            ) : (
-              alerts.map((alert, index) => (
-                <AlertDisplay
-                  key={`${alert.timestamp}-${index}`}
-                  alert={alert}
-                  onDismiss={() => handleDismissAlert(index)}
-                />
-              ))
-            )}
-          </Box>
-        </Paper>
-
-        {/* Right Panel - Session Metrics and Pathway */}
+        {/* Content Grid - Responsive for tablets */}
         <Box sx={{ 
-          flex: '1 1 50%', 
-          display: 'flex', 
-          flexDirection: 'column', 
+          flex: 1,
+          display: 'grid',
           gap: 3,
+          gridTemplateColumns: isWideScreen ? 'minmax(400px, 2fr) minmax(300px, 1.5fr) minmax(300px, 1.5fr)' : '1fr',
+          gridAutoRows: 'min-content',
         }}>
-          {/* Session Metrics */}
+          {/* Left Panel - Real-Time Guidance */}
           <Paper 
             sx={{ 
-              flex: 1,
-              p: 3,
+              p: 3, 
+              display: 'flex',
+              flexDirection: 'column',
               background: 'rgba(255, 255, 255, 0.85)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
@@ -689,6 +650,9 @@ const App: React.FC = () => {
                 boxShadow: '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
               },
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              gridRow: isWideScreen ? 'span 2' : 'auto',
+              maxHeight: 'calc(100vh - 200px)',
+              overflow: 'hidden',
             }}
           >
             <Typography 
@@ -701,175 +665,373 @@ const App: React.FC = () => {
                 color: 'var(--primary)',
                 fontWeight: 600,
                 mb: 3,
+                flexShrink: 0,
               }}
             >
-              <TrendingUp sx={{ 
+              <Info sx={{ 
                 fontSize: 32,
                 background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }} /> 
-              Session Metrics
+              Real-Time Guidance
             </Typography>
-            <SessionMetrics metrics={sessionMetrics} />
+            <Box sx={{ 
+              flex: 1, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: 2,
+              overflow: 'auto',
+              minHeight: 0,
+              // Custom scrollbar
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: 'rgba(0, 0, 0, 0.05)',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: 'rgba(11, 87, 208, 0.2)',
+                borderRadius: '4px',
+                '&:hover': {
+                  background: 'rgba(11, 87, 208, 0.3)',
+                },
+              },
+            }}>
+              {alerts.length === 0 ? (
+                <Box sx={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  py: 6,
+                  px: 3,
+                  background: 'rgba(250, 251, 253, 0.5)',
+                  borderRadius: '12px',
+                  border: '1px dashed rgba(196, 199, 205, 0.3)',
+                }}>
+                  <Typography 
+                    variant="body1" 
+                    color="text.secondary"
+                    sx={{ fontWeight: 500 }}
+                  >
+                    Guidance will appear here during the session
+                  </Typography>
+                </Box>
+              ) : (
+                <>
+                  {/* Current Alert */}
+                  <Box sx={{ flexShrink: 0 }}>
+                    <AlertDisplay
+                      key={`${alerts[0].timestamp}-0`}
+                      alert={alerts[0]}
+                      onDismiss={() => handleDismissAlert(0)}
+                    />
+                  </Box>
+
+                  {/* History Section */}
+                  {alerts.length > 1 && (
+                    <Box sx={{ 
+                      display: 'flex',
+                      flexDirection: 'column',
+                      flexShrink: 0,
+                    }}>
+                      {/* History Toggle Button */}
+                      <Button
+                        onClick={() => setHistoryExpanded(!historyExpanded)}
+                        startIcon={historyExpanded ? <ExpandLess /> : <ExpandMore />}
+                        sx={{
+                          justifyContent: 'flex-start',
+                          textTransform: 'none',
+                          color: 'text.secondary',
+                          fontWeight: 500,
+                          mt: 2,
+                          mb: 1,
+                          flexShrink: 0,
+                          '&:hover': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                          },
+                        }}
+                      >
+                        {historyExpanded ? 'Hide' : 'See'} history ({alerts.length - 1} previous {alerts.length - 1 === 1 ? 'alert' : 'alerts'})
+                      </Button>
+
+                      {/* History Content */}
+                      <Collapse in={historyExpanded} timeout="auto">
+                        <Box sx={{ 
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 2,
+                          pb: 2,
+                        }}>
+                          {alerts.slice(1).map((alert, index) => (
+                            <Box
+                              key={`${alert.timestamp}-${index + 1}`}
+                              sx={{
+                                opacity: 0.85,
+                                transition: 'opacity 0.2s',
+                                '&:hover': {
+                                  opacity: 1,
+                                },
+                              }}
+                            >
+                              <AlertDisplay
+                                alert={alert}
+                                onDismiss={() => handleDismissAlert(index + 1)}
+                              />
+                            </Box>
+                          ))}
+                        </Box>
+                      </Collapse>
+                    </Box>
+                  )}
+                </>
+              )}
+            </Box>
+            
+            {/* Citations Panel */}
+            {citations.length > 0 && (
+              <Box sx={{ flexShrink: 0, mt: 2 }}>
+                <CitationsPanel citations={citations} />
+              </Box>
+            )}
           </Paper>
 
-          {/* Pathway Indicator */}
-          <PathwayIndicator 
-            currentApproach={sessionContext.current_approach}
-            effectiveness={pathwayIndicators.current_approach_effectiveness || (sessionMetrics.phase_appropriate ? 'effective' : 'struggling')}
-          />
+          {/* Middle Panel - Session Metrics & Phase */}
+          <Paper 
+            sx={{ 
+              p: 3,
+              background: 'rgba(255, 255, 255, 0.85)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
+              '&:hover': {
+                boxShadow: '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 3,
+              maxHeight: 'calc(100vh - 200px)',
+              overflow: 'auto',
+              // Custom scrollbar
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: 'rgba(0, 0, 0, 0.05)',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: 'rgba(16, 185, 129, 0.2)',
+                borderRadius: '4px',
+                '&:hover': {
+                  background: 'rgba(16, 185, 129, 0.3)',
+                },
+              },
+            }}
+          >
+            <Box>
+              <Typography 
+                variant="h5" 
+                gutterBottom 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1.5,
+                  color: 'var(--primary)',
+                  fontWeight: 600,
+                  mb: 3,
+                }}
+              >
+                <TrendingUp sx={{ 
+                  fontSize: 32,
+                  background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }} /> 
+                Session Metrics
+              </Typography>
+              <SessionMetrics metrics={sessionMetrics} />
+            </Box>
+            
+            {/* Session Phase Indicator */}
+            <SessionPhaseIndicator duration={sessionDuration} />
+          </Paper>
+
+          {/* Right Panel - Current Pathway */}
+          <Box sx={{ 
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
+          }}>
+            <PathwayIndicator 
+              currentApproach={sessionContext.current_approach}
+              effectiveness={pathwayIndicators.current_approach_effectiveness || (sessionMetrics.phase_appropriate ? 'effective' : 'struggling')}
+              rationale={pathwayGuidance.rationale}
+              immediateActions={pathwayGuidance.immediate_actions}
+              contraindications={pathwayGuidance.contraindications}
+              alternativePathways={pathwayGuidance.alternative_pathways}
+            />
+          </Box>
         </Box>
       </Box>
 
-      {/* Bottom Transcript Panel - Collapsible */}
-      <Box
+      {/* Floating Transcript Toggle Button */}
+      <Fab
+        color="primary"
+        aria-label="transcript"
+        onClick={() => {
+          setTranscriptOpen(!transcriptOpen);
+          if (!transcriptOpen) {
+            setNewTranscriptCount(0);
+          }
+        }}
         sx={{
           position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1200,
+          bottom: 24,
+          right: 24,
+          background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+          '&:hover': {
+            background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
+            transform: 'scale(1.1)',
+          },
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
+          zIndex: 1201,
         }}
       >
-        {/* Transcript Header Bar */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            p: 2,
-            px: 3,
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 251, 253, 0.95) 100%)',
+        <Badge badgeContent={newTranscriptCount} color="error">
+          <Chat />
+        </Badge>
+      </Fab>
+
+      {/* Test Transcript Button */}
+      {!isRecording && !isTestMode && (
+        <Box sx={{ 
+          position: 'fixed', 
+          bottom: 24, 
+          left: 24,
+          zIndex: 1201,
+        }}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={loadTestTranscript}
+            sx={{ 
+              borderColor: '#0b57d0',
+              color: '#0b57d0',
+              '&:hover': {
+                borderColor: '#00639b',
+                backgroundColor: 'rgba(11, 87, 208, 0.04)',
+              },
+              fontWeight: 600,
+              borderRadius: '16px',
+              px: 2,
+              py: 0.5,
+            }}
+          >
+            Load Test Transcript
+          </Button>
+        </Box>
+      )}
+
+      {/* Right Sidebar - Transcript */}
+      <Drawer
+        anchor="right"
+        open={transcriptOpen}
+        onClose={() => setTranscriptOpen(false)}
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: isDesktop ? 400 : 350,
+            p: 3,
+            pt: 10,
+            background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
-            borderTop: '1px solid rgba(255, 255, 255, 0.3)',
-            boxShadow: '0 -4px 20px -4px rgba(0, 0, 0, 0.08)',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(250, 251, 253, 1) 100%)',
-              boxShadow: '0 -4px 24px -4px rgba(0, 0, 0, 0.1)',
-            },
-          }}
-        >
-          <Box 
-            sx={{ display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer' }}
-            onClick={handleToggleTranscript}
+            boxShadow: '-4px 0 20px -4px rgba(0, 0, 0, 0.1)',
+          },
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1.5,
+              color: 'var(--primary)',
+              fontWeight: 600,
+            }}
           >
             <Article sx={{ 
-              fontSize: 24,
+              fontSize: 28,
               background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, color: 'var(--primary)' }}>
-              Live Transcript
-            </Typography>
-            {!transcriptExpanded && newTranscriptCount > 0 && (
-              <Badge 
-                badgeContent={newTranscriptCount} 
-                color="primary"
-                sx={{
-                  '& .MuiBadge-badge': {
-                    background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-                    color: 'white',
-                    fontWeight: 600,
-                    animation: 'pulse-soft 2s infinite',
-                  }
-                }}
-              />
-            )}
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {!isRecording && !isTestMode && (
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={loadTestTranscript}
-                sx={{ 
-                  borderColor: '#0b57d0',
-                  color: '#0b57d0',
-                  '&:hover': {
-                    borderColor: '#00639b',
-                    backgroundColor: 'rgba(11, 87, 208, 0.04)',
-                  },
-                  fontWeight: 600,
-                  borderRadius: '16px',
-                  px: 2,
-                  py: 0.5,
-                }}
-              >
-                Load Test Transcript
-              </Button>
-            )}
-            {(isRecording || isTestMode) && transcript.length > 0 && (
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => {
-                  console.log('[Manual Analysis] Triggering immediate analysis');
-                  const recentTranscript = transcript.slice(-10);
-                  if (recentTranscript.length > 0) {
-                    const formattedTranscript = recentTranscript
-                      .filter(t => !t.is_interim)
-                      .map(t => ({
-                        speaker: 'conversation',
-                        text: t.text,
-                        timestamp: t.timestamp
-                      }));
-                    
-                    if (formattedTranscript.length > 0) {
-                      analyzeSegment(formattedTranscript, sessionContext, Math.floor(sessionDuration / 60));
-                    }
-                  }
-                }}
-                sx={{ 
-                  borderColor: '#10b981',
-                  color: '#10b981',
-                  '&:hover': {
-                    borderColor: '#059669',
-                    backgroundColor: 'rgba(16, 185, 129, 0.04)',
-                  },
-                  fontWeight: 600,
-                  borderRadius: '16px',
-                  px: 2,
-                  py: 0.5,
-                }}
-              >
-                Analyze Now
-              </Button>
-            )}
-            <IconButton 
-              size="small"
-              onClick={handleToggleTranscript}
-              sx={{
-                color: 'var(--primary)',
-                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                transform: transcriptExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-              }}
-            >
-              <ExpandLess />
-            </IconButton>
-          </Box>
-        </Box>
-
-        {/* Collapsible Transcript Content */}
-        <Collapse in={transcriptExpanded} timeout={300}>
-          <Box
-            sx={{
-              height: 300,
-              overflow: 'auto',
-              p: 3,
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              borderTop: '1px solid rgba(0, 0, 0, 0.05)',
+            Live Transcript
+          </Typography>
+          <IconButton 
+            onClick={() => setTranscriptOpen(false)}
+            sx={{ 
+              color: 'var(--on-surface-variant)',
+              '&:hover': {
+                background: 'rgba(0, 0, 0, 0.04)',
+              },
             }}
           >
-            <TranscriptDisplay transcript={transcript} />
+            <Close />
+          </IconButton>
+        </Box>
+        
+        {(isRecording || isTestMode) && transcript.length > 0 && (
+          <Box sx={{ mb: 2 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => {
+                console.log('[Manual Analysis] Triggering immediate analysis');
+                const recentTranscript = transcript.slice(-10);
+                if (recentTranscript.length > 0) {
+                  const formattedTranscript = recentTranscript
+                    .filter(t => !t.is_interim)
+                    .map(t => ({
+                      speaker: 'conversation',
+                      text: t.text,
+                      timestamp: t.timestamp
+                    }));
+                  
+                  if (formattedTranscript.length > 0) {
+                    analyzeSegment(formattedTranscript, sessionContext, Math.floor(sessionDuration / 60));
+                  }
+                }
+              }}
+              sx={{ 
+                borderColor: '#10b981',
+                color: '#10b981',
+                '&:hover': {
+                  borderColor: '#059669',
+                  backgroundColor: 'rgba(16, 185, 129, 0.04)',
+                },
+                fontWeight: 600,
+                borderRadius: '16px',
+                px: 2,
+                py: 0.5,
+              }}
+            >
+              Analyze Now
+            </Button>
           </Box>
-        </Collapse>
-      </Box>
+        )}
+        
+        <Box sx={{ flex: 1, overflow: 'auto' }}>
+          <TranscriptDisplay transcript={transcript} />
+        </Box>
+      </Drawer>
     </Box>
   );
 };

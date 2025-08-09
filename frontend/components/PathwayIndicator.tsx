@@ -1,13 +1,29 @@
-import React from 'react';
-import { Box, Paper, Typography, Button, Chip } from '@mui/material';
-import { SwapHoriz, CheckCircle, Warning, TrendingDown } from '@mui/icons-material';
+import React, { useState } from 'react';
+import { Box, Paper, Typography, Button, Chip, Collapse, IconButton, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import { SwapHoriz, CheckCircle, Warning, TrendingDown, ExpandMore, Info, ErrorOutline, PlayCircle } from '@mui/icons-material';
 
 interface PathwayIndicatorProps {
   currentApproach: string;
   effectiveness: 'effective' | 'struggling' | 'ineffective' | 'unknown';
+  rationale?: string;
+  immediateActions?: string[];
+  contraindications?: string[];
+  alternativePathways?: Array<{
+    approach: string;
+    reason: string;
+    techniques: string[];
+  }>;
 }
 
-const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({ currentApproach, effectiveness }) => {
+const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({ 
+  currentApproach, 
+  effectiveness,
+  rationale,
+  immediateActions,
+  contraindications,
+  alternativePathways
+}) => {
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
   const getEffectivenessColor = () => {
     switch (effectiveness) {
       case 'effective':
@@ -108,29 +124,17 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({ currentApproach, ef
           }} /> 
           Current Pathway
         </Typography>
-        {effectiveness === 'ineffective' && (
-          <Button
+        {(immediateActions?.length || contraindications?.length || rationale) && (
+          <IconButton
             size="small"
-            variant="contained"
-            startIcon={<SwapHoriz />}
+            onClick={() => setDetailsExpanded(!detailsExpanded)}
             sx={{
-              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '20px',
-              textTransform: 'none',
-              fontWeight: 600,
-              px: 2,
-              '&:hover': {
-                background: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
-                transform: 'translateY(-2px)',
-                boxShadow: '0 8px 16px -4px rgba(239, 68, 68, 0.3)',
-              },
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              transform: detailsExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.3s ease',
             }}
           >
-            View Alternatives
-          </Button>
+            <ExpandMore />
+          </IconButton>
         )}
       </Box>
 
@@ -245,6 +249,122 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({ currentApproach, ef
           </Typography>
         </Box>
       )}
+
+      {/* Expanded Details Section */}
+      <Collapse in={detailsExpanded}>
+        <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(0, 0, 0, 0.08)' }}>
+          {rationale && (
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                <Info sx={{ fontSize: 16, color: 'text.secondary' }} />
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  RATIONALE
+                </Typography>
+              </Box>
+              <Typography variant="body2" color="text.primary">
+                {rationale}
+              </Typography>
+            </Box>
+          )}
+
+          {immediateActions && immediateActions.length > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                <PlayCircle sx={{ fontSize: 16, color: 'success.main' }} />
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  IMMEDIATE ACTIONS
+                </Typography>
+              </Box>
+              <List dense sx={{ p: 0 }}>
+                {immediateActions.map((action, idx) => (
+                  <ListItem key={idx} sx={{ px: 0, py: 0.5 }}>
+                    <ListItemIcon sx={{ minWidth: 24 }}>
+                      <CheckCircle sx={{ fontSize: 14, color: 'success.main' }} />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={action} 
+                      primaryTypographyProps={{ 
+                        variant: 'body2',
+                        color: 'text.primary'
+                      }} 
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          )}
+
+          {contraindications && contraindications.length > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                <ErrorOutline sx={{ fontSize: 16, color: 'error.main' }} />
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  CONTRAINDICATIONS
+                </Typography>
+              </Box>
+              <List dense sx={{ p: 0 }}>
+                {contraindications.map((contraindication, idx) => (
+                  <ListItem key={idx} sx={{ px: 0, py: 0.5 }}>
+                    <ListItemIcon sx={{ minWidth: 24 }}>
+                      <Warning sx={{ fontSize: 14, color: 'error.main' }} />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={contraindication} 
+                      primaryTypographyProps={{ 
+                        variant: 'body2',
+                        color: 'text.primary'
+                      }} 
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          )}
+
+          {alternativePathways && alternativePathways.length > 0 && (
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                <SwapHoriz sx={{ fontSize: 16, color: 'warning.main' }} />
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  ALTERNATIVE PATHWAYS
+                </Typography>
+              </Box>
+              {alternativePathways.map((pathway, idx) => (
+                <Box 
+                  key={idx} 
+                  sx={{ 
+                    p: 1.5, 
+                    mb: 1, 
+                    background: 'rgba(250, 251, 253, 0.5)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(196, 199, 205, 0.2)',
+                  }}
+                >
+                  <Typography variant="body2" fontWeight={600} color="text.primary">
+                    {pathway.approach}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {pathway.reason}
+                  </Typography>
+                  {pathway.techniques.length > 0 && (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                      {pathway.techniques.map((technique, tIdx) => (
+                        <Chip
+                          key={tIdx}
+                          label={technique}
+                          size="small"
+                          variant="outlined"
+                          sx={{ fontSize: '0.7rem', height: 20 }}
+                        />
+                      ))}
+                    </Box>
+                  )}
+                </Box>
+              ))}
+            </Box>
+          )}
+        </Box>
+      </Collapse>
     </Paper>
   );
 };

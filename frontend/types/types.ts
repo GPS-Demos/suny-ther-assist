@@ -34,12 +34,26 @@ export interface PathwayIndicators {
   change_urgency: 'none' | 'monitor' | 'consider' | 'recommended';
 }
 
+export interface Citation {
+  citation_number: number;
+  source?: {
+    title?: string;
+    uri?: string;
+    excerpt?: string;
+    pages?: {
+      first: number;
+      last: number;
+    };
+  };
+}
+
 export interface AnalysisResponse {
   alerts: Alert[];
   session_metrics: SessionMetrics;
   pathway_indicators: PathwayIndicators;
   timestamp: string;
   session_phase: string;
+  citations?: Citation[];
 }
 
 export interface TranscriptEntry {

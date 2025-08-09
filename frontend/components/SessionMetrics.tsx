@@ -87,14 +87,19 @@ const SessionMetrics: React.FC<SessionMetricsProps> = ({ metrics }) => {
             <Groups fontSize="small" />
             <Box>
               <Typography variant="caption" color="text.secondary">
-                Alliance
+                Therapeutic Alliance
               </Typography>
-              <Chip
-                label={metrics.therapeutic_alliance}
-                size="small"
-                color={getAllianceColor() as any}
-                sx={{ fontWeight: 600 }}
-              />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                <Chip
+                  label={metrics.therapeutic_alliance.charAt(0).toUpperCase() + metrics.therapeutic_alliance.slice(1)}
+                  size="small"
+                  color={getAllianceColor() as any}
+                  sx={{ 
+                    fontWeight: 600,
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </Box>
             </Box>
           </Box>
         </Grid>
