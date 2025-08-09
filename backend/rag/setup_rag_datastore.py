@@ -138,29 +138,85 @@ def upload_corpus_to_gcs(bucket_name):
     client = storage.Client(project=PROJECT_ID)
     bucket = client.bucket(bucket_name)
     
-    corpus_dir = "backend/rag/corpus"
+    corpus_dir = "corpus"  # Since we run from backend/rag
     
     if not os.path.exists(corpus_dir):
         print(f"❌ Corpus directory '{corpus_dir}' not found!")
+        print(f"   Current directory: {os.getcwd()}")
+        print(f"   Available directories: {os.listdir('.')}")
         return False
     
     files_uploaded = 0
+    files_failed = 0
     for filename in os.listdir(corpus_dir):
         if filename.endswith(('.pdf', '.docx', '.txt')):
             local_path = os.path.join(corpus_dir, filename)
             blob_name = f"corpus/{filename}"
             blob = bucket.blob(blob_name)
             
-            print(f"Uploading {filename}...")
-            blob.upload_from_filename(local_path)
-            files_uploaded += 1
+            try:
+                print(f"📤 Uploading {filename}...")
+                blob.upload_from_filename(local_path)
+                files_uploaded += 1
+                print(f"  ✅ Successfully uploaded {filename}")
+            except Exception as e:
+                print(f"  ❌ Failed to upload {filename}: {e}")
+                files_failed += 1
     
-    print(f"✅ Uploaded {files_uploaded} files to GCS bucket")
-    return True
+    print(f"\n📊 Upload Summary:")
+    print(f"  ✅ Successfully uploaded: {files_uploaded} files")
+    if files_failed > 0:
+        print(f"  ❌ Failed to upload: {files_failed} files")
+    return files_uploaded > 0
 
 def import_documents_to_datastore(bucket_name):
     """Import documents from GCS to the datastore."""
+    from google.cloud import storage
     
+    # First, create a metadata JSONL file for document import
+    client = storage.Client(project=PROJECT_ID)
+    bucket = client.bucket(bucket_name)
+    
+    # List all corpus files
+    corpus_files = []
+    for blob in bucket.list_blobs(prefix="corpus/"):
+        if blob.name.endswith(('.pdf', '.docx', '.txt')):
+            corpus_files.append(blob.name)
+    
+    if not corpus_files:
+        print("❌ No corpus files found in bucket!")
+        return None
+    
+    # Create metadata for each document
+    metadata_lines = []
+    for file_path in corpus_files:
+        filename = file_path.split('/')[-1]
+        doc_id = filename.replace('.', '_').replace(' ', '_')
+        
+        metadata = {
+            "id": doc_id,
+            "structData": {
+                "title": filename,
+                "content_uri": f"gs://{bucket_name}/{file_path}",
+                "source": "EBT Manual",
+                "type": "therapy_manual"
+            },
+            "content": {
+                "uri": f"gs://{bucket_name}/{file_path}",
+                "mimeType": "application/pdf" if file_path.endswith('.pdf') else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            }
+        }
+        
+        import json
+        metadata_lines.append(json.dumps(metadata))
+    
+    # Upload metadata file
+    metadata_content = '\n'.join(metadata_lines)
+    metadata_blob = bucket.blob("import_metadata.jsonl")
+    metadata_blob.upload_from_string(metadata_content)
+    print(f"✅ Created metadata file with {len(corpus_files)} documents")
+    
+    # Now import using the metadata file
     url = f"https://discoveryengine.googleapis.com/v1/projects/{PROJECT_ID}/locations/{LOCATION}/collections/default_collection/dataStores/{DATASTORE_ID}/branches/0/documents:import"
     
     headers = {
@@ -169,17 +225,18 @@ def import_documents_to_datastore(bucket_name):
         "X-Goog-User-Project": PROJECT_ID
     }
     
-    # Configure import from GCS
+    # Configure import from GCS using metadata file
     data = {
         "gcsSource": {
-            "inputUris": [f"gs://{bucket_name}/corpus/**"],
+            "inputUris": [f"gs://{bucket_name}/import_metadata.jsonl"],
             "dataSchema": "document"
         },
         "reconciliationMode": "INCREMENTAL"
-        # Don't use autoGenerateIds with document schema
     }
     
-    print(f"Importing documents from GCS to datastore...")
+    print(f"Importing {len(corpus_files)} documents from GCS to datastore...")
+    for file in corpus_files:
+        print(f"  - {file}")
     
     response = requests.post(url, headers=headers, json=data)
     
@@ -201,6 +258,7 @@ def wait_for_operation(operation_name, timeout=600):
     }
     
     start_time = time.time()
+    elapsed = 0
     
     while time.time() - start_time < timeout:
         url = f"https://discoveryengine.googleapis.com/v1/{operation_name}"
@@ -210,19 +268,43 @@ def wait_for_operation(operation_name, timeout=600):
             operation = response.json()
             if operation.get("done"):
                 if "error" in operation:
-                    print(f"❌ Operation failed: {operation['error']}")
+                    error_detail = operation.get('error', {})
+                    print(f"\n❌❌❌ IMPORT OPERATION FAILED ❌❌❌")
+                    print(f"Error Code: {error_detail.get('code', 'Unknown')}")
+                    print(f"Error Message: {error_detail.get('message', 'No message provided')}")
+                    if 'details' in error_detail:
+                        print(f"Error Details: {json.dumps(error_detail['details'], indent=2)}")
+                    print("❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌❌")
                     return False
                 else:
-                    print(f"✅ Operation completed successfully!")
+                    # Check for partial failures in metadata
+                    metadata = operation.get('metadata', {})
+                    if metadata.get('successCount'):
+                        print(f"\n✅ Operation completed!")
+                        print(f"  📊 Import Statistics:")
+                        print(f"    - Success Count: {metadata.get('successCount', 0)}")
+                        print(f"    - Failure Count: {metadata.get('failureCount', 0)}")
+                        print(f"    - Update Time: {metadata.get('updateTime', 'N/A')}")
+                        
+                        # Check for any partial failures
+                        if metadata.get('failureCount', 0) > 0:
+                            print(f"\n  ⚠️  Warning: {metadata.get('failureCount')} documents failed to import")
+                            print(f"     Check the Google Cloud Console for details")
+                    else:
+                        print(f"✅ Operation completed successfully!")
                     return True
         else:
             print(f"❌ Error checking operation status: {response.status_code}")
+            print(f"   Response: {response.text}")
             return False
         
-        print("⏳ Waiting for operation to complete...")
+        elapsed = int(time.time() - start_time)
+        print(f"⏳ Waiting for operation to complete... ({elapsed}/{timeout} seconds)")
         time.sleep(10)
     
     print(f"❌ Operation timed out after {timeout} seconds")
+    print(f"   Operation name: {operation_name}")
+    print(f"   Check the Google Cloud Console for status")
     return False
 
 def update_datastore_path_in_code():
@@ -257,21 +339,33 @@ def main():
             if operation:
                 # Wait for import to complete
                 if wait_for_operation(operation['name']):
-                    print("\n✅ RAG datastore setup complete!")
+                    print("\n✅✅✅ RAG DATASTORE SETUP COMPLETE! ✅✅✅")
                     
                     # Update datastore path
                     datastore_path = update_datastore_path_in_code()
                     
                     print("\n📚 Your EBT corpus has been:")
-                    print("   - Uploaded to GCS")
-                    print("   - Imported into Vertex AI Search")
-                    print("   - Configured with layout-aware chunking (500 tokens per chunk)")
-                    print("   - Optimized for RAG with ancestor headings included")
+                    print("   ✅ Uploaded to GCS bucket")
+                    print("   ✅ Imported into Vertex AI Search")
+                    print("   ✅ Configured with layout-aware chunking (500 tokens per chunk)")
+                    print("   ✅ Optimized for RAG with ancestor headings included")
                     
-                    print("\nYou can now use this datastore for real-time therapy guidance!")
+                    print("\n🎯 Files in EBT corpus:")
+                    corpus_dir = "corpus"
+                    if os.path.exists(corpus_dir):
+                        for filename in os.listdir(corpus_dir):
+                            if filename.endswith(('.pdf', '.docx', '.txt')):
+                                print(f"   - {filename}")
+                    
+                    print("\n✨ You can now use this datastore for real-time therapy guidance!")
                 else:
-                    print("\n⚠️  Import operation failed or timed out")
-                    print("Check the operation status in the Google Cloud Console")
+                    print("\n❌❌❌ IMPORT OPERATION FAILED OR TIMED OUT ❌❌❌")
+                    print("⚠️  Troubleshooting steps:")
+                    print("   1. Check the operation status in Google Cloud Console:")
+                    print(f"      https://console.cloud.google.com/ai/search/datastores/{DATASTORE_ID}/documents")
+                    print("   2. Verify the GCS bucket has the files:")
+                    print(f"      https://console.cloud.google.com/storage/browser/{bucket_name}")
+                    print("   3. Check for API quotas or permissions issues")
         
     except Exception as e:
         print(f"\n❌ Setup failed: {str(e)}")

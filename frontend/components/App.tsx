@@ -55,16 +55,16 @@ const App: React.FC = () => {
 
   const [alerts, setAlerts] = useState<IAlert[]>([]);
   const [sessionMetrics, setSessionMetrics] = useState({
-    engagement_level: 0.8,
-    therapeutic_alliance: 'strong' as 'strong' | 'moderate' | 'weak',
+    engagement_level: 0.0,  // Start with 0, not hardcoded 0.8
+    therapeutic_alliance: 'moderate' as 'strong' | 'moderate' | 'weak',  // Start neutral
     techniques_detected: [] as string[],
-    emotional_state: 'calm' as 'calm' | 'anxious' | 'distressed' | 'dissociated',
-    phase_appropriate: true,
+    emotional_state: 'unknown' as 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'unknown',
+    phase_appropriate: false,  // Start false until analyzed
   });
   const [pathwayIndicators, setPathwayIndicators] = useState({
-    current_approach_effectiveness: 'effective' as 'effective' | 'struggling' | 'ineffective',
+    current_approach_effectiveness: 'unknown' as 'effective' | 'struggling' | 'ineffective' | 'unknown',
     alternative_pathways: [] as string[],
-    change_urgency: 'none' as 'none' | 'monitor' | 'consider' | 'recommended',
+    change_urgency: 'monitor' as 'none' | 'monitor' | 'consider' | 'recommended',
   });
   
   // Test mode state
@@ -175,57 +175,184 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [isRecording, sessionStartTime]);
 
+  // Store analysis functions in refs to avoid recreating intervals
+  const analyzeSegmentRef = useRef(analyzeSegment);
+  const getPathwayGuidanceRef = useRef(getPathwayGuidance);
+  
+  // Store transcript in ref to avoid stale closures
+  const transcriptRef = useRef(transcript);
+  const sessionMetricsRef = useRef(sessionMetrics);
+  const alertsRef = useRef(alerts);
+  const sessionContextRef = useRef(sessionContext);
+  const sessionDurationRef = useRef(sessionDuration);
+  
+  useEffect(() => {
+    analyzeSegmentRef.current = analyzeSegment;
+    getPathwayGuidanceRef.current = getPathwayGuidance;
+  }, [analyzeSegment, getPathwayGuidance]);
+  
+  // Update refs when state changes
+  useEffect(() => {
+    transcriptRef.current = transcript;
+  }, [transcript]);
+  
+  useEffect(() => {
+    sessionMetricsRef.current = sessionMetrics;
+  }, [sessionMetrics]);
+  
+  useEffect(() => {
+    alertsRef.current = alerts;
+  }, [alerts]);
+  
+  useEffect(() => {
+    sessionContextRef.current = sessionContext;
+  }, [sessionContext]);
+  
+  useEffect(() => {
+    sessionDurationRef.current = sessionDuration;
+  }, [sessionDuration]);
+
   // Analyze transcript segments for real-time feedback
   useEffect(() => {
-    if (!isRecording) return;
+    console.log(`[Analysis Effect] State:`, {
+      isRecording,
+      isTestMode,
+      transcriptLength: transcript.length,
+      sessionDuration
+    });
+    
+    // Only run analysis if we're recording
+    if (!isRecording) {
+      console.log('[Analysis Effect] Not recording, skipping analysis setup');
+      return;
+    }
 
-    // Different intervals for different analysis types
-    const SAFETY_INTERVAL = 5000;  // 5 seconds for critical alerts
-    const METRICS_INTERVAL = 10000; // 10 seconds for metrics
-    const PATHWAY_INTERVAL = 10000; // 10 seconds for pathway evaluation (quick for testing)
+    // For test mode, wait a bit for initial transcript entries
+    const startupDelay = isTestMode ? 4000 : 2000; // Wait 4 seconds in test mode for transcript to populate
+    
+    console.log(`[Analysis Effect] Waiting ${startupDelay}ms before starting analysis...`);
+    
+    let intervalRefs: { safety?: number; metrics?: number; pathway?: number } = {};
+    
+    const startupTimer = setTimeout(() => {
+      console.log('[Analysis Effect] Starting analysis intervals after delay');
+      
+      // Check if we have transcript entries now
+      if (transcript.length === 0) {
+        console.log('[Analysis Effect] Still no transcript after delay, but starting intervals anyway');
+      }
 
-    // Safety and metrics analysis (frequent)
-    const safetyInterval = setInterval(() => {
-      const recentTranscript = transcript.slice(-5); // Last 5 exchanges for quick analysis
-      if (recentTranscript.length > 0) {
-        const formattedTranscript = recentTranscript
-          .filter(t => !t.is_interim)
-          .map(t => ({
-            speaker: 'conversation',
-            text: t.text,
-            timestamp: t.timestamp
-          }));
+      // Different intervals for different analysis types
+      const SAFETY_INTERVAL = 5000;  // 5 seconds for critical alerts
+      const METRICS_INTERVAL = 10000; // 10 seconds for metrics
+      const PATHWAY_INTERVAL = 15000; // 15 seconds for pathway evaluation
+
+      // Triple Stream Analysis Architecture
+      
+      // Stream 1: Safety Analysis (Fast, 5s interval)
+      intervalRefs.safety = setInterval(() => {
+        console.log(`[Safety Stream] ⏰ Interval fired at ${new Date().toISOString()}`);
+        const currentTranscript = transcriptRef.current.slice(-5); // Use ref to get current transcript
+        console.log(`[Safety Stream] Current transcript length: ${transcriptRef.current.length}, analyzing last 5: ${currentTranscript.length}`);
         
-        if (formattedTranscript.length > 0) {
-          console.log(`[Analysis] Triggering safety/metrics analysis at ${new Date().toISOString()}`);
-          console.log(`[Analysis] Analyzing ${formattedTranscript.length} transcript entries`);
-          analyzeSegment(formattedTranscript, sessionContext, Math.floor(sessionDuration / 60));
+        if (currentTranscript.length > 0) {
+          const formattedTranscript = currentTranscript
+            .filter(t => !t.is_interim)
+            .map(t => ({
+              speaker: 'conversation',
+              text: t.text,
+              timestamp: t.timestamp
+            }));
+          
+          if (formattedTranscript.length > 0) {
+            console.log(`[Safety Stream] 🚨 TRIGGERING SAFETY ANALYSIS`);
+            console.log(`[Safety Stream] Formatted entries:`, formattedTranscript);
+            
+            // Call with current ref values
+            analyzeSegmentRef.current(
+              formattedTranscript, 
+              sessionContextRef.current, 
+              Math.floor(sessionDurationRef.current / 60)
+            );
+          } else {
+            console.log('[Safety Stream] All entries are interim, skipping');
+          }
+        } else {
+          console.log('[Safety Stream] No transcript entries available yet');
         }
-      }
-    }, isTestMode ? 3000 : SAFETY_INTERVAL); // Faster in test mode
+      }, isTestMode ? 3000 : SAFETY_INTERVAL);
 
-    // Pathway evaluation (less frequent, needs more context)
-    const pathwayInterval = setInterval(() => {
-      if (sessionMetrics.phase_appropriate === false || 
-          sessionMetrics.engagement_level < 0.5 ||
-          alerts.some(a => a.category === 'pathway_change')) {
-        console.log(`[Pathway] Triggering pathway evaluation due to metrics threshold`);
-        const extendedTranscript = transcript.slice(-20); // More context for pathway decisions
-        if (extendedTranscript.length > 0) {
-          getPathwayGuidance(
-            sessionContext.current_approach,
-            extendedTranscript.filter(t => !t.is_interim),
-            [sessionContext.primary_concern]
-          );
+      // Stream 2: Metrics Analysis (Moderate, 10s interval)
+      intervalRefs.metrics = setInterval(() => {
+        console.log(`[Metrics Stream] ⏰ Interval fired at ${new Date().toISOString()}`);
+        const currentTranscript = transcriptRef.current.slice(-10); // Use ref to get current transcript
+        console.log(`[Metrics Stream] Analyzing last 10 entries: ${currentTranscript.length}`);
+        
+        if (currentTranscript.length >= 3) { // Need at least 3 entries for meaningful metrics
+          const formattedTranscript = currentTranscript
+            .filter(t => !t.is_interim)
+            .map(t => ({
+              speaker: 'conversation',
+              text: t.text,
+              timestamp: t.timestamp
+            }));
+          
+          if (formattedTranscript.length >= 3) {
+            console.log(`[Metrics Stream] 📊 TRIGGERING METRICS ANALYSIS`);
+            
+            // Call with current ref values
+            analyzeSegmentRef.current(
+              formattedTranscript, 
+              sessionContextRef.current, 
+              Math.floor(sessionDurationRef.current / 60)
+            );
+          }
+        } else {
+          console.log('[Metrics Stream] Not enough entries for metrics analysis');
         }
-      }
-    }, isTestMode ? 10000 : PATHWAY_INTERVAL); // Faster in test mode
+      }, isTestMode ? 5000 : METRICS_INTERVAL);
+
+      // Stream 3: Pathway Evaluation (Complex, conditional)
+      intervalRefs.pathway = setInterval(() => {
+        console.log(`[Pathway Stream] ⏰ Checking pathway conditions...`);
+        const currentMetrics = sessionMetricsRef.current;
+        const currentAlerts = alertsRef.current;
+        const shouldEvaluate = currentMetrics.phase_appropriate === false || 
+                              currentMetrics.engagement_level < 0.5 ||
+                              currentAlerts.some(a => a.category === 'pathway_change');
+        
+        console.log(`[Pathway Stream] Evaluation needed: ${shouldEvaluate}`, {
+          phase_appropriate: currentMetrics.phase_appropriate,
+          engagement_level: currentMetrics.engagement_level,
+          has_pathway_alert: currentAlerts.some(a => a.category === 'pathway_change')
+        });
+        
+        if (shouldEvaluate && transcriptRef.current.length > 0) {
+          console.log(`[Pathway Stream] 🛤️ TRIGGERING PATHWAY EVALUATION`);
+          const extendedTranscript = transcriptRef.current.slice(-20)
+            .filter(t => !t.is_interim);
+          
+          if (extendedTranscript.length > 0) {
+            getPathwayGuidanceRef.current(
+              sessionContextRef.current.current_approach,
+              extendedTranscript,
+              [sessionContextRef.current.primary_concern]
+            );
+          }
+        }
+      }, isTestMode ? 8000 : PATHWAY_INTERVAL);
+
+      console.log('[Analysis Effect] All 3 analysis streams started');
+    }, startupDelay);
 
     return () => {
-      clearInterval(safetyInterval);
-      clearInterval(pathwayInterval);
+      console.log('[Analysis Effect] Cleaning up startup timer and intervals');
+      clearTimeout(startupTimer);
+      if (intervalRefs.safety) clearInterval(intervalRefs.safety);
+      if (intervalRefs.metrics) clearInterval(intervalRefs.metrics);
+      if (intervalRefs.pathway) clearInterval(intervalRefs.pathway);
     };
-  }, [isRecording, isTestMode, transcript, sessionContext, sessionDuration, sessionMetrics, alerts, analyzeSegment, getPathwayGuidance]);
+  }, [isRecording, isTestMode]); // Removed transcript.length and functions from dependencies
 
   const handleStartSession = async () => {
     setSessionStartTime(new Date());

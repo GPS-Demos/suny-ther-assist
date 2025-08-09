@@ -15,7 +15,7 @@ interface SessionMetricsProps {
     engagement_level: number;
     therapeutic_alliance: 'weak' | 'moderate' | 'strong';
     techniques_detected: string[];
-    emotional_state: 'calm' | 'anxious' | 'distressed' | 'dissociated';
+    emotional_state: 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'unknown';
     phase_appropriate: boolean;
   };
 }
@@ -31,8 +31,10 @@ const SessionMetrics: React.FC<SessionMetricsProps> = ({ metrics }) => {
         return <MoodBad color="error" />;
       case 'dissociated':
         return <SentimentVeryDissatisfied color="error" />;
+      case 'unknown':
+        return <SentimentSatisfied color="disabled" />;
       default:
-        return <SentimentSatisfied />;
+        return <SentimentSatisfied color="disabled" />;
     }
   };
 

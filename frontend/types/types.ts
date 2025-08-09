@@ -24,12 +24,12 @@ export interface SessionMetrics {
   engagement_level: number;
   therapeutic_alliance: 'weak' | 'moderate' | 'strong';
   techniques_detected: string[];
-  emotional_state: 'calm' | 'anxious' | 'distressed' | 'dissociated';
+  emotional_state: 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'unknown';
   phase_appropriate: boolean;
 }
 
 export interface PathwayIndicators {
-  current_approach_effectiveness: 'effective' | 'struggling' | 'ineffective';
+  current_approach_effectiveness: 'effective' | 'struggling' | 'ineffective' | 'unknown';
   alternative_pathways: string[];
   change_urgency: 'none' | 'monitor' | 'consider' | 'recommended';
 }

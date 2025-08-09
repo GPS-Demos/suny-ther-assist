@@ -4,7 +4,7 @@ import { SwapHoriz, CheckCircle, Warning, TrendingDown } from '@mui/icons-materi
 
 interface PathwayIndicatorProps {
   currentApproach: string;
-  effectiveness: 'effective' | 'struggling' | 'ineffective';
+  effectiveness: 'effective' | 'struggling' | 'ineffective' | 'unknown';
 }
 
 const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({ currentApproach, effectiveness }) => {
@@ -16,6 +16,8 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({ currentApproach, ef
         return 'warning';
       case 'ineffective':
         return 'error';
+      case 'unknown':
+        return 'default';
       default:
         return 'default';
     }
@@ -29,6 +31,8 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({ currentApproach, ef
         return <Warning />;
       case 'ineffective':
         return <TrendingDown />;
+      case 'unknown':
+        return null;
       default:
         return null;
     }
@@ -42,6 +46,8 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({ currentApproach, ef
         return 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
       case 'ineffective':
         return 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+      case 'unknown':
+        return 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
       default:
         return 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
     }
@@ -55,6 +61,8 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({ currentApproach, ef
         return '0 0 20px rgba(245, 158, 11, 0.15)';
       case 'ineffective':
         return '0 0 30px rgba(239, 68, 68, 0.2)';
+      case 'unknown':
+        return 'none';
       default:
         return 'none';
     }
@@ -180,7 +188,7 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({ currentApproach, ef
         />
       </Box>
 
-      {effectiveness !== 'effective' && (
+      {effectiveness !== 'effective' && effectiveness !== 'unknown' && (
         <Box
           sx={{
             mt: 2.5,
