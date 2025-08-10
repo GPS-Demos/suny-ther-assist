@@ -49,13 +49,6 @@ TRANSCRIPT_RAG_TOOL = types.Tool(
     )
 )
 
-# Alert level definitions
-ALERT_LEVELS = {
-    "critical": {"priority": 1, "color": "red", "icon": "🔴"},
-    "suggestion": {"priority": 2, "color": "yellow", "icon": "🟡"},
-    "info": {"priority": 3, "color": "green", "icon": "🟢"}
-}
-
 # Therapy phase definitions
 THERAPY_PHASES = {
     "beginning": {"duration_minutes": 10, "focus": "rapport building, agenda setting"},
@@ -116,8 +109,9 @@ def handle_segment_analysis(request_json, headers):
         transcript_segment = request_json.get('transcript_segment', [])
         session_context = request_json.get('session_context', {})
         session_duration = request_json.get('session_duration_minutes', 0)
+        is_realtime = request_json.get('is_realtime', False)  # Flag for fast real-time analysis
         
-        logging.info(f"Segment analysis request - duration: {session_duration} minutes, segments: {len(transcript_segment)}")
+        logging.info(f"Segment analysis request - duration: {session_duration} minutes, segments: {len(transcript_segment)}, realtime: {is_realtime}")
         
         if not transcript_segment:
             return (jsonify({'error': 'Missing transcript_segment'}), 400, headers)
@@ -128,8 +122,44 @@ def handle_segment_analysis(request_json, headers):
         # Format transcript
         transcript_text = format_transcript_segment(transcript_segment)
         
-        # Create comprehensive analysis prompt
-        analysis_prompt = f"""<thinking>
+        # Log timing for diagnostics
+        analysis_start = datetime.now()
+        logging.info(f"[TIMING] Analysis started at: {analysis_start.isoformat()}")
+        
+        # Choose analysis mode based on is_realtime flag
+        if is_realtime:
+            # FAST PATH: Real-time guidance - both safety and helpful suggestions
+            analysis_prompt = f"""Analyze this therapy segment for real-time guidance.
+
+TRANSCRIPT (last 5 minutes):
+{transcript_text}
+
+Provide guidance based on timing priority:
+1. NOW (immediate intervention needed): dissociation, panic, suicidal ideation, self-harm, severe distress
+2. PAUSE (wait for natural pause): therapeutic opportunities, technique suggestions, process observations  
+3. INFO (informational only): positive moments, progress indicators, engagement observations
+
+Return the MOST RELEVANT guidance (max 1-2 alerts). Format:
+{{
+    "alerts": [{{
+        "timing": "now|pause|info",
+        "category": "safety|technique|pathway_change",
+        "title": "Brief descriptive title",
+        "message": "Specific action or observation (1-3 sentences max)",
+        "evidence": ["relevant quote if applicable"],
+        "recommendation": "Action to take if applicable"
+    }}],
+    "session_metrics": {{
+        "engagement_level": 0.0-1.0,
+        "therapeutic_alliance": "weak|moderate|strong",
+        "emotional_state": "calm|anxious|distressed|dissociated|engaged"
+    }}
+}}
+
+Prioritize actionable guidance. Even routine moments can have helpful suggestions."""
+        else:
+            # COMPREHENSIVE PATH: Full analysis with RAG
+            analysis_prompt = f"""<thinking>
 Analyze this therapy session segment step by step:
 1. Check for any safety concerns (dissociation, panic, suicidal ideation)
 2. Evaluate therapeutic process metrics (engagement, alliance, techniques)
@@ -161,13 +191,12 @@ Provide analysis in this JSON format:
 {{
     "alerts": [
         {{
-            "level": "critical|suggestion|info",
-            "category": "safety|technique|pathway_change|engagement",
+            "timing": "now|pause|info",
+            "category": "safety|technique|pathway_change",
             "title": "Brief alert title",
             "message": "Detailed guidance message",
             "evidence": ["Direct quote from transcript"],
-            "recommendation": "Specific action to take",
-            "urgency": "immediate|next_pause|end_of_topic"
+            "recommendation": "Specific action to take"
         }}
     ],
     "session_metrics": {{
@@ -194,45 +223,77 @@ Focus on clinically actionable insights. Only surface critical information that 
         
         logging.info(f"Analysis prompt prepared - length: {len(analysis_prompt)} characters")
         
-        # Configure generation with variable thinking budget based on complexity
-        thinking_budget = 8192  # Moderate complexity for balanced analysis
-        
-        # Determine if we need more complex reasoning
-        if "suicide" in transcript_text.lower() or "self-harm" in transcript_text.lower():
-            thinking_budget = 24576  # Maximum for critical situations
-        elif session_duration < 5:
-            thinking_budget = 4096  # Fast for early session
-        
-        config = types.GenerateContentConfig(
-            temperature=0.3,
-            max_output_tokens=4096,
-            safety_settings=[
-                types.SafetySetting(
-                    category="HARM_CATEGORY_HARASSMENT",
-                    threshold="OFF"
+        # Configure generation based on analysis mode
+        if is_realtime:
+            # FAST configuration for real-time guidance
+            config = types.GenerateContentConfig(
+                temperature=0.0,  # Deterministic for speed
+                max_output_tokens=300,  # Minimal output
+                safety_settings=[
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_HARASSMENT",
+                        threshold="OFF"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_HATE_SPEECH",
+                        threshold="OFF"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                        threshold="OFF"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_DANGEROUS_CONTENT",
+                        threshold="OFF"
+                    )
+                ],
+                tools=[],  # No RAG for speed
+                thinking_config=types.ThinkingConfig(
+                    thinking_budget=0,  # Zero thinking for fastest response
+                    include_thoughts=False
                 ),
-                types.SafetySetting(
-                    category="HARM_CATEGORY_HATE_SPEECH",
-                    threshold="OFF"
+            )
+        else:
+            # COMPREHENSIVE configuration for full analysis
+            thinking_budget = 8192  # Moderate complexity for balanced analysis
+            
+            # Determine if we need more complex reasoning
+            if "suicide" in transcript_text.lower() or "self-harm" in transcript_text.lower():
+                thinking_budget = 24576  # Maximum for critical situations
+            elif session_duration < 5:
+                thinking_budget = 4096  # Fast for early session
+            
+            config = types.GenerateContentConfig(
+                temperature=0.3,
+                max_output_tokens=4096,
+                safety_settings=[
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_HARASSMENT",
+                        threshold="OFF"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_HATE_SPEECH",
+                        threshold="OFF"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                        threshold="OFF"
+                    ),
+                    types.SafetySetting(
+                        category="HARM_CATEGORY_DANGEROUS_CONTENT",
+                        threshold="OFF"
+                    )
+                ],
+                tools=[MANUAL_RAG_TOOL, TRANSCRIPT_RAG_TOOL],
+                thinking_config=types.ThinkingConfig(
+                    thinking_budget=thinking_budget,
+                    include_thoughts=False  # Don't include thoughts in response
                 ),
-                types.SafetySetting(
-                    category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                    threshold="OFF"
-                ),
-                types.SafetySetting(
-                    category="HARM_CATEGORY_DANGEROUS_CONTENT",
-                    threshold="OFF"
-                )
-            ],
-            tools=[MANUAL_RAG_TOOL, TRANSCRIPT_RAG_TOOL],
-            thinking_config=types.ThinkingConfig(
-                thinking_budget=thinking_budget,
-                include_thoughts=False  # Don't include thoughts in response
-            ),
-        )
+            )
         
         # Generate analysis with streaming
-        logging.info(f"Calling Gemini model '{MODEL_NAME}' with thinking_budget={thinking_budget}")
+        thinking_budget_log = 0 if is_realtime else config.thinking_config.thinking_budget if hasattr(config, 'thinking_config') else 0
+        logging.info(f"[TIMING] Calling Gemini model '{MODEL_NAME}' - realtime: {is_realtime}, thinking_budget: {thinking_budget_log}")
         
         def generate():
             """Generator function for streaming response"""
@@ -367,21 +428,22 @@ Based on evidence-based treatment protocols, provide specific guidance on:
 3. Specific techniques to implement
 4. Contraindications to watch for
 
-Reference specific sections from the EBT manuals (CBT, PE for PTSD, etc.) with citations.
+IMPORTANT: When referencing EBT manuals or research, use inline citations in the format [1], [2], etc. 
+For example: "Consider graded exposure therapy [1] as outlined in the PE manual [2]."
 
 Provide response in JSON format:
 {{
     "continue_current": true|false,
-    "rationale": "Explanation for recommendation",
+    "rationale": "Explanation with citations [1], [2] embedded in text",
     "alternative_pathways": [
         {{
             "approach": "Approach name",
-            "reason": "Why this alternative",
+            "reason": "Why this alternative with citations [3]",
             "techniques": ["technique1", "technique2"]
         }}
     ],
-    "immediate_actions": ["action1", "action2"],
-    "contraindications": ["contraindication1", "contraindication2"]
+    "immediate_actions": ["action1 with citation [4]", "action2"],
+    "contraindications": ["contraindication1 [5]", "contraindication2"]
 }}"""
         
         contents = [types.Content(
@@ -433,20 +495,36 @@ Provide response in JSON format:
             if json_match:
                 parsed_response = json.loads(json_match.group())
                 
-                # Add grounding metadata if available
+                # Add grounding metadata if available (same format as segment analysis)
                 if response.candidates[0].grounding_metadata:
                     metadata = response.candidates[0].grounding_metadata
                     if hasattr(metadata, 'grounding_chunks') and metadata.grounding_chunks:
                         citations = []
                         for idx, g_chunk in enumerate(metadata.grounding_chunks):
+                            citation_data = {
+                                "citation_number": idx + 1,  # Maps to [1], [2], etc in text
+                            }
+                            
                             if g_chunk.retrieved_context:
                                 ctx = g_chunk.retrieved_context
-                                citations.append({
-                                    "number": idx + 1,
-                                    "title": ctx.title if hasattr(ctx, 'title') else "EBT Manual",
-                                    "excerpt": ctx.text[:200] if hasattr(ctx, 'text') else None
-                                })
+                                citation_data["source"] = {
+                                    "title": ctx.title if hasattr(ctx, 'title') and ctx.title else "EBT Manual",
+                                    "uri": ctx.uri if hasattr(ctx, 'uri') and ctx.uri else None,
+                                    "excerpt": ctx.text[:200] if hasattr(ctx, 'text') and ctx.text else None
+                                }
+                                
+                                # Include page information if available
+                                if hasattr(ctx, 'rag_chunk') and ctx.rag_chunk:
+                                    if hasattr(ctx.rag_chunk, 'page_span') and ctx.rag_chunk.page_span:
+                                        citation_data["source"]["pages"] = {
+                                            "first": ctx.rag_chunk.page_span.first_page,
+                                            "last": ctx.rag_chunk.page_span.last_page
+                                        }
+                            
+                            citations.append(citation_data)
+                        
                         parsed_response['citations'] = citations
+                        logging.info(f"Added {len(citations)} citations to pathway guidance response")
                 
                 return (jsonify(parsed_response), 200, headers)
             else:

@@ -1,0 +1,199 @@
+import React from 'react';
+import { Chip } from '@mui/material';
+import ReactMarkdown from 'react-markdown';
+import { Citation } from '../types/types';
+
+interface RenderTextWithCitationsOptions {
+  citations: Citation[];
+  onCitationClick: (citation: Citation) => void;
+  markdown?: boolean;
+}
+
+/**
+ * Renders text with clickable citation chips
+ * @param text - The text containing citation markers like [1], [2], [3, 6, 9]
+ * @param options - Options for rendering including citations array and click handler
+ * @returns JSX element with rendered text and clickable citations
+ */
+export const renderTextWithCitations = (
+  text: string,
+  options: RenderTextWithCitationsOptions
+): JSX.Element => {
+  const { citations, onCitationClick, markdown = false } = options;
+  
+  // If markdown is enabled, we need to handle citations differently
+  if (markdown) {
+    // For markdown, we'll replace citation markers with a special format
+    // that we can then render as components
+    const processedText = text.replace(/\[(\d+(?:\s*,\s*\d+)*)\]/g, (match, nums) => {
+      return `__CITATION_${nums}__`;
+    });
+    
+    return (
+      <ReactMarkdown
+        components={{
+          p: ({ children }) => <span>{children}</span>,
+          // Handle inline text nodes
+          text: ({ value }: any) => {
+            if (typeof value !== 'string') return value;
+            
+            // Check if this text contains our citation markers
+            const citationPattern = /__CITATION_([\d,\s]+)__/g;
+            const parts: (string | JSX.Element)[] = [];
+            let lastIndex = 0;
+            let match;
+            
+            while ((match = citationPattern.exec(value)) !== null) {
+              // Add text before the citation
+              if (match.index > lastIndex) {
+                parts.push(value.substring(lastIndex, match.index));
+              }
+              
+              // Parse citation numbers
+              const citationNumbers = match[1].split(',').map(num => parseInt(num.trim()));
+              
+              // Create clickable citation chip
+              parts.push(
+                <Chip
+                  key={`citation-${match.index}`}
+                  label={`[${match[1]}]`}
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Find the citation with the first number
+                    const citation = citations.find(c => citationNumbers.includes(c.citation_number));
+                    if (citation) {
+                      onCitationClick(citation);
+                    }
+                  }}
+                  sx={{
+                    height: 20,
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+                    color: 'white',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
+                      transform: 'scale(1.1)',
+                    },
+                    transition: 'all 0.2s ease',
+                    mx: 0.5,
+                    verticalAlign: 'middle',
+                  }}
+                />
+              );
+              
+              lastIndex = citationPattern.lastIndex;
+            }
+            
+            // Add remaining text
+            if (lastIndex < value.length) {
+              parts.push(value.substring(lastIndex));
+            }
+            
+            return parts.length > 0 ? <>{parts}</> : value;
+          }
+        }}
+      >
+        {processedText}
+      </ReactMarkdown>
+    );
+  }
+  
+  // Non-markdown version (original logic from AlertDisplay)
+  const citationPattern = /\[(\d+(?:\s*,\s*\d+)*)\]/g;
+  const parts: (string | JSX.Element)[] = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = citationPattern.exec(text)) !== null) {
+    // Add text before the citation
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+
+    // Parse citation numbers
+    const citationNumbers = match[1].split(',').map(num => parseInt(num.trim()));
+    
+    // Create clickable citation chip
+    parts.push(
+      <Chip
+        key={`citation-${match.index}`}
+        label={`[${match[1]}]`}
+        size="small"
+        onClick={(e) => {
+          e.stopPropagation();
+          // Find the citation with the first number
+          const citation = citations.find(c => citationNumbers.includes(c.citation_number));
+          if (citation) {
+            onCitationClick(citation);
+          }
+        }}
+        sx={{
+          height: 20,
+          fontSize: '0.8rem',
+          fontWeight: 700,
+          cursor: 'pointer',
+          background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+          color: 'white',
+          '&:hover': {
+            background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
+            transform: 'scale(1.1)',
+          },
+          transition: 'all 0.2s ease',
+          mx: 0.5,
+          verticalAlign: 'middle',
+        }}
+      />
+    );
+
+    lastIndex = citationPattern.lastIndex;
+  }
+
+  // Add remaining text after the last citation
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  // If no citations found, return the original text
+  if (parts.length === 0) {
+    return <>{text}</>;
+  }
+
+  return <>{parts}</>;
+};
+
+/**
+ * Simple markdown renderer without citation support
+ * @param text - The markdown text to render
+ * @returns JSX element with rendered markdown
+ */
+export const renderMarkdown = (text: string): JSX.Element => {
+  return (
+    <ReactMarkdown
+      components={{
+        // Customize components as needed
+        p: ({ children }) => <span style={{ display: 'block', marginBottom: '0.5em' }}>{children}</span>,
+        ul: ({ children }) => <ul style={{ marginTop: '0.5em', marginBottom: '0.5em', paddingLeft: '1.5em' }}>{children}</ul>,
+        ol: ({ children }) => <ol style={{ marginTop: '0.5em', marginBottom: '0.5em', paddingLeft: '1.5em' }}>{children}</ol>,
+        li: ({ children }) => <li style={{ marginBottom: '0.25em' }}>{children}</li>,
+        strong: ({ children }) => <strong style={{ fontWeight: 600 }}>{children}</strong>,
+        em: ({ children }) => <em style={{ fontStyle: 'italic' }}>{children}</em>,
+        code: ({ children }) => (
+          <code style={{ 
+            background: 'rgba(0, 0, 0, 0.05)', 
+            padding: '0.1em 0.3em', 
+            borderRadius: '3px',
+            fontSize: '0.9em',
+            fontFamily: 'monospace'
+          }}>
+            {children}
+          </code>
+        ),
+      }}
+    >
+      {text}
+    </ReactMarkdown>
+  );
+};

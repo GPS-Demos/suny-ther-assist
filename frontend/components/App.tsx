@@ -31,6 +31,7 @@ import AlertDisplay from './AlertDisplay';
 import SessionMetrics from './SessionMetrics';
 import PathwayIndicator from './PathwayIndicator';
 import SessionPhaseIndicator from './SessionPhaseIndicator.tsx';
+import SessionSummaryModal from './SessionSummaryModal';
 import { useAudioRecorderWebSocket } from '../hooks/useAudioRecorderWebSocket';
 import { useTherapyAnalysis } from '../hooks/useTherapyAnalysis';
 import { formatDuration } from '../utils/timeUtils';
@@ -52,6 +53,7 @@ const App: React.FC = () => {
     current_approach: 'Cognitive Behavioral Therapy',
   });
   const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [wordsSinceLastAnalysis, setWordsSinceLastAnalysis] = useState(0);
 
   const [transcript, setTranscript] = useState<Array<{
     text: string;
@@ -84,6 +86,7 @@ const App: React.FC = () => {
     }>;
   }>({});
   const [riskLevel] = useState<'low' | 'moderate' | 'high' | null>(null);
+  const [showSessionSummary, setShowSessionSummary] = useState(false);
   
   // Test mode state
   const [isTestMode, setIsTestMode] = useState(false);
@@ -127,9 +130,7 @@ const App: React.FC = () => {
     },
     onError: (error: string) => {
       setAlerts(prev => [...prev, {
-        id: Date.now().toString(),
-        type: 'error' as const,
-        level: 'critical' as const,
+        timing: 'now' as const,  // System errors need immediate attention
         category: 'safety' as const,
         title: 'System Error',
         message: error,
@@ -232,136 +233,62 @@ const App: React.FC = () => {
     sessionDurationRef.current = sessionDuration;
   }, [sessionDuration]);
 
-  // Analyze transcript segments for real-time feedback
+  // Word-based real-time analysis trigger (simplified)
   useEffect(() => {
-    console.log(`[Analysis Effect] State:`, {
-      isRecording,
-      isTestMode,
-      transcriptLength: transcript.length,
-      sessionDuration
-    });
+    if (!isRecording || transcript.length === 0) return;
     
-    if (!isRecording) {
-      console.log('[Analysis Effect] Not recording, skipping analysis setup');
-      return;
-    }
-
-    const startupDelay = isTestMode ? 4000 : 2000;
+    const lastEntry = transcript[transcript.length - 1];
+    if (!lastEntry || lastEntry.is_interim) return;
     
-    console.log(`[Analysis Effect] Waiting ${startupDelay}ms before starting analysis...`);
+    // Count words in the new entry
+    const newWords = lastEntry.text.split(' ').filter(word => word.trim()).length;
     
-    let intervalRefs: { safety?: number; metrics?: number; pathway?: number } = {};
-    
-    const startupTimer = setTimeout(() => {
-      console.log('[Analysis Effect] Starting analysis intervals after delay');
+    setWordsSinceLastAnalysis(prev => {
+      const updatedWordCount = prev + newWords;
+      console.log(`[Word Trigger] New words: ${newWords}, Total since last analysis: ${updatedWordCount}`);
       
-      if (transcript.length === 0) {
-        console.log('[Analysis Effect] Still no transcript after delay, but starting intervals anyway');
+      // Trigger analysis every 10 words
+      const WORDS_PER_ANALYSIS = 10;
+      const TRANSCRIPT_WINDOW_MINUTES = 5;
+      
+      if (updatedWordCount >= WORDS_PER_ANALYSIS) {
+        console.log(`[Word Trigger] 🚀 Triggering real-time guidance and pathway analysis after ${updatedWordCount} words`);
+        
+        // Get last 5 minutes of transcript
+        const fiveMinutesAgo = new Date(Date.now() - TRANSCRIPT_WINDOW_MINUTES * 60 * 1000);
+        const recentTranscript = transcript
+          .filter(t => !t.is_interim && new Date(t.timestamp) > fiveMinutesAgo)
+          .map(t => ({
+            speaker: 'conversation',
+            text: t.text,
+            timestamp: t.timestamp
+          }));
+        
+        console.log(`[Word Trigger] Sending ${recentTranscript.length} entries from last 5 minutes`);
+        
+        if (recentTranscript.length > 0) {
+          // 1. Real-time analysis (fast, no RAG)
+          analyzeSegmentRef.current(
+            recentTranscript,
+            { ...sessionContextRef.current, is_realtime: true },
+            Math.floor(sessionDurationRef.current / 60)
+          );
+          
+          // 2. Pathway analysis (with RAG) - testing at same frequency
+          analyzeSegmentRef.current(
+            recentTranscript,
+            { ...sessionContextRef.current, is_realtime: false },  // Full RAG analysis
+            Math.floor(sessionDurationRef.current / 60)
+          );
+        }
+        
+        // Reset word count
+        return 0;
       }
-
-      const SAFETY_INTERVAL = 5000;
-      const METRICS_INTERVAL = 10000;
-      const PATHWAY_INTERVAL = 15000;
-
-      intervalRefs.safety = setInterval(() => {
-        console.log(`[Safety Stream] ⏰ Interval fired at ${new Date().toISOString()}`);
-        const currentTranscript = transcriptRef.current.slice(-5);
-        console.log(`[Safety Stream] Current transcript length: ${transcriptRef.current.length}, analyzing last 5: ${currentTranscript.length}`);
-        
-        if (currentTranscript.length > 0) {
-          const formattedTranscript = currentTranscript
-            .filter(t => !t.is_interim)
-            .map(t => ({
-              speaker: 'conversation',
-              text: t.text,
-              timestamp: t.timestamp
-            }));
-          
-          if (formattedTranscript.length > 0) {
-            console.log(`[Safety Stream] 🚨 TRIGGERING SAFETY ANALYSIS`);
-            console.log(`[Safety Stream] Formatted entries:`, formattedTranscript);
-            
-            analyzeSegmentRef.current(
-              formattedTranscript, 
-              sessionContextRef.current, 
-              Math.floor(sessionDurationRef.current / 60)
-            );
-          } else {
-            console.log('[Safety Stream] All entries are interim, skipping');
-          }
-        } else {
-          console.log('[Safety Stream] No transcript entries available yet');
-        }
-      }, isTestMode ? 3000 : SAFETY_INTERVAL);
-
-      intervalRefs.metrics = setInterval(() => {
-        console.log(`[Metrics Stream] ⏰ Interval fired at ${new Date().toISOString()}`);
-        const currentTranscript = transcriptRef.current.slice(-10);
-        console.log(`[Metrics Stream] Analyzing last 10 entries: ${currentTranscript.length}`);
-        
-        if (currentTranscript.length >= 3) {
-          const formattedTranscript = currentTranscript
-            .filter(t => !t.is_interim)
-            .map(t => ({
-              speaker: 'conversation',
-              text: t.text,
-              timestamp: t.timestamp
-            }));
-          
-          if (formattedTranscript.length >= 3) {
-            console.log(`[Metrics Stream] 📊 TRIGGERING METRICS ANALYSIS`);
-            
-            analyzeSegmentRef.current(
-              formattedTranscript, 
-              sessionContextRef.current, 
-              Math.floor(sessionDurationRef.current / 60)
-            );
-          }
-        } else {
-          console.log('[Metrics Stream] Not enough entries for metrics analysis');
-        }
-      }, isTestMode ? 5000 : METRICS_INTERVAL);
-
-      intervalRefs.pathway = setInterval(() => {
-        console.log(`[Pathway Stream] ⏰ Checking pathway conditions...`);
-        const currentMetrics = sessionMetricsRef.current;
-        const currentAlerts = alertsRef.current;
-        const shouldEvaluate = currentMetrics.phase_appropriate === false || 
-                              currentMetrics.engagement_level < 0.5 ||
-                              currentAlerts.some(a => a.category === 'pathway_change');
-        
-        console.log(`[Pathway Stream] Evaluation needed: ${shouldEvaluate}`, {
-          phase_appropriate: currentMetrics.phase_appropriate,
-          engagement_level: currentMetrics.engagement_level,
-          has_pathway_alert: currentAlerts.some(a => a.category === 'pathway_change')
-        });
-        
-        if (shouldEvaluate && transcriptRef.current.length > 0) {
-          console.log(`[Pathway Stream] 🛤️ TRIGGERING PATHWAY EVALUATION`);
-          const extendedTranscript = transcriptRef.current.slice(-20)
-            .filter(t => !t.is_interim);
-          
-          if (extendedTranscript.length > 0) {
-            getPathwayGuidanceRef.current(
-              sessionContextRef.current.current_approach,
-              extendedTranscript,
-              [sessionContextRef.current.primary_concern]
-            );
-          }
-        }
-      }, isTestMode ? 8000 : PATHWAY_INTERVAL);
-
-      console.log('[Analysis Effect] All 3 analysis streams started');
-    }, startupDelay);
-
-    return () => {
-      console.log('[Analysis Effect] Cleaning up startup timer and intervals');
-      clearTimeout(startupTimer);
-      if (intervalRefs.safety) clearInterval(intervalRefs.safety);
-      if (intervalRefs.metrics) clearInterval(intervalRefs.metrics);
-      if (intervalRefs.pathway) clearInterval(intervalRefs.pathway);
-    };
-  }, [isRecording, isTestMode]);
+      
+      return updatedWordCount;
+    });
+  }, [transcript, isRecording]);
 
   const handleStartSession = async () => {
     setSessionStartTime(new Date());
@@ -374,6 +301,10 @@ const App: React.FC = () => {
     await stopRecording();
     if (isTestMode) {
       stopTestMode();
+    }
+    // Show session summary modal if we have transcript data
+    if (transcript.length > 0) {
+      setShowSessionSummary(true);
     }
   };
 
@@ -855,6 +786,7 @@ const App: React.FC = () => {
               immediateActions={pathwayGuidance.immediate_actions}
               contraindications={pathwayGuidance.contraindications}
               alternativePathways={pathwayGuidance.alternative_pathways}
+              citations={citations}
             />
           </Box>
         </Box>
@@ -1012,6 +944,17 @@ const App: React.FC = () => {
           <TranscriptDisplay transcript={transcript} />
         </Box>
       </Drawer>
+
+      {/* Session Summary Modal */}
+      <SessionSummaryModal
+        open={showSessionSummary}
+        onClose={() => setShowSessionSummary(false)}
+        transcript={transcript}
+        sessionMetrics={sessionMetrics}
+        sessionContext={sessionContext}
+        sessionDuration={sessionDuration}
+        sessionId={sessionId}
+      />
     </Box>
   );
 };

@@ -10,15 +10,13 @@ import {
   Fade,
 } from '@mui/material';
 import {
-  Warning,
-  Info,
-  CheckCircle,
+  Shield,
+  Psychology,
+  SwapHoriz,
   Close,
   ExpandMore,
   ExpandLess,
   MenuBook,
-  SwapHoriz,
-  Psychology,
 } from '@mui/icons-material';
 import { Alert, Citation } from '../types/types';
 import CitationModal from './CitationModal';
@@ -34,41 +32,35 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
   const [citationModalOpen, setCitationModalOpen] = useState(false);
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
 
-  const getAlertIcon = () => {
-    switch (alert.level) {
-      case 'critical':
-        return <Warning sx={{ fontSize: 32 }} />;
-      case 'suggestion':
-        return <Info sx={{ fontSize: 28 }} />;
-      case 'info':
-        return <CheckCircle sx={{ fontSize: 24 }} />;
-      default:
-        return <Info />;
-    }
-  };
+  // Use timing directly from backend (simplified!)
+  const timing = alert.timing || 'info';
 
+  // Color based on timing
   const getAlertColor = () => {
-    switch (alert.level) {
-      case 'critical':
-        return '#d32f2f';
-      case 'suggestion':
-        return '#f57c00';
+    switch (timing) {
+      case 'now':
+        return '#dc2626'; // Red
+      case 'pause':
+        return '#d97706'; // Amber
       case 'info':
-        return '#388e3c';
+        return '#059669'; // Green
       default:
-        return '#1976d2';
+        return '#6b7280'; // Gray
     }
   };
 
-  const getCategoryIcon = () => {
-    switch (alert.category) {
-      case 'pathway_change':
-        return <SwapHoriz />;
-      case 'technique':
-        return <Psychology />;
-      default:
-        return null;
+  // Single icon based on content type
+  const getContentIcon = () => {
+    // Safety takes precedence
+    if (alert.category === 'safety') {
+      return <Shield sx={{ fontSize: 24 }} />;
     }
+    // Pathway changes
+    if (alert.category === 'pathway_change') {
+      return <SwapHoriz sx={{ fontSize: 24 }} />;
+    }
+    // Technique/intervention (default)
+    return <Psychology sx={{ fontSize: 24 }} />;
   };
 
   const alertColor = getAlertColor();
@@ -143,57 +135,100 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
     <>
       <Fade in timeout={300}>
       <Paper
-        elevation={alert.level === 'critical' ? 6 : 2}
+        elevation={timing === 'now' ? 4 : 2}
         sx={{
-          border: alert.level === 'critical' ? `3px solid ${alertColor}` : `1px solid ${alertColor}`,
+          border: 'none', // No borders as requested
           borderRadius: 2,
           overflow: 'hidden',
           transition: 'all 0.3s ease',
-          animation: alert.level === 'critical' ? 'criticalPulse 2s infinite' : 'none',
-          '@keyframes criticalPulse': {
-            '0%': { borderColor: alertColor },
-            '50%': { borderColor: `${alertColor}66` },
-            '100%': { borderColor: alertColor },
+          background: timing === 'now' 
+            ? `linear-gradient(135deg, ${alertColor}08 0%, ${alertColor}04 100%)`
+            : 'rgba(255, 255, 255, 0.9)',
+          animation: timing === 'now' ? 'urgentPulse 3s infinite' : 'none',
+          '@keyframes urgentPulse': {
+            '0%': { 
+              boxShadow: `0 4px 20px -4px ${alertColor}40`,
+            },
+            '50%': { 
+              boxShadow: `0 4px 30px -4px ${alertColor}60`,
+            },
+            '100%': { 
+              boxShadow: `0 4px 20px -4px ${alertColor}40`,
+            },
           },
         }}
       >
         {/* Alert Header */}
         <Box
           sx={{
-            bgcolor: `${alertColor}15`,
+            bgcolor: `${alertColor}10`,
             p: 2,
             display: 'flex',
             alignItems: 'flex-start',
             gap: 2,
           }}
         >
-          <Box sx={{ color: alertColor }}>{getAlertIcon()}</Box>
+          {/* Single icon based on content type */}
+          <Box sx={{ 
+            color: alertColor,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            bgcolor: `${alertColor}10`,
+          }}>
+            {getContentIcon()}
+          </Box>
           
           <Box sx={{ flex: 1 }}>
+            {/* Title with timing indicator */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              {timing === 'now' && (
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    bgcolor: alertColor,
+                    animation: 'pulse-soft 1.5s infinite',
+                    mr: 0.5,
+                  }}
+                />
+              )}
               <Typography
                 variant="h6"
                 sx={{
                   fontWeight: 600,
-                  fontSize: alert.level === 'critical' ? '1.25rem' : '1rem',
-                  color: alertColor,
+                  fontSize: timing === 'now' ? '1.125rem' : '1rem',
+                  color: timing === 'now' ? alertColor : 'text.primary',
                 }}
               >
                 {alert.title}
               </Typography>
-              {getCategoryIcon() && (
-                <Box sx={{ color: alertColor, display: 'flex' }}>
-                  {getCategoryIcon()}
-                </Box>
+              {timing === 'pause' && (
+                <Chip
+                  label="Next Pause"
+                  size="small"
+                  sx={{
+                    height: 20,
+                    fontSize: '0.7rem',
+                    bgcolor: `${alertColor}15`,
+                    color: alertColor,
+                    fontWeight: 600,
+                  }}
+                />
               )}
             </Box>
             
             <Box
               component="span"
               sx={{
-                fontSize: alert.level === 'critical' ? '1rem' : '0.875rem',
+                fontSize: timing === 'now' ? '0.95rem' : '0.875rem',
                 lineHeight: 1.6,
                 display: 'block',
+                color: timing === 'info' ? 'text.secondary' : 'text.primary',
               }}
             >
               {renderMessageWithCitations(alert.message)}
@@ -202,8 +237,16 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
             {/* Evidence */}
             {alert.evidence && alert.evidence.length > 0 && (
               <Box sx={{ mt: 2 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                  EVIDENCE:
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    fontWeight: 600,
+                    color: alertColor,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  Evidence:
                 </Typography>
                 {alert.evidence.map((ev, idx) => (
                   <Typography
@@ -214,7 +257,7 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
                       pl: 2,
                       fontStyle: 'italic',
                       color: 'text.secondary',
-                      borderLeft: `3px solid ${alertColor}33`,
+                      borderLeft: `2px solid ${alertColor}30`,
                     }}
                   >
                     "{ev}"
@@ -229,14 +272,20 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
                 sx={{
                   mt: 2,
                   p: 1.5,
-                  bgcolor: 'background.paper',
+                  bgcolor: timing === 'now' ? `${alertColor}08` : 'background.paper',
                   borderRadius: 1,
-                  border: '1px solid',
-                  borderColor: 'divider',
+                  borderLeft: `3px solid ${alertColor}`,
                 }}
               >
-                <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                  Recommended Action:
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontWeight: 600, 
+                    mb: 0.5,
+                    color: alertColor,
+                  }}
+                >
+                  {timing === 'now' ? '→ Action Required:' : '→ Recommendation:'}
                 </Typography>
                 <Typography variant="body2">{alert.recommendation}</Typography>
               </Box>
@@ -245,7 +294,16 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
 
           {/* Actions */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-            <IconButton size="small" onClick={onDismiss}>
+            <IconButton 
+              size="small" 
+              onClick={onDismiss}
+              sx={{
+                color: 'text.secondary',
+                '&:hover': {
+                  bgcolor: 'action.hover',
+                },
+              }}
+            >
               <Close fontSize="small" />
             </IconButton>
             {alert.manual_reference && (
@@ -300,26 +358,6 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
               </Button>
             </Box>
           </Collapse>
-        )}
-
-        {/* Urgency Indicator */}
-        {alert.urgency && (
-          <Box
-            sx={{
-              bgcolor: alert.urgency === 'immediate' ? alertColor : 'grey.200',
-              color: alert.urgency === 'immediate' ? 'white' : 'text.secondary',
-              px: 2,
-              py: 0.5,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Typography variant="caption" fontWeight={600} textTransform="uppercase">
-              {alert.urgency === 'immediate' && '⚡ '}
-              {alert.urgency.replace('_', ' ')}
-            </Typography>
-          </Box>
         )}
       </Paper>
     </Fade>

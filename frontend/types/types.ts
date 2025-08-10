@@ -5,8 +5,8 @@ export interface SessionContext {
 }
 
 export interface Alert {
-  level: 'critical' | 'suggestion' | 'info';
-  category: 'safety' | 'technique' | 'pathway_change' | 'engagement';
+  timing: 'now' | 'pause' | 'info';  // Simplified!
+  category: 'safety' | 'technique' | 'pathway_change';
   title: string;
   message: string;
   evidence?: string[];
@@ -16,8 +16,11 @@ export interface Alert {
     page?: number;
     section?: string;
   };
-  urgency?: 'immediate' | 'next_pause' | 'end_of_topic';
   timestamp?: string;
+  
+  // Legacy fields for backward compatibility (to be removed)
+  level?: 'critical' | 'suggestion' | 'info';
+  urgency?: 'immediate' | 'next_pause' | 'end_of_topic';
 }
 
 export interface SessionMetrics {

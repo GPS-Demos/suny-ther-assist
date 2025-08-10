@@ -17,18 +17,22 @@ export const useTherapyAnalysis = ({
 
   const analyzeSegment = useCallback(async (
     transcriptSegment: Array<{ speaker: string; text: string; timestamp: string }>,
-    sessionContext: SessionContext,
+    sessionContext: SessionContext | { is_realtime?: boolean } & SessionContext,
     sessionDurationMinutes: number
   ) => {
-    console.log(`[useTherapyAnalysis] Starting segment analysis with ${transcriptSegment.length} entries`);
+    // Extract is_realtime flag if present
+    const { is_realtime, ...cleanContext } = sessionContext as any;
+    
+    console.log(`[useTherapyAnalysis] Starting segment analysis with ${transcriptSegment.length} entries, realtime: ${is_realtime || false}`);
     const startTime = performance.now();
     
     try {
       const response = await axios.post(`${ANALYSIS_API}/therapy_analysis`, {
         action: 'analyze_segment',
         transcript_segment: transcriptSegment,
-        session_context: sessionContext,
+        session_context: cleanContext,
         session_duration_minutes: sessionDurationMinutes,
+        is_realtime: is_realtime || false,  // Pass as top-level parameter
       }, {
         responseType: 'text',
       });

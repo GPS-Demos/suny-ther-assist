@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Box, Paper, Typography, Button, Chip, Collapse, IconButton, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
 import { SwapHoriz, CheckCircle, Warning, TrendingDown, ExpandMore, Info, ErrorOutline, PlayCircle } from '@mui/icons-material';
+import { Citation } from '../types/types';
+import { renderTextWithCitations, renderMarkdown } from '../utils/textRendering';
+import CitationModal from './CitationModal';
 
 interface PathwayIndicatorProps {
   currentApproach: string;
@@ -13,6 +16,7 @@ interface PathwayIndicatorProps {
     reason: string;
     techniques: string[];
   }>;
+  citations?: Citation[];
 }
 
 const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({ 
@@ -21,9 +25,17 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
   rationale,
   immediateActions,
   contraindications,
-  alternativePathways
+  alternativePathways,
+  citations = []
 }) => {
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [citationModalOpen, setCitationModalOpen] = useState(false);
+  const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
+
+  const handleCitationClick = (citation: Citation) => {
+    setSelectedCitation(citation);
+    setCitationModalOpen(true);
+  };
   const getEffectivenessColor = () => {
     switch (effectiveness) {
       case 'effective':
@@ -85,6 +97,7 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
   };
 
   return (
+    <>
     <Paper
       sx={{
         p: 3,
@@ -103,6 +116,10 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
             ? `0 25px 50px -8px rgba(239, 68, 68, 0.2), ${getEffectivenessGlow()}`
             : '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
         },
+        display: 'flex',
+        flexDirection: 'column',
+        maxHeight: 'calc(100vh - 200px)',
+        overflow: 'hidden',
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -267,7 +284,28 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
 
       {/* Expanded Details Section */}
       <Collapse in={detailsExpanded}>
-        <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid rgba(0, 0, 0, 0.08)' }}>
+        <Box sx={{ 
+          mt: 2, 
+          pt: 2, 
+          borderTop: '1px solid rgba(0, 0, 0, 0.08)',
+          maxHeight: '400px',
+          overflow: 'auto',
+          // Custom scrollbar
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'rgba(0, 0, 0, 0.05)',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: 'rgba(11, 87, 208, 0.2)',
+            borderRadius: '4px',
+            '&:hover': {
+              background: 'rgba(11, 87, 208, 0.3)',
+            },
+          },
+        }}>
           {rationale && (
             <Box sx={{ mb: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
@@ -276,9 +314,13 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
                   RATIONALE
                 </Typography>
               </Box>
-              <Typography variant="body2" color="text.primary">
-                {rationale}
-              </Typography>
+              <Box sx={{ color: 'text.primary' }}>
+                {renderTextWithCitations(rationale, {
+                  citations,
+                  onCitationClick: handleCitationClick,
+                  markdown: true
+                })}
+              </Box>
             </Box>
           )}
 
@@ -297,11 +339,15 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
                       <CheckCircle sx={{ fontSize: 14, color: 'success.main' }} />
                     </ListItemIcon>
                     <ListItemText 
-                      primary={action} 
-                      primaryTypographyProps={{ 
-                        variant: 'body2',
-                        color: 'text.primary'
-                      }} 
+                      primary={
+                        <Box sx={{ color: 'text.primary' }}>
+                          {renderTextWithCitations(action, {
+                            citations,
+                            onCitationClick: handleCitationClick,
+                            markdown: true
+                          })}
+                        </Box>
+                      }
                     />
                   </ListItem>
                 ))}
@@ -324,11 +370,15 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
                       <Warning sx={{ fontSize: 14, color: 'error.main' }} />
                     </ListItemIcon>
                     <ListItemText 
-                      primary={contraindication} 
-                      primaryTypographyProps={{ 
-                        variant: 'body2',
-                        color: 'text.primary'
-                      }} 
+                      primary={
+                        <Box sx={{ color: 'text.primary' }}>
+                          {renderTextWithCitations(contraindication, {
+                            citations,
+                            onCitationClick: handleCitationClick,
+                            markdown: true
+                          })}
+                        </Box>
+                      }
                     />
                   </ListItem>
                 ))}
@@ -358,9 +408,13 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
                   <Typography variant="body2" fontWeight={600} color="text.primary">
                     {pathway.approach}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {pathway.reason}
-                  </Typography>
+                  <Box sx={{ color: 'text.secondary', fontSize: '0.875rem', mt: 0.5 }}>
+                    {renderTextWithCitations(pathway.reason, {
+                      citations,
+                      onCitationClick: handleCitationClick,
+                      markdown: true
+                    })}
+                  </Box>
                   {pathway.techniques.length > 0 && (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
                       {pathway.techniques.map((technique, tIdx) => (
@@ -381,6 +435,17 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
         </Box>
       </Collapse>
     </Paper>
+
+    {/* Citation Modal */}
+    <CitationModal
+      open={citationModalOpen}
+      onClose={() => {
+        setCitationModalOpen(false);
+        setSelectedCitation(null);
+      }}
+      citation={selectedCitation}
+    />
+    </>
   );
 };
 
