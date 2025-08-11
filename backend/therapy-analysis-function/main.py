@@ -347,7 +347,7 @@ Focus on clinically actionable insights. Only surface critical information that 
                                     g_data["source"] = {
                                         "title": ctx.title if hasattr(ctx, 'title') and ctx.title else "EBT Manual",
                                         "uri": ctx.uri if hasattr(ctx, 'uri') and ctx.uri else None,
-                                        "excerpt": ctx.text[:200] if hasattr(ctx, 'text') and ctx.text else None
+                                        "excerpt": ctx.text if hasattr(ctx, 'text') and ctx.text else None
                                     }
                                     
                                     # Include page information if available
@@ -526,7 +526,7 @@ Provide response in JSON format:
                                 citation_data["source"] = {
                                     "title": ctx.title if hasattr(ctx, 'title') and ctx.title else "EBT Manual",
                                     "uri": ctx.uri if hasattr(ctx, 'uri') and ctx.uri else None,
-                                    "excerpt": ctx.text[:200] if hasattr(ctx, 'text') and ctx.text else None
+                                    "excerpt": ctx.text if hasattr(ctx, 'text') and ctx.text else None
                                 }
                                 
                                 # Include page information if available

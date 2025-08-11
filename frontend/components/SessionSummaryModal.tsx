@@ -217,8 +217,24 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 2,
+          borderRadius: '24px',
           minHeight: '80vh',
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(248, 250, 252, 0.85) 100%)',
+          backdropFilter: 'blur(40px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+          border: '1px solid rgba(255, 255, 255, 0.6)',
+          boxShadow: '0 25px 70px -10px rgba(0, 0, 0, 0.18)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            borderRadius: '24px',
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0%, transparent 100%)',
+            pointerEvents: 'none',
+          },
         },
       }}
     >
@@ -226,8 +242,11 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'space-between',
-        background: 'linear-gradient(135deg, rgba(11, 87, 208, 0.95) 0%, rgba(0, 99, 155, 0.95) 100%)',
+        background: 'linear-gradient(135deg, rgba(11, 87, 208, 0.9) 0%, rgba(0, 99, 155, 0.9) 100%)',
         color: 'white',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Assignment sx={{ fontSize: 28 }} />
@@ -271,7 +290,14 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
         ) : summary ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {/* Session Overview */}
-            <Paper sx={{ p: 3, background: 'rgba(250, 251, 253, 0.5)' }}>
+            <Paper sx={{ 
+              p: 3, 
+              background: 'linear-gradient(135deg, rgba(250, 251, 253, 0.6) 0%, rgba(245, 247, 250, 0.7) 100%)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              boxShadow: '0 8px 20px -4px rgba(0, 0, 0, 0.08)',
+            }}>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <TrendingUp /> Session Overview
               </Typography>
@@ -373,7 +399,14 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
                 <Assignment /> Homework Assignments
               </Typography>
               {summary.homework_assignments.map((hw, idx) => (
-                <Paper key={idx} sx={{ p: 2, mb: 2, background: 'rgba(16, 185, 129, 0.05)' }}>
+                <Paper key={idx} sx={{ 
+                  p: 2, 
+                  mb: 2, 
+                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.04) 100%)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                }}>
                   <Typography variant="body1" fontWeight={600} gutterBottom>
                     {hw.task}
                   </Typography>

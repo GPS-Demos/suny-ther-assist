@@ -20,7 +20,7 @@ const lightPalette = {
     dark: '#0f5223',
     contrastText: '#ffffff',
   },
-  success: {a
+  success: {
     main: '#10b981',
     light: '#34d399',
     dark: '#059669',

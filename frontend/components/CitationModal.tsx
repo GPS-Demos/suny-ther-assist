@@ -50,10 +50,23 @@ const CitationModal: React.FC<CitationModalProps> = ({ open, onClose, citation }
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: '16px',
-          background: 'rgba(255, 255, 255, 0.98)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
+          borderRadius: '20px',
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 252, 0.9) 100%)',
+          backdropFilter: 'blur(32px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(200%)',
+          border: '1px solid rgba(255, 255, 255, 0.5)',
+          boxShadow: '0 20px 60px -8px rgba(0, 0, 0, 0.15)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            borderRadius: '20px',
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%)',
+            pointerEvents: 'none',
+          },
         }
       }}
     >
@@ -128,6 +141,23 @@ const CitationModal: React.FC<CitationModalProps> = ({ open, onClose, citation }
                 background: 'rgba(250, 251, 253, 0.8)',
                 borderLeft: '4px solid rgba(11, 87, 208, 0.3)',
                 borderRadius: '8px',
+                maxHeight: '400px',
+                overflowY: 'auto',
+                // Custom scrollbar styling
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: 'rgba(0, 0, 0, 0.05)',
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: 'rgba(11, 87, 208, 0.3)',
+                  borderRadius: '4px',
+                  '&:hover': {
+                    background: 'rgba(11, 87, 208, 0.5)',
+                  },
+                },
               }}
             >
               <Typography
@@ -139,7 +169,7 @@ const CitationModal: React.FC<CitationModalProps> = ({ open, onClose, citation }
                   whiteSpace: 'pre-wrap',
                 }}
               >
-                "{citation.source.excerpt}..."
+                "{citation.source.excerpt}"
               </Typography>
             </Box>
           </Box>
