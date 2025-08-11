@@ -52,3 +52,16 @@ service-account-key.json
 *.tmp
 *.temp
 .cache/
+
+# Large media files
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.zip
+*.tar.gz
+*.rar
+
+# Example and test data
+pathways-example/clinical-pathways-sample.zip
+rag-example/backend/rag/materials/Curriculum/**/*.mp4
