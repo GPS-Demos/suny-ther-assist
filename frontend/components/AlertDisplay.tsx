@@ -185,18 +185,6 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
           <Box sx={{ flex: 1 }}>
             {/* Title with timing indicator */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-              {timing === 'now' && (
-                <Box
-                  sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    bgcolor: alertColor,
-                    animation: 'pulse-soft 1.5s infinite',
-                    mr: 0.5,
-                  }}
-                />
-              )}
               <Typography
                 variant="h6"
                 sx={{

@@ -85,6 +85,12 @@ const App: React.FC = () => {
       techniques: string[];
     }>;
   }>({});
+  const [pathwayHistory, setPathwayHistory] = useState<Array<{
+    timestamp: string;
+    effectiveness: 'effective' | 'struggling' | 'ineffective' | 'unknown';
+    change_urgency: 'none' | 'monitor' | 'consider' | 'recommended';
+    rationale?: string;
+  }>>([]);
   const [riskLevel] = useState<'low' | 'moderate' | 'high' | null>(null);
   const [showSessionSummary, setShowSessionSummary] = useState(false);
   
@@ -139,48 +145,73 @@ const App: React.FC = () => {
     }
   });
 
-  const { analyzeSegment, getPathwayGuidance } = useTherapyAnalysis({
+  const { analyzeSegment } = useTherapyAnalysis({
     onAnalysis: (analysis) => {
+      const analysisType = (analysis as any).analysis_type;
+      const isRealtime = analysisType === 'realtime';
+      
       console.log('[App] Received analysis:', {
+        type: analysisType,
+        isRealtime,
         hasAlerts: !!analysis.alerts,
         hasMetrics: !!analysis.session_metrics,
         hasPathway: !!analysis.pathway_indicators,
         hasCitations: !!analysis.citations
       });
       
-      if (analysis.alerts) {
-        setAlerts(prev => [...analysis.alerts, ...prev].slice(0, 5));
-      }
-      if (analysis.session_metrics) {
-        setSessionMetrics(prev => ({
-          ...prev,
-          ...analysis.session_metrics
-        }));
-      }
-      if (analysis.pathway_indicators) {
-        setPathwayIndicators(prev => ({
-          ...prev,
-          ...analysis.pathway_indicators
-        }));
-      }
-      if (analysis.citations) {
-        setCitations(analysis.citations);
-      }
-    },
-    onPathwayGuidance: (guidance) => {
-      console.log('[App] Received pathway guidance:', guidance);
-      if (guidance) {
-        setPathwayIndicators({
-          current_approach_effectiveness: guidance.continue_current ? 'effective' : 'ineffective',
-          alternative_pathways: guidance.alternative_pathways?.map((p: any) => p.approach) || [],
-          change_urgency: guidance.continue_current ? 'none' : 'recommended',
-        });
-        setPathwayGuidance({
-          rationale: guidance.rationale,
-          immediate_actions: guidance.immediate_actions,
-          contraindications: guidance.contraindications,
-          alternative_pathways: guidance.alternative_pathways,
-        });
+      if (isRealtime) {
+        // Real-time analysis: Only update alerts and basic metrics
+        if (analysis.alerts && analysis.alerts.length > 0) {
+          setAlerts(prev => [...analysis.alerts!, ...prev].slice(0, 5));
+        }
+        if (analysis.session_metrics) {
+          setSessionMetrics(prev => ({
+            ...prev,
+            engagement_level: analysis.session_metrics!.engagement_level || prev.engagement_level,
+            therapeutic_alliance: analysis.session_metrics!.therapeutic_alliance || prev.therapeutic_alliance,
+            emotional_state: analysis.session_metrics!.emotional_state || prev.emotional_state,
+            // Don't update complex metrics from real-time
+            techniques_detected: prev.techniques_detected,
+            phase_appropriate: prev.phase_appropriate,
+          }));
+        }
+      } else {
+        // Comprehensive RAG analysis: Update pathway indicators and citations
+        // Don't update alerts from RAG analysis - keep those real-time only
+        if (analysis.session_metrics) {
+          setSessionMetrics(prev => ({
+            ...prev,
+            ...analysis.session_metrics
+          }));
+        }
+        if (analysis.pathway_indicators) {
+          const newIndicators = analysis.pathway_indicators;
+          
+          // Check if there's a change in urgency or effectiveness to add to history
+          if (pathwayIndicators.change_urgency !== newIndicators.change_urgency ||
+              pathwayIndicators.current_approach_effectiveness !== newIndicators.current_approach_effectiveness) {
+            setPathwayHistory(prev => [...prev, {
+              timestamp: new Date().toISOString(),
+              effectiveness: newIndicators.current_approach_effectiveness || 'unknown',
+              change_urgency: newIndicators.change_urgency || 'none',
+              rationale: (analysis as any).pathway_guidance?.rationale
+            }].slice(-10)); // Keep last 10 history items
+          }
+          
+          setPathwayIndicators(prev => ({
+            ...prev,
+            ...newIndicators
+          }));
+        }
+        
+        // Handle pathway guidance from the same response
+        if ((analysis as any).pathway_guidance) {
+          setPathwayGuidance((analysis as any).pathway_guidance);
+        }
+        
+        if (analysis.citations) {
+          setCitations(analysis.citations);
+        }
       }
     },
   });
@@ -198,7 +229,6 @@ const App: React.FC = () => {
 
   // Store analysis functions in refs to avoid recreating intervals
   const analyzeSegmentRef = useRef(analyzeSegment);
-  const getPathwayGuidanceRef = useRef(getPathwayGuidance);
   
   // Store transcript in ref to avoid stale closures
   const transcriptRef = useRef(transcript);
@@ -209,8 +239,7 @@ const App: React.FC = () => {
   
   useEffect(() => {
     analyzeSegmentRef.current = analyzeSegment;
-    getPathwayGuidanceRef.current = getPathwayGuidance;
-  }, [analyzeSegment, getPathwayGuidance]);
+  }, [analyzeSegment]);
   
   // Update refs when state changes
   useEffect(() => {
@@ -267,17 +296,19 @@ const App: React.FC = () => {
         console.log(`[Word Trigger] Sending ${recentTranscript.length} entries from last 5 minutes`);
         
         if (recentTranscript.length > 0) {
-          // 1. Real-time analysis (fast, no RAG)
+          // 1. Real-time analysis (fast, no RAG) - for immediate guidance
+          console.log('[Word Trigger] Triggering REAL-TIME analysis (unRAGed)');
           analyzeSegmentRef.current(
             recentTranscript,
             { ...sessionContextRef.current, is_realtime: true },
             Math.floor(sessionDurationRef.current / 60)
           );
           
-          // 2. Pathway analysis (with RAG) - testing at same frequency
+          // 2. Comprehensive analysis (with RAG) - for pathway evaluation
+          console.log('[Word Trigger] Triggering COMPREHENSIVE analysis (RAGed)');
           analyzeSegmentRef.current(
             recentTranscript,
-            { ...sessionContextRef.current, is_realtime: false },  // Full RAG analysis
+            { ...sessionContextRef.current, is_realtime: false },
             Math.floor(sessionDurationRef.current / 60)
           );
         }
@@ -782,11 +813,13 @@ const App: React.FC = () => {
             <PathwayIndicator 
               currentApproach={sessionContext.current_approach}
               effectiveness={pathwayIndicators.current_approach_effectiveness || (sessionMetrics.phase_appropriate ? 'effective' : 'struggling')}
+              changeUrgency={pathwayIndicators.change_urgency}
               rationale={pathwayGuidance.rationale}
               immediateActions={pathwayGuidance.immediate_actions}
               contraindications={pathwayGuidance.contraindications}
               alternativePathways={pathwayGuidance.alternative_pathways}
               citations={citations}
+              history={pathwayHistory}
             />
           </Box>
         </Box>
@@ -906,7 +939,7 @@ const App: React.FC = () => {
               variant="outlined"
               size="small"
               onClick={() => {
-                console.log('[Manual Analysis] Triggering immediate analysis');
+                console.log('[Manual Analysis] Triggering both real-time and comprehensive analyses');
                 const recentTranscript = transcript.slice(-10);
                 if (recentTranscript.length > 0) {
                   const formattedTranscript = recentTranscript
@@ -918,7 +951,17 @@ const App: React.FC = () => {
                     }));
                   
                   if (formattedTranscript.length > 0) {
-                    analyzeSegment(formattedTranscript, sessionContext, Math.floor(sessionDuration / 60));
+                    // Trigger both analyses like the automatic word trigger does
+                    analyzeSegment(
+                      formattedTranscript, 
+                      { ...sessionContext, is_realtime: true }, 
+                      Math.floor(sessionDuration / 60)
+                    );
+                    analyzeSegment(
+                      formattedTranscript, 
+                      { ...sessionContext, is_realtime: false }, 
+                      Math.floor(sessionDuration / 60)
+                    );
                   }
                 }
               }}

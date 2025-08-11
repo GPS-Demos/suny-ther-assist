@@ -8,6 +8,7 @@ import CitationModal from './CitationModal';
 interface PathwayIndicatorProps {
   currentApproach: string;
   effectiveness: 'effective' | 'struggling' | 'ineffective' | 'unknown';
+  changeUrgency?: 'none' | 'monitor' | 'consider' | 'recommended';
   rationale?: string;
   immediateActions?: string[];
   contraindications?: string[];
@@ -17,6 +18,12 @@ interface PathwayIndicatorProps {
     techniques: string[];
   }>;
   citations?: Citation[];
+  history?: Array<{
+    timestamp: string;
+    effectiveness: 'effective' | 'struggling' | 'ineffective' | 'unknown';
+    change_urgency: 'none' | 'monitor' | 'consider' | 'recommended';
+    rationale?: string;
+  }>;
 }
 
 const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({ 
@@ -28,7 +35,7 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
   alternativePathways,
   citations = []
 }) => {
-  const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [detailsExpanded, setDetailsExpanded] = useState(true);
   const [citationModalOpen, setCitationModalOpen] = useState(false);
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
 

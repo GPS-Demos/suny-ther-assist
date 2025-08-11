@@ -51,12 +51,13 @@ export interface Citation {
 }
 
 export interface AnalysisResponse {
-  alerts: Alert[];
-  session_metrics: SessionMetrics;
-  pathway_indicators: PathwayIndicators;
-  timestamp: string;
-  session_phase: string;
+  alerts?: Alert[];
+  session_metrics?: SessionMetrics;
+  pathway_indicators?: PathwayIndicators;
   citations?: Citation[];
+  timestamp?: string;
+  session_phase?: string;
+  analysis_type?: 'realtime' | 'comprehensive';
 }
 
 export interface TranscriptEntry {

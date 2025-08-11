@@ -166,6 +166,7 @@ Analyze this therapy session segment step by step:
 3. Assess if current approach is effective or needs adjustment
 4. Search for similar patterns in clinical transcripts (Beck sessions, PTSD sessions)
 5. Reference EBT manuals for evidence-based protocols
+6. Provide specific pathway guidance regardless of effectiveness
 </thinking>
 
 You are an expert clinical supervisor providing real-time guidance during a therapy session. Analyze this segment comprehensively using BOTH:
@@ -186,6 +187,7 @@ IMPORTANT:
 - Look for similar patterns in the transcript database (e.g., "client resistance", "overwhelm", "not ready")
 - Reference EBT manual protocols with citations [1], [2], etc.
 - If you find a similar moment in Beck or PTSD sessions, mention how it was handled
+- ALWAYS provide pathway guidance details (rationale, actions, contraindications) regardless of effectiveness
 
 Provide analysis in this JSON format:
 {{
@@ -210,10 +212,23 @@ Provide analysis in this JSON format:
         "current_approach_effectiveness": "effective|struggling|ineffective",
         "alternative_pathways": ["pathway1", "pathway2"],
         "change_urgency": "none|monitor|consider|recommended"
+    }},
+    "pathway_guidance": {{
+        "continue_current": true|false,
+        "rationale": "Explanation with citations [1], [2] embedded in text",
+        "immediate_actions": ["action1 with citation [3]", "action2"],
+        "contraindications": ["contraindication1 [4]", "contraindication2"],
+        "alternative_pathways": [
+            {{
+                "approach": "Approach name",
+                "reason": "Why this alternative with citations [5]",
+                "techniques": ["technique1", "technique2"]
+            }}
+        ]
     }}
 }}
 
-Focus on clinically actionable insights. Only surface critical information that requires immediate attention."""
+Focus on clinically actionable insights. Only surface critical information that requires immediate attention. Always provide pathway guidance even when the current approach is effective."""
         
         # Build content for analysis
         contents = [types.Content(
@@ -357,6 +372,7 @@ Focus on clinically actionable insights. Only surface critical information that 
                         # Add metadata
                         parsed['timestamp'] = datetime.now().isoformat()
                         parsed['session_phase'] = phase
+                        parsed['analysis_type'] = 'realtime' if is_realtime else 'comprehensive'
                         
                         # Add grounding citations if available
                         if grounding_chunks:
