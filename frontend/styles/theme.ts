@@ -20,7 +20,7 @@ const lightPalette = {
     dark: '#0f5223',
     contrastText: '#ffffff',
   },
-  success: {
+  success: {a
     main: '#10b981',
     light: '#34d399',
     dark: '#059669',
@@ -254,11 +254,11 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
-          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
           borderRadius: 16,
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          border: '1px solid rgba(0, 0, 0, 0.08)',
           boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)',
           transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
         },
@@ -342,6 +342,16 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           color: 'inherit',
+        },
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          backgroundImage: 'none',
         },
       },
     },

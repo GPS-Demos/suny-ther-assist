@@ -590,9 +590,6 @@ const App: React.FC = () => {
               p: 3, 
               display: 'flex',
               flexDirection: 'column',
-              background: 'rgba(255, 255, 255, 0.85)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
               border: '1px solid rgba(255, 255, 255, 0.3)',
               boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
               '&:hover': {
@@ -746,9 +743,6 @@ const App: React.FC = () => {
           <Paper 
             sx={{ 
               p: 3,
-              background: 'rgba(255, 255, 255, 0.85)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
               border: '1px solid rgba(255, 255, 255, 0.3)',
               boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
               '&:hover': {
