@@ -70,37 +70,44 @@ export const renderTextWithCitations = (
           if (segment.type === 'citation') {
             const citationNumbers = segment.content.split(',').map(num => parseInt(num.trim()));
             
+            // Create individual chips for each citation number
             return (
-              <Chip
-                key={`citation-${index}`}
-                label={`[${segment.content}]`}
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  // Find the citation with the matching number
-                  const citation = citations.find(c => citationNumbers.includes(c.citation_number));
-                  if (citation) {
-                    onCitationClick(citation);
-                  }
-                }}
-                sx={{
-                  height: 20,
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-                  color: 'white',
-                  '&:hover': {
-                    background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
-                    transform: 'scale(1.1)',
-                  },
-                  transition: 'all 0.2s ease',
-                  mx: 0.5,
-                  verticalAlign: 'middle',
-                  display: 'inline-flex',
-                }}
-              />
+              <React.Fragment key={`citation-group-${index}`}>
+                {citationNumbers.map((citationNumber, citIndex) => {
+                  const citation = citations.find(c => c.citation_number === citationNumber);
+                  
+                  return (
+                    <Chip
+                      key={`citation-${index}-${citIndex}`}
+                      label={`[${citationNumber}]`}
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (citation) {
+                          onCitationClick(citation);
+                        }
+                      }}
+                      sx={{
+                        height: 20,
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+                        color: 'white',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
+                          transform: 'scale(1.1)',
+                        },
+                        transition: 'all 0.2s ease',
+                        mx: 0.3,
+                        verticalAlign: 'middle',
+                        display: 'inline-flex',
+                      }}
+                    />
+                  );
+                })}
+              </React.Fragment>
             );
           } else {
             // Render markdown for text segments
@@ -152,37 +159,46 @@ export const renderTextWithCitations = (
     // Parse citation numbers
     const citationNumbers = match[1].split(',').map(num => parseInt(num.trim()));
     
-    // Create clickable citation chip
+    // Create individual clickable citation chips for each number
+    const citationChips = citationNumbers.map((citationNumber, citIndex) => {
+      const citation = citations.find(c => c.citation_number === citationNumber);
+      
+      return (
+        <Chip
+          key={`citation-${keyCounter++}-${citIndex}`}
+          label={`[${citationNumber}]`}
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            if (citation) {
+              onCitationClick(citation);
+            }
+          }}
+          sx={{
+            height: 20,
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+            color: 'white',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
+              transform: 'scale(1.1)',
+            },
+            transition: 'all 0.2s ease',
+            mx: 0.3,
+            verticalAlign: 'middle',
+          }}
+        />
+      );
+    });
+    
+    // Add all citation chips
     parts.push(
-      <Chip
-        key={`citation-${keyCounter++}`}
-        label={`[${match[1]}]`}
-        size="small"
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          // Find the citation with the matching number
-          const citation = citations.find(c => citationNumbers.includes(c.citation_number));
-          if (citation) {
-            onCitationClick(citation);
-          }
-        }}
-        sx={{
-          height: 20,
-          fontSize: '0.8rem',
-          fontWeight: 700,
-          cursor: 'pointer',
-          background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-          color: 'white',
-          '&:hover': {
-            background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
-            transform: 'scale(1.1)',
-          },
-          transition: 'all 0.2s ease',
-          mx: 0.5,
-          verticalAlign: 'middle',
-        }}
-      />
+      <React.Fragment key={`citation-group-${keyCounter++}`}>
+        {citationChips}
+      </React.Fragment>
     );
 
     lastIndex = match.index + match[0].length;

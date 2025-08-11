@@ -18,6 +18,7 @@ import {
   MenuBook,
   Article,
 } from '@mui/icons-material';
+import { getStorageAccessUrl } from '../utils/storageUtils';
 
 interface Citation {
   citation_number: number;
@@ -150,7 +151,7 @@ const CitationModal: React.FC<CitationModalProps> = ({ open, onClose, citation }
           <Button
             variant="outlined"
             startIcon={<Article />}
-            href={citation.source.uri}
+            href={getStorageAccessUrl(citation.source.uri)}
             target="_blank"
             rel="noopener noreferrer"
             sx={{ mr: 'auto' }}

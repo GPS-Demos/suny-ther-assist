@@ -35,9 +35,10 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
   // Use timing directly from backend (simplified!)
   const timing = alert.timing || 'info';
 
-  // Color based on timing
+  // Color based on timing (handle both uppercase and lowercase)
   const getAlertColor = () => {
-    switch (timing) {
+    const normalizedTiming = timing?.toLowerCase();
+    switch (normalizedTiming) {
       case 'now':
         return '#dc2626'; // Red
       case 'pause':
