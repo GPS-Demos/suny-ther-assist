@@ -96,7 +96,7 @@ const App: React.FC = () => {
   
   // Test mode state
   const [isTestMode, setIsTestMode] = useState(false);
-  const testIntervalRef = useRef<number | null>(null);
+  const testIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Audio recording hook with WebSocket streaming
   const { 
