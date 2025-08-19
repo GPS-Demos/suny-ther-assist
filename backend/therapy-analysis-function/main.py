@@ -35,7 +35,7 @@ MODEL_NAME = "gemini-2.5-flash"
 MANUAL_RAG_TOOL = types.Tool(
     retrieval=types.Retrieval(
         vertex_ai_search=types.VertexAISearch(
-            datastore="projects/suny-ther-assist/locations/global/collections/default_collection/dataStores/ebt-corpus"
+            datastore=f"projects/{project_id}/locations/global/collections/default_collection/dataStores/ebt-corpus"
         )
     )
 )
@@ -44,7 +44,7 @@ MANUAL_RAG_TOOL = types.Tool(
 TRANSCRIPT_RAG_TOOL = types.Tool(
     retrieval=types.Retrieval(
         vertex_ai_search=types.VertexAISearch(
-            datastore="projects/suny-ther-assist/locations/global/collections/default_collection/dataStores/transcript-patterns"
+            datastore=f"projects/{project_id}/locations/global/collections/default_collection/dataStores/transcript-patterns"
         )
     )
 )
@@ -662,6 +662,7 @@ Format as structured JSON:
                 return (jsonify({'summary': response_text}), 200, headers)
         except json.JSONDecodeError:
             # Return raw text if JSON parsing fails
+            logging.exception(f"Error in handle_session_summary: {str(e)}")
             return (jsonify({'summary': response_text}), 200, headers)
         
     except Exception as e:

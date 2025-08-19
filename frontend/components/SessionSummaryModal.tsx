@@ -91,7 +91,7 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
     setError(null);
     
     try {
-      const API_ENDPOINT = import.meta.env.VITE_ANALYSIS_API_URL || 
+      const API_ENDPOINT = import.meta.env.VITE_ANALYSIS_API || 
                           'https://therapy-analysis-297463074292.us-central1.run.app';
       
       const response = await fetch(API_ENDPOINT, {

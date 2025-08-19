@@ -3,7 +3,7 @@
 # Deploy the storage access Cloud Function
 
 # Set variables
-PROJECT_ID="suny-ther-assist"
+PROJECT_ID="${PROJECT_ID}"
 FUNCTION_NAME="storage-access"
 REGION="us-central1"
 RUNTIME="python311"

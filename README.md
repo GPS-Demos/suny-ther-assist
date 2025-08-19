@@ -61,22 +61,23 @@ gcloud services enable cloudbuild.googleapis.com
 # (Follow Google Cloud Console to create a datastore and upload PDF manuals)
 ```
 
-### 2. Backend Deployment
+### 2. Create RAG Corpuses
+Follow the instructions in the [RAG README.MD](./backend/rag/README)
+
+### 3. Backend Deployment
 
 Deploy Cloud Functions:
 
+#### Deploy Storage Access Function
+First give your default compute engine SA the role for Cloud Build Builder, Vertex AI User, Discovery Engine User, and finally the Storage Object & Bucket Viewer roles. Then run the following commands:
 ```bash
 # Deploy transcription function
-cd backend/transcription-function
-gcloud functions deploy transcribe_therapy_audio \
-  --runtime python312 \
-  --trigger-http \
-  --allow-unauthenticated \
-  --memory 512MB \
-  --timeout 540s \
-  --set-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID
+cd backend/storage-access-function
+deploy.sh
+```
 
-# Deploy analysis function
+#### Deploy analysis function
+```bash
 cd ../therapy-analysis-function
 gcloud functions deploy therapy_analysis \
   --runtime python312 \
@@ -87,22 +88,35 @@ gcloud functions deploy therapy_analysis \
   --set-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID
 ```
 
-### 3. Frontend Setup
+Note: Org policies may block your functions from deploying with public access enabled. You'll have to change that setting manually.
 
+### 4. Frontend Setup
+
+1. Install dependencies
 ```bash
 cd frontend
 
 # Install dependencies
 npm install
 
-# Copy environment variables
+# Copy environment variables and update with your own
 cp .env.example .env
+```
 
-# Update .env with your Cloud Function URLs
-# VITE_TRANSCRIPTION_API=https://REGION-PROJECT_ID.cloudfunctions.net/transcribe_therapy_audio
-# VITE_ANALYSIS_API=https://REGION-PROJECT_ID.cloudfunctions.net/therapy_analysis
+2. Update your .env file with your project's variables
 
-# Run development server
+3. Login and configure Firebase
+```bash
+firebase login
+```
+
+4. Deploy to Firebase
+```bash
+firebase deploy
+```
+
+#### Run frontend development server
+```bash
 npm run dev
 ```
 
@@ -144,7 +158,8 @@ For local development without Google Cloud:
 
 ### Testing
 
-```bash
+TODO
+<!-- ```bash
 # Frontend tests
 cd frontend
 npm test
@@ -152,7 +167,7 @@ npm test
 # Backend function tests
 cd backend/therapy-analysis-function
 python -m pytest test_scripts/
-```
+``` -->
 
 ## Contributing
 
