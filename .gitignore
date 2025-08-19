@@ -67,5 +67,6 @@ pathways-example/clinical-pathways-sample.zip
 rag-example/backend/rag/materials/Curriculum/**/*.mp4
 
 # Firebase
+.firebase/*
 .firebaserc
 firebase-config-object.ts
