@@ -96,27 +96,47 @@ Note: Org policies may block your functions from deploying with public access en
 ```bash
 cd frontend
 
-# Install dependencies
-npm install
-
 # Copy environment variables and update with your own
 cp .env.example .env
 ```
 
 2. Update your .env file with your project's variables
 
-3. Login and configure Firebase
-```bash
-firebase login
+3. Enable Firebase in your project, enable Google authentication, register an app, get the Firebase config object, and use that object to create `frontend/firebase-config-object.ts`:
+```javascript
+export const firebaseConfig = {
+  apiKey: "api-key",
+  authDomain: "your-gcp-project.firebaseapp.com",
+  projectId: "your-gcp-project",
+  storageBucket: "your-gcp-project.firebasestorage.app",
+  messagingSenderId: "message-sender-id",
+  appId: "1:app-id"
+};
 ```
 
-4. Deploy to Firebase
+4. Create the following file `frontend/firebaserc` with your own information:
+```javascript
+{
+  "projects": {
+    "default": "your-gcp-project-id"
+  }
+}
+```
+
+5. Build your app
+```bash
+npm run build
+```
+
+6. Deploy to Firebase
 ```bash
 firebase deploy
 ```
 
 #### Run frontend development server
+1. Install dependencies and run frontend
 ```bash
+npm install
 npm run dev
 ```
 

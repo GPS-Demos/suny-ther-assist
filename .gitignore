@@ -65,3 +65,7 @@ service-account-key.json
 # Example and test data
 pathways-example/clinical-pathways-sample.zip
 rag-example/backend/rag/materials/Curriculum/**/*.mp4
+
+# Firebase
+.firebaserc
+firebase-config-object.ts
