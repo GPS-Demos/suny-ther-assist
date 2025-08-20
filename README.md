@@ -36,7 +36,7 @@ Ther-Assist listens ambiently to therapy sessions and provides near real-time gu
 - **Alert System**: Critical (red), Suggestion (yellow), Info (green) alerts
 - **Session Metrics Dashboard**: Visual indicators for therapeutic progress
 
-## Setup Instructions
+## Deployment Instructions
 
 ### Prerequisites
 - Node.js 18+ and npm
@@ -133,11 +133,40 @@ npm run build
 firebase deploy
 ```
 
-#### Run frontend development server
-1. Install dependencies and run frontend
+## Local Dev
+
+### Frontend
+1. Create .env.development
 ```bash
+# Backend API endpoints
+VITE_ANALYSIS_API=http://localhost:8080
+VITE_STORAGE_ACCESS_URL=http://localhost:8081
+VITE_TRANSCRIPTION_API=http://localhost:8082
+
+# Google Cloud settings
+VITE_GOOGLE_CLOUD_PROJECT=your-gcp-project
+```
+
+2. Install dependencies and run frontend
+```bash
+cd frontend
 npm install
 npm run dev
+```
+
+### Backend therapy-analysis-function
+1. Run the Cloud Run Function locally
+```bash
+cd backend/therapy-analysis-function
+export GOOGLE_CLOUD_PROJECT="your-project-id"
+functions-framework --target=therapy_analysis --port=8080
+```
+
+### Backend storage-acccess-function
+```bash
+cd backend/storage-access-function
+export GOOGLE_CLOUD_PROJECT="your-project-id"
+functions-framework --target=storage_access --port=8081
 ```
 
 ## Usage

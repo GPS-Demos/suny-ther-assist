@@ -13,7 +13,7 @@ export const useTherapyAnalysis = ({
   onPathwayGuidance,
   onSessionSummary 
 }: UseTherapyAnalysisProps) => {
-  const ANALYSIS_API = import.meta.env.VITE_ANALYSIS_API || 'http://localhost:8081';
+  const ANALYSIS_API = import.meta.env.VITE_ANALYSIS_API;
 
   const analyzeSegment = useCallback(async (
     transcriptSegment: Array<{ speaker: string; text: string; timestamp: string }>,
