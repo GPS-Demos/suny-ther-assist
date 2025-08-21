@@ -35,6 +35,7 @@ import PathwayIndicator from './PathwayIndicator';
 import SessionPhaseIndicator from './SessionPhaseIndicator.tsx';
 import SessionSummaryModal from './SessionSummaryModal';
 import RationaleModal from './RationaleModal';
+import CitationModal from './CitationModal';
 import { useAudioRecorderWebSocket } from '../hooks/useAudioRecorderWebSocket';
 import { useTherapyAnalysis } from '../hooks/useTherapyAnalysis';
 import { formatDuration } from '../utils/timeUtils';
@@ -98,6 +99,8 @@ const App: React.FC = () => {
   const [riskLevel] = useState<'low' | 'moderate' | 'high' | null>(null);
   const [showSessionSummary, setShowSessionSummary] = useState(false);
   const [showRationaleModal, setShowRationaleModal] = useState(false);
+  const [citationModalOpen, setCitationModalOpen] = useState(false);
+  const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
   
   // Test mode state
   const [isTestMode, setIsTestMode] = useState(false);
@@ -359,6 +362,11 @@ const App: React.FC = () => {
     setIsRecording(true);
     setSessionStartTime(new Date());
     setTranscript([]);
+    setPathwayGuidance({
+      rationale: "This is a test rationale for the loaded transcript. The pathway is being monitored based on the current interaction.",
+      immediate_actions: ["Test Action: Build more rapport with the client.", "Test Action: Validate the client's feelings about the situation."],
+      contraindications: ["Test Contraindication: Avoid challenging the client's core beliefs at this early stage.", "Test Contraindication: Do not assign homework that is too demanding."],
+    });
     
     let currentIndex = 0;
     testIntervalRef.current = setInterval(() => {
@@ -411,6 +419,11 @@ const App: React.FC = () => {
   };
 
   const selectedAlert = selectedAlertIndex !== null ? alerts[selectedAlertIndex] : null;
+
+  const handleCitationClick = (citation: Citation) => {
+    setSelectedCitation(citation);
+    setCitationModalOpen(true);
+  };
 
   return (
     <Box sx={{ 
@@ -1154,6 +1167,7 @@ const App: React.FC = () => {
               alternativePathways={pathwayGuidance.alternative_pathways}
               citations={citations}
               history={pathwayHistory}
+              onCitationClick={handleCitationClick}
             />
           </Box>
           */}
@@ -1349,6 +1363,19 @@ const App: React.FC = () => {
         open={showRationaleModal}
         onClose={() => setShowRationaleModal(false)}
         rationale={pathwayGuidance.rationale}
+        immediateActions={pathwayGuidance.immediate_actions}
+        contraindications={pathwayGuidance.contraindications}
+        citations={citations}
+        onCitationClick={handleCitationClick}
+      />
+
+      <CitationModal
+        open={citationModalOpen}
+        onClose={() => {
+          setCitationModalOpen(false);
+          setSelectedCitation(null);
+        }}
+        citation={selectedCitation}
       />
     </Box>
   );

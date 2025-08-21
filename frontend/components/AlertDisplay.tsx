@@ -19,6 +19,7 @@ import {
   MenuBook,
 } from '@mui/icons-material';
 import { Alert, Citation } from '../types/types';
+import RationaleModal from './RationaleModal';
 import CitationModal from './CitationModal';
 
 interface AlertDisplayProps {
@@ -30,8 +31,14 @@ interface AlertDisplayProps {
 
 const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations = [], isSelected = false }) => {
   const [expanded, setExpanded] = useState(false);
+  const [rationaleModalOpen, setRationaleModalOpen] = useState(false);
   const [citationModalOpen, setCitationModalOpen] = useState(false);
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
+
+  const handleCitationClick = (citation: Citation) => {
+    setSelectedCitation(citation);
+    setCitationModalOpen(true);
+  };
 
   // Use timing directly from backend (simplified!)
   const timing = alert.timing || 'info';
@@ -95,8 +102,7 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
             // Find the citation with the first number (for now, just handle single citations)
             const citation = citations.find(c => citationNumbers.includes(c.citation_number));
             if (citation) {
-              setSelectedCitation(citation);
-              setCitationModalOpen(true);
+              handleCitationClick(citation);
             }
           }}
           sx={{
@@ -305,6 +311,13 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
                 {expanded ? <ExpandLess /> : <ExpandMore />}
               </IconButton>
             )}
+             <Button
+              size="small"
+              onClick={() => setRationaleModalOpen(true)}
+              sx={{ mt: 1 }}
+              >
+              Details
+            </Button>
           </Box>
         </Box>
 
@@ -361,6 +374,15 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
       }}
       citation={selectedCitation}
     />
+     <RationaleModal
+        open={rationaleModalOpen}
+        onClose={() => setRationaleModalOpen(false)}
+        rationale={alert.recommendation}
+        immediateActions={alert.immediateActions}
+        contraindications={alert.contraindications}
+        citations={citations}
+        onCitationClick={handleCitationClick}
+      />
   </>
   );
 };

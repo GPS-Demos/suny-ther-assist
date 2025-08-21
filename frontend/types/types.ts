@@ -11,6 +11,8 @@ export interface Alert {
   message: string;
   evidence?: string[];
   recommendation?: string;
+  immediateActions?: string[];
+  contraindications?: string[];
   manual_reference?: {
     source: string;
     page?: number;
