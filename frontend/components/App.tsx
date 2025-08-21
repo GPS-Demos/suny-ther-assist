@@ -34,6 +34,7 @@ import SessionMetrics from './SessionMetrics';
 import PathwayIndicator from './PathwayIndicator';
 import SessionPhaseIndicator from './SessionPhaseIndicator.tsx';
 import SessionSummaryModal from './SessionSummaryModal';
+import RationaleModal from './RationaleModal';
 import { useAudioRecorderWebSocket } from '../hooks/useAudioRecorderWebSocket';
 import { useTherapyAnalysis } from '../hooks/useTherapyAnalysis';
 import { formatDuration } from '../utils/timeUtils';
@@ -96,6 +97,7 @@ const App: React.FC = () => {
   }>>([]);
   const [riskLevel] = useState<'low' | 'moderate' | 'high' | null>(null);
   const [showSessionSummary, setShowSessionSummary] = useState(false);
+  const [showRationaleModal, setShowRationaleModal] = useState(false);
   
   // Test mode state
   const [isTestMode, setIsTestMode] = useState(false);
@@ -596,8 +598,7 @@ const App: React.FC = () => {
           flex: 1,
           display: 'grid',
           gap: 3,
-          gridTemplateColumns: isWideScreen ? 'minmax(400px, 2fr) minmax(300px, 1.5fr) minmax(300px, 1.5fr)' : '1fr',
-          gridAutoRows: 'min-content',
+          gridTemplateColumns: isWideScreen ? '1fr 2fr' : '1fr',
         }}>
           {/* Section ID */}
           <Paper
@@ -665,13 +666,16 @@ const App: React.FC = () => {
             </Box>
             <Paper 
               sx={{ 
-                p: 1, 
-                backgroundColor: 'warning.light', 
-                color: 'warning.contrastText',
-                textAlign: 'center'
+                p: '2px 8px',
+                backgroundColor: '#10b981', 
+                color: 'white',
+                textAlign: 'center',
+                borderRadius: '12px',
+                width: 'fit-content',
+                alignSelf: 'flex-start'
               }}
             >
-              <Typography variant="caption">consider phase adjustment</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 500 }}>Phase-appropriate Progress</Typography>
             </Paper>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Box sx={{ flexGrow: 1, backgroundColor: 'grey.300', borderRadius: 1 }}>
@@ -744,21 +748,65 @@ const App: React.FC = () => {
             </Box>
           </Paper>
 
-          {/* Evidence Section */}
-          <Paper
-            sx={{
-              p: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
-              '&:hover': {
-                boxShadow: '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
-              },
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            }}
-          >
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Pathway Summary Section */}
+            <Paper
+              sx={{
+                p: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 2,
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: '0 10px 20px -5px rgba(0, 0, 0, 0.05)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
+              <Box>
+                <Typography variant="body2" color="text.secondary">Current Pathway</Typography>
+                <Typography variant="h6" sx={{ color: 'var(--primary)', fontWeight: 600 }}>
+                  {sessionContext.current_approach}
+                </Typography>
+              </Box>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>{sessionMetrics.techniques_detected.length}</Typography>
+                <Typography variant="body2" color="text.secondary">Techniques</Typography>
+              </Box>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color:
+                      pathwayIndicators.current_approach_effectiveness === 'effective'
+                        ? 'green'
+                        : pathwayIndicators.current_approach_effectiveness === 'struggling'
+                        ? 'orange'
+                        : 'red',
+                    fontWeight: 600
+                  }}>
+                  {pathwayIndicators.current_approach_effectiveness.charAt(0).toUpperCase() + pathwayIndicators.current_approach_effectiveness.slice(1)}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">Effectiveness</Typography>
+              </Box>
+              <Button variant="outlined" size="small" onClick={() => setShowRationaleModal(true)}>Show Rationale</Button>
+            </Paper>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
+              {/* Evidence Section */}
+              <Paper
+                sx={{
+                  p: 3,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
+                  '&:hover': {
+                    boxShadow: '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
             <Typography 
               variant="h5" 
               gutterBottom 
@@ -780,7 +828,7 @@ const App: React.FC = () => {
             {selectedAlert && selectedAlert.evidence ? (
               <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {selectedAlert.evidence.map((item, index) => (
-                  <Typography key={index} variant="body2" color="text.secondary">
+                  <Typography key={index} variant="body2" color="text.secondary" fontStyle="italic">
                     - {item}
                   </Typography>
                 ))}
@@ -809,21 +857,21 @@ const App: React.FC = () => {
             )}
           </Paper>
 
-          {/* Recommendation Section */}
-          <Paper
-            sx={{
-              p: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
-              '&:hover': {
-                boxShadow: '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
-              },
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            }}
-          >
+              {/* Recommendation Section */}
+              <Paper
+                sx={{
+                  p: 3,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
+                  '&:hover': {
+                    boxShadow: '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
             <Typography 
               variant="h5" 
               gutterBottom 
@@ -869,7 +917,8 @@ const App: React.FC = () => {
               </Box>
             )}
           </Paper>
-
+            </Box>
+          </Box>
           {/*
           // Left Panel - Real-Time Guidance
           <Paper 
@@ -1294,6 +1343,12 @@ const App: React.FC = () => {
         sessionContext={sessionContext}
         sessionDuration={sessionDuration}
         sessionId={sessionId}
+      />
+
+      <RationaleModal
+        open={showRationaleModal}
+        onClose={() => setShowRationaleModal(false)}
+        rationale={pathwayGuidance.rationale}
       />
     </Box>
   );
