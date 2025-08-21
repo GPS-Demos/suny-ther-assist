@@ -41,7 +41,7 @@ import { useAudioRecorderWebSocket } from '../hooks/useAudioRecorderWebSocket';
 import { useTherapyAnalysis } from '../hooks/useTherapyAnalysis';
 import { formatDuration } from '../utils/timeUtils';
 import { getStatusColor } from '../utils/colorUtils';
-import { SessionContext, Alert as IAlert, Citation } from '../types/types';
+import { SessionContext, Alert as IAlert, Citation, SessionSummary } from '../types/types';
 import { testTranscriptData } from '../utils/testTranscript';
 
 const App: React.FC = () => {
@@ -100,6 +100,9 @@ const App: React.FC = () => {
   }>>([]);
   const [riskLevel] = useState<'low' | 'moderate' | 'high' | null>(null);
   const [showSessionSummary, setShowSessionSummary] = useState(false);
+  const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   const [sessionSummaryClosed, setSessionSummaryClosed] = useState(false);
   const [showRationaleModal, setShowRationaleModal] = useState(false);
   const [citationModalOpen, setCitationModalOpen] = useState(false);
@@ -156,7 +159,7 @@ const App: React.FC = () => {
     }
   });
 
-  const { analyzeSegment } = useTherapyAnalysis({
+  const { analyzeSegment, generateSessionSummary } = useTherapyAnalysis({
     onAnalysis: (analysis) => {
       const analysisType = (analysis as any).analysis_type;
       const isRealtime = analysisType === 'realtime';
@@ -346,6 +349,8 @@ const App: React.FC = () => {
     setSessionStartTime(new Date());
     setIsRecording(true);
     setSessionSummaryClosed(false);
+    setSessionSummary(null);
+    setSummaryError(null);
     await startRecording();
   };
 
@@ -355,9 +360,36 @@ const App: React.FC = () => {
     if (isTestMode) {
       stopTestMode();
     }
-    // Show session summary modal if we have transcript data
     if (transcript.length > 0) {
-      setShowSessionSummary(true);
+      requestSummary();
+    }
+  };
+
+  const requestSummary = async () => {
+    setSummaryLoading(true);
+    setSummaryError(null);
+    setSessionSummaryClosed(true);
+    try {
+      const fullTranscript = transcript
+        .filter(t => !t.is_interim)
+        .map(t => ({
+          speaker: 'conversation',
+          text: t.text,
+          timestamp: t.timestamp,
+        }));
+      
+      const result = await generateSessionSummary(fullTranscript, sessionMetrics);
+
+      if (result.summary) {
+        setSessionSummary(result.summary);
+      } else {
+        throw new Error('Invalid summary response');
+      }
+    } catch (err) {
+      console.error('Error generating summary:', err);
+      setSummaryError('Failed to generate session summary. Please try again.');
+    } finally {
+      setSummaryLoading(false);
     }
   };
 
@@ -678,7 +710,7 @@ const App: React.FC = () => {
             <Box>
               <Typography variant="h6">Phase: Beginning</Typography>
               <Typography variant="body2" color="text.secondary">
-                Rapport-building, agenda-setting
+                Rapport-building, agenda-setting (1-10 minutes)
               </Typography>
             </Box>
             <Paper 
@@ -1376,14 +1408,11 @@ const App: React.FC = () => {
       {/* Session Summary Modal */}
       <SessionSummaryModal
         open={showSessionSummary}
-        onClose={() => {
-          setShowSessionSummary(false);
-          setSessionSummaryClosed(true);
-        }}
-        transcript={transcript}
-        sessionMetrics={sessionMetrics}
-        sessionContext={sessionContext}
-        sessionDuration={sessionDuration}
+        onClose={() => setShowSessionSummary(false)}
+        summary={sessionSummary}
+        loading={summaryLoading}
+        error={summaryError}
+        onRetry={requestSummary}
         sessionId={sessionId}
       />
 
