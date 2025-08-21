@@ -25,6 +25,8 @@ import {
   Shield,
   Close,
   Chat,
+  SwapHoriz,
+  Psychology,
 } from '@mui/icons-material';
 import TranscriptDisplay from './TranscriptDisplay';
 import AlertDisplay from './AlertDisplay';
@@ -54,6 +56,7 @@ const App: React.FC = () => {
   });
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [wordsSinceLastAnalysis, setWordsSinceLastAnalysis] = useState(0);
+  const [selectedAlertIndex, setSelectedAlertIndex] = useState<number | null>(null);
 
   const [transcript, setTranscript] = useState<Array<{
     text: string;
@@ -162,7 +165,17 @@ const App: React.FC = () => {
       if (isRealtime) {
         // Real-time analysis: Only update alerts and basic metrics
         if (analysis.alerts && analysis.alerts.length > 0) {
-          setAlerts(prev => [...analysis.alerts!, ...prev].slice(0, 5));
+          const newAlerts = analysis.alerts.map(alert => ({
+            ...alert,
+            sessionTime: sessionDuration,
+            timestamp: new Date().toISOString()
+          }));
+
+          setAlerts(prev => {
+            const existingAlerts = new Set(prev.map(a => a.title));
+            const uniqueNewAlerts = newAlerts.filter(a => !existingAlerts.has(a.title));
+            return [...uniqueNewAlerts, ...prev].slice(0, 5);
+          });
         }
         if (analysis.session_metrics) {
           setSessionMetrics(prev => ({
@@ -395,6 +408,8 @@ const App: React.FC = () => {
     }
   };
 
+  const selectedAlert = selectedAlertIndex !== null ? alerts[selectedAlertIndex] : null;
+
   return (
     <Box sx={{ 
       height: '100vh', 
@@ -572,7 +587,7 @@ const App: React.FC = () => {
         display: 'flex', 
         gap: 3, 
         p: 3, 
-        overflow: 'hidden', // Changed from 'auto' to 'hidden' to prevent main scrolling
+        overflow: 'auto', // Allow scrolling for the main content
         pr: transcriptOpen ? '450px' : '100px', // Space for right sidebar
         transition: 'padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       }}>
@@ -584,7 +599,279 @@ const App: React.FC = () => {
           gridTemplateColumns: isWideScreen ? 'minmax(400px, 2fr) minmax(300px, 1.5fr) minmax(300px, 1.5fr)' : '1fr',
           gridAutoRows: 'min-content',
         }}>
-          {/* Left Panel - Real-Time Guidance */}
+          {/* Section ID */}
+          <Paper
+            sx={{
+              p: 3,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
+              '&:hover': {
+                boxShadow: '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography 
+                variant="h5" 
+                sx={{ 
+                  color: 'var(--primary)',
+                  fontWeight: 600,
+                }}
+              >
+                John Doe
+              </Typography>
+              {!isRecording ? (
+                <Button
+                  variant="contained"
+                  startIcon={<Mic />}
+                  onClick={handleStartSession}
+                  sx={{ 
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                    },
+                  }}
+                >
+                  Start Session
+                </Button>
+              ) : (
+                <Button
+                  variant="contained"
+                  startIcon={<Stop />}
+                  onClick={handleStopSession}
+                  sx={{ 
+                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    color: 'white',
+                    '&:hover': { 
+                      background: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
+                    },
+                  }}
+                >
+                  {isTestMode ? 'Stop Test' : 'End Session'}
+                </Button>
+              )}
+            </Box>
+            <Typography variant="body1">Session #1</Typography>
+            <Box>
+              <Typography variant="h6">Phase: Beginning</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Rapport-building, agenda-setting
+              </Typography>
+            </Box>
+            <Paper 
+              sx={{ 
+                p: 1, 
+                backgroundColor: 'warning.light', 
+                color: 'warning.contrastText',
+                textAlign: 'center'
+              }}
+            >
+              <Typography variant="caption">consider phase adjustment</Typography>
+            </Paper>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ flexGrow: 1, backgroundColor: 'grey.300', borderRadius: 1 }}>
+                <Box 
+                  sx={{ 
+                    width: `${(sessionDuration / 300) * 100}%`, // Assumes 5 minutes
+                    backgroundColor: 'primary.main', 
+                    height: '8px', 
+                    borderRadius: 1 
+                  }} 
+                />
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                {formatDuration(sessionDuration)}
+              </Typography>
+            </Box>
+            <Box sx={{ mt: 2 }}>
+              {alerts.map((alert, index) => {
+                const timing = alert.timing || 'info';
+                const getAlertColor = () => {
+                  const normalizedTiming = timing?.toLowerCase();
+                  switch (normalizedTiming) {
+                    case 'now':
+                      return '#dc2626'; // Red
+                    case 'pause':
+                      return '#d97706'; // Amber
+                    case 'info':
+                      return '#059669'; // Green
+                    default:
+                      return '#6b7280'; // Gray
+                  }
+                };
+
+                const getContentIcon = () => {
+                  if (alert.category === 'safety') {
+                    return <Shield sx={{ fontSize: 20, color: getAlertColor() }} />;
+                  }
+                  if (alert.category === 'pathway_change') {
+                    return <SwapHoriz sx={{ fontSize: 20, color: getAlertColor() }} />;
+                  }
+                  return <Psychology sx={{ fontSize: 20, color: getAlertColor() }} />;
+                };
+
+                return (
+                  <Box
+                    key={index}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      mb: 1,
+                      p: 1,
+                      borderRadius: 1,
+                      cursor: 'pointer',
+                      backgroundColor: selectedAlertIndex === index ? 'action.selected' : 'transparent',
+                      '&:hover': {
+                        backgroundColor: 'action.hover',
+                      },
+                    }}
+                    onClick={() => setSelectedAlertIndex(index)}
+                  >
+                    {getContentIcon()}
+                    <Typography variant="body2">{alert.title}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      ({formatDuration(alert.sessionTime || 0)})
+                    </Typography>
+                  </Box>
+                );
+              })}
+            </Box>
+          </Paper>
+
+          {/* Evidence Section */}
+          <Paper
+            sx={{
+              p: 3,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
+              '&:hover': {
+                boxShadow: '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            <Typography 
+              variant="h5" 
+              gutterBottom 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1.5,
+                color: 'var(--primary)',
+                fontWeight: 600,
+              }}
+            >
+              <Article sx={{ 
+                fontSize: 28,
+                color: 'rgba(11, 87, 208, 0.6)',
+                opacity: 0.8,
+              }} /> 
+              Evidence
+            </Typography>
+            {selectedAlert && selectedAlert.evidence ? (
+              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {selectedAlert.evidence.map((item, index) => (
+                  <Typography key={index} variant="body2" color="text.secondary">
+                    - {item}
+                  </Typography>
+                ))}
+              </Box>
+            ) : (
+              <Box sx={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                py: 6,
+                px: 3,
+                background: 'rgba(250, 251, 253, 0.5)',
+                borderRadius: '12px',
+                border: '1px dashed rgba(196, 199, 205, 0.3)',
+              }}>
+                <Typography 
+                  variant="body1" 
+                  color="text.secondary"
+                  sx={{ fontWeight: 500 }}
+                >
+                  Evidence will appear here.
+                </Typography>
+              </Box>
+            )}
+          </Paper>
+
+          {/* Recommendation Section */}
+          <Paper
+            sx={{
+              p: 3,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
+              '&:hover': {
+                boxShadow: '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            <Typography 
+              variant="h5" 
+              gutterBottom 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1.5,
+                color: 'var(--primary)',
+                fontWeight: 600,
+              }}
+            >
+              <Psychology sx={{ 
+                fontSize: 28,
+                color: 'rgba(11, 87, 208, 0.6)',
+                opacity: 0.8,
+              }} /> 
+              Recommendation
+            </Typography>
+            {selectedAlert && selectedAlert.recommendation ? (
+              <Typography variant="body2" color="text.secondary">
+                {selectedAlert.recommendation}
+              </Typography>
+            ) : (
+              <Box sx={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                py: 6,
+                px: 3,
+                background: 'rgba(250, 251, 253, 0.5)',
+                borderRadius: '12px',
+                border: '1px dashed rgba(196, 199, 205, 0.3)',
+              }}>
+                <Typography 
+                  variant="body1" 
+                  color="text.secondary"
+                  sx={{ fontWeight: 500 }}
+                >
+                  Recommendations will appear here.
+                </Typography>
+              </Box>
+            )}
+          </Paper>
+
+          {/*
+          // Left Panel - Real-Time Guidance
           <Paper 
             sx={{ 
               p: 3, 
@@ -667,7 +954,7 @@ const App: React.FC = () => {
                 </Box>
               ) : (
                 <>
-                  {/* Current Alert */}
+                  
                   <Box sx={{ flexShrink: 0 }}>
                     <AlertDisplay
                       key={`${alerts[0].timestamp}-0`}
@@ -677,14 +964,14 @@ const App: React.FC = () => {
                     />
                   </Box>
 
-                  {/* History Section */}
+                  
                   {alerts.length > 1 && (
                     <Box sx={{ 
                       display: 'flex',
                       flexDirection: 'column',
                       flexShrink: 0,
                     }}>
-                      {/* History Toggle Button */}
+                      
                       <Button
                         onClick={() => setHistoryExpanded(!historyExpanded)}
                         startIcon={historyExpanded ? <ExpandLess /> : <ExpandMore />}
@@ -704,7 +991,7 @@ const App: React.FC = () => {
                         {historyExpanded ? 'Hide' : 'See'} history ({alerts.length - 1} previous {alerts.length - 1 === 1 ? 'alert' : 'alerts'})
                       </Button>
 
-                      {/* History Content */}
+                      
                       <Collapse in={historyExpanded} timeout="auto">
                         <Box sx={{ 
                           display: 'flex',
@@ -738,8 +1025,10 @@ const App: React.FC = () => {
               )}
             </Box>
           </Paper>
+          */}
 
-          {/* Middle Panel - Session Metrics & Phase */}
+          {/* 
+          // Middle Panel - Session Metrics & Phase
           <Paper 
             sx={{ 
               p: 3,
@@ -794,11 +1083,13 @@ const App: React.FC = () => {
               <SessionMetrics metrics={sessionMetrics} />
             </Box>
             
-            {/* Session Phase Indicator */}
+            
             <SessionPhaseIndicator duration={sessionDuration} />
           </Paper>
+          */}
 
-          {/* Right Panel - Current Pathway */}
+          {/* 
+          // Right Panel - Current Pathway
           <Box sx={{ 
             display: 'flex',
             flexDirection: 'column',
@@ -816,6 +1107,7 @@ const App: React.FC = () => {
               history={pathwayHistory}
             />
           </Box>
+          */}
         </Box>
       </Box>
 

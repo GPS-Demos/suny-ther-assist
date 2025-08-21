@@ -25,9 +25,10 @@ interface AlertDisplayProps {
   alert: Alert;
   onDismiss: () => void;
   citations?: Citation[];
+  isSelected?: boolean;
 }
 
-const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations = [] }) => {
+const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations = [], isSelected = false }) => {
   const [expanded, setExpanded] = useState(false);
   const [citationModalOpen, setCitationModalOpen] = useState(false);
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
@@ -142,9 +143,9 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
           borderRadius: 2,
           overflow: 'hidden',
           transition: 'all 0.3s ease',
-          background: timing === 'now' 
+          background: isSelected ? `${alertColor}20` : (timing === 'now' 
             ? `linear-gradient(135deg, ${alertColor}08 0%, ${alertColor}04 100%)`
-            : 'rgba(255, 255, 255, 0.9)',
+            : 'rgba(255, 255, 255, 0.9)'),
           animation: timing === 'now' ? 'urgentPulse 3s infinite' : 'none',
           '@keyframes urgentPulse': {
             '0%': { 

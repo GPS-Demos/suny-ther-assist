@@ -17,6 +17,7 @@ export interface Alert {
     section?: string;
   };
   timestamp?: string;
+  sessionTime?: number;
   
   // Legacy fields for backward compatibility (to be removed)
   level?: 'critical' | 'suggestion' | 'info';

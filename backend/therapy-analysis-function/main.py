@@ -54,6 +54,7 @@ def therapy_analysis(request):
     HTTP Cloud Function for real-time therapy session analysis.
     """
     # --- CORS Handling ---
+    logging.warning(request.method)
     if request.method == 'OPTIONS':
         headers = {
             'Access-Control-Allow-Origin': '*',
