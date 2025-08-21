@@ -36,9 +36,11 @@ import SessionPhaseIndicator from './SessionPhaseIndicator.tsx';
 import SessionSummaryModal from './SessionSummaryModal';
 import RationaleModal from './RationaleModal';
 import CitationModal from './CitationModal';
+import SessionVitals from './SessionVitals';
 import { useAudioRecorderWebSocket } from '../hooks/useAudioRecorderWebSocket';
 import { useTherapyAnalysis } from '../hooks/useTherapyAnalysis';
 import { formatDuration } from '../utils/timeUtils';
+import { getStatusColor } from '../utils/colorUtils';
 import { SessionContext, Alert as IAlert, Citation } from '../types/types';
 import { testTranscriptData } from '../utils/testTranscript';
 
@@ -98,6 +100,7 @@ const App: React.FC = () => {
   }>>([]);
   const [riskLevel] = useState<'low' | 'moderate' | 'high' | null>(null);
   const [showSessionSummary, setShowSessionSummary] = useState(false);
+  const [sessionSummaryClosed, setSessionSummaryClosed] = useState(false);
   const [showRationaleModal, setShowRationaleModal] = useState(false);
   const [citationModalOpen, setCitationModalOpen] = useState(false);
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
@@ -342,6 +345,7 @@ const App: React.FC = () => {
   const handleStartSession = async () => {
     setSessionStartTime(new Date());
     setIsRecording(true);
+    setSessionSummaryClosed(false);
     await startRecording();
   };
 
@@ -434,7 +438,7 @@ const App: React.FC = () => {
       overflow: 'hidden',
     }}>
       {/* Header */}
-      <Box 
+      {/* <Box 
         sx={{ 
           p: 3,
           background: 'linear-gradient(135deg, rgba(11, 87, 208, 0.95) 0%, rgba(0, 99, 155, 0.95) 100%)',
@@ -594,7 +598,7 @@ const App: React.FC = () => {
             )}
           </Box>
         </Box>
-      </Box>
+      </Box> */}
 
       {/* Main Content Area */}
       <Box sx={{ 
@@ -752,9 +756,9 @@ const App: React.FC = () => {
                   >
                     {getContentIcon()}
                     <Typography variant="body2">{alert.title}</Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    {/* <Typography variant="caption" color="text.secondary">
                       ({formatDuration(alert.sessionTime || 0)})
-                    </Typography>
+                    </Typography> */}
                   </Box>
                 );
               })}
@@ -762,6 +766,9 @@ const App: React.FC = () => {
           </Paper>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Session Vitals */}
+            <SessionVitals metrics={sessionMetrics} />
+
             {/* Pathway Summary Section */}
             <Paper
               sx={{
@@ -782,24 +789,20 @@ const App: React.FC = () => {
                 </Typography>
               </Box>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>{sessionMetrics.techniques_detected.length}</Typography>
                 <Typography variant="body2" color="text.secondary">Techniques</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>{sessionMetrics.techniques_detected.length}</Typography>
               </Box>
               <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary">Effectiveness</Typography>
                 <Typography
                   variant="h6"
                   sx={{
-                    color:
-                      pathwayIndicators.current_approach_effectiveness === 'effective'
-                        ? 'green'
-                        : pathwayIndicators.current_approach_effectiveness === 'struggling'
-                        ? 'orange'
-                        : 'red',
-                    fontWeight: 600
+                    color: getStatusColor(pathwayIndicators.current_approach_effectiveness),
+                    fontWeight: 600,
+                    textTransform: 'capitalize'
                   }}>
-                  {pathwayIndicators.current_approach_effectiveness.charAt(0).toUpperCase() + pathwayIndicators.current_approach_effectiveness.slice(1)}
+                  {pathwayIndicators.current_approach_effectiveness}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">Effectiveness</Typography>
               </Box>
               <Button variant="outlined" size="small" onClick={() => setShowRationaleModal(true)}>Show Rationale</Button>
             </Paper>
@@ -1174,34 +1177,56 @@ const App: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Floating Transcript Toggle Button */}
-      <Fab
-        color="primary"
-        aria-label="transcript"
-        onClick={() => {
-          setTranscriptOpen(!transcriptOpen);
-          if (!transcriptOpen) {
-            setNewTranscriptCount(0);
-          }
-        }}
-        sx={{
-          position: 'fixed',
-          bottom: 24,
-          right: 24,
-          background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-          '&:hover': {
-            background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
-            transform: 'scale(1.1)',
-          },
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
-          zIndex: 1201,
-        }}
-      >
-        <Badge badgeContent={newTranscriptCount} color="error">
-          <Chat />
-        </Badge>
-      </Fab>
+      {/* Floating Action Buttons */}
+      <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1201, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end' }}>
+        {/* Reopen Session Summary Button */}
+        {sessionSummaryClosed && !showSessionSummary && (
+          <Fab
+            color="secondary"
+            variant="extended"
+            aria-label="reopen session summary"
+            onClick={() => setShowSessionSummary(true)}
+            sx={{
+              background: 'linear-gradient(135deg, #673ab7 0%, #512da8 100%)',
+              color: 'white',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #512da8 0%, #673ab7 100%)',
+                transform: 'scale(1.05)',
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: '0 8px 20px -4px rgba(103, 58, 183, 0.35)',
+            }}
+          >
+            <Article sx={{ mr: 1 }} />
+            Summary
+          </Fab>
+        )}
+
+        {/* Floating Transcript Toggle Button */}
+        <Fab
+          color="primary"
+          aria-label="transcript"
+          onClick={() => {
+            setTranscriptOpen(!transcriptOpen);
+            if (!transcriptOpen) {
+              setNewTranscriptCount(0);
+            }
+          }}
+          sx={{
+            background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
+              transform: 'scale(1.1)',
+            },
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
+          }}
+        >
+          <Badge badgeContent={newTranscriptCount} color="error">
+            <Chat />
+          </Badge>
+        </Fab>
+      </Box>
 
       {/* Test Transcript Button */}
       {!isRecording && !isTestMode && (
@@ -1351,7 +1376,10 @@ const App: React.FC = () => {
       {/* Session Summary Modal */}
       <SessionSummaryModal
         open={showSessionSummary}
-        onClose={() => setShowSessionSummary(false)}
+        onClose={() => {
+          setShowSessionSummary(false);
+          setSessionSummaryClosed(true);
+        }}
         transcript={transcript}
         sessionMetrics={sessionMetrics}
         sessionContext={sessionContext}
