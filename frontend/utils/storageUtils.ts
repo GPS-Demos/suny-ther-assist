@@ -4,8 +4,7 @@
 
 // Cloud Function endpoint for storage access
 // This will be replaced with the actual deployed function URL
-const STORAGE_ACCESS_URL = import.meta.env.VITE_STORAGE_ACCESS_URL || 
-  'https://storage-access-mlofelg76a-uc.a.run.app';
+const STORAGE_ACCESS_URL = import.meta.env.VITE_STORAGE_ACCESS_URL;
 
 /**
  * Check if a URI is a Google Cloud Storage URI

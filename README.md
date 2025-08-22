@@ -36,7 +36,7 @@ Ther-Assist listens ambiently to therapy sessions and provides near real-time gu
 - **Alert System**: Critical (red), Suggestion (yellow), Info (green) alerts
 - **Session Metrics Dashboard**: Visual indicators for therapeutic progress
 
-## Setup Instructions
+## Deployment Instructions
 
 ### Prerequisites
 - Node.js 18+ and npm
@@ -61,22 +61,23 @@ gcloud services enable cloudbuild.googleapis.com
 # (Follow Google Cloud Console to create a datastore and upload PDF manuals)
 ```
 
-### 2. Backend Deployment
+### 2. Create RAG Corpuses
+Follow the instructions in the [RAG README.MD](./backend/rag/README)
+
+### 3. Backend Deployment
 
 Deploy Cloud Functions:
 
+#### Deploy Storage Access Function
+First give your default compute engine SA the role for Cloud Build Builder, Vertex AI User, Discovery Engine User, and finally the Storage Object & Bucket Viewer roles. Then run the following commands:
 ```bash
 # Deploy transcription function
-cd backend/transcription-function
-gcloud functions deploy transcribe_therapy_audio \
-  --runtime python312 \
-  --trigger-http \
-  --allow-unauthenticated \
-  --memory 512MB \
-  --timeout 540s \
-  --set-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID
+cd backend/storage-access-function
+deploy.sh
+```
 
-# Deploy analysis function
+#### Deploy analysis function
+```bash
 cd ../therapy-analysis-function
 gcloud functions deploy therapy_analysis \
   --runtime python312 \
@@ -87,23 +88,85 @@ gcloud functions deploy therapy_analysis \
   --set-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID
 ```
 
-### 3. Frontend Setup
+Note: Org policies may block your functions from deploying with public access enabled. You'll have to change that setting manually.
 
+### 4. Frontend Setup
+
+1. Install dependencies
 ```bash
 cd frontend
 
-# Install dependencies
-npm install
-
-# Copy environment variables
+# Copy environment variables and update with your own
 cp .env.example .env
+```
 
-# Update .env with your Cloud Function URLs
-# VITE_TRANSCRIPTION_API=https://REGION-PROJECT_ID.cloudfunctions.net/transcribe_therapy_audio
-# VITE_ANALYSIS_API=https://REGION-PROJECT_ID.cloudfunctions.net/therapy_analysis
+2. Update your .env file with your project's variables
 
-# Run development server
+3. Enable Firebase in your project, enable Google authentication, register an app, get the Firebase config object, and use that object to create `frontend/firebase-config-object.ts`:
+```javascript
+export const firebaseConfig = {
+  apiKey: "api-key",
+  authDomain: "your-gcp-project.firebaseapp.com",
+  projectId: "your-gcp-project",
+  storageBucket: "your-gcp-project.firebasestorage.app",
+  messagingSenderId: "message-sender-id",
+  appId: "1:app-id"
+};
+```
+
+4. Create the following file `frontend/firebaserc` with your own information:
+```javascript
+{
+  "projects": {
+    "default": "your-gcp-project-id"
+  }
+}
+```
+
+5. Build your app
+```bash
+npm run build
+```
+
+6. Deploy to Firebase
+```bash
+firebase deploy
+```
+
+## Local Dev
+
+### Frontend
+1. Create .env.development
+```bash
+# Backend API endpoints
+VITE_ANALYSIS_API=http://localhost:8080
+VITE_STORAGE_ACCESS_URL=http://localhost:8081
+VITE_TRANSCRIPTION_API=http://localhost:8082
+
+# Google Cloud settings
+VITE_GOOGLE_CLOUD_PROJECT=your-gcp-project
+```
+
+2. Install dependencies and run frontend
+```bash
+cd frontend
+npm install
 npm run dev
+```
+
+### Backend therapy-analysis-function
+1. Run the Cloud Run Function locally
+```bash
+cd backend/therapy-analysis-function
+export GOOGLE_CLOUD_PROJECT="your-project-id"
+functions-framework --target=therapy_analysis --port=8080
+```
+
+### Backend storage-acccess-function
+```bash
+cd backend/storage-access-function
+export GOOGLE_CLOUD_PROJECT="your-project-id"
+functions-framework --target=storage_access --port=8081
 ```
 
 ## Usage
@@ -144,7 +207,8 @@ For local development without Google Cloud:
 
 ### Testing
 
-```bash
+TODO
+<!-- ```bash
 # Frontend tests
 cd frontend
 npm test
@@ -152,7 +216,7 @@ npm test
 # Backend function tests
 cd backend/therapy-analysis-function
 python -m pytest test_scripts/
-```
+``` -->
 
 ## Contributing
 
