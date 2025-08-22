@@ -25,6 +25,8 @@ import {
   Shield,
   Close,
   Chat,
+  SwapHoriz,
+  Psychology,
 } from '@mui/icons-material';
 import TranscriptDisplay from './TranscriptDisplay';
 import AlertDisplay from './AlertDisplay';
@@ -32,10 +34,14 @@ import SessionMetrics from './SessionMetrics';
 import PathwayIndicator from './PathwayIndicator';
 import SessionPhaseIndicator from './SessionPhaseIndicator.tsx';
 import SessionSummaryModal from './SessionSummaryModal';
+import RationaleModal from './RationaleModal';
+import CitationModal from './CitationModal';
+import SessionVitals from './SessionVitals';
 import { useAudioRecorderWebSocket } from '../hooks/useAudioRecorderWebSocket';
 import { useTherapyAnalysis } from '../hooks/useTherapyAnalysis';
 import { formatDuration } from '../utils/timeUtils';
-import { SessionContext, Alert as IAlert, Citation } from '../types/types';
+import { getStatusColor } from '../utils/colorUtils';
+import { SessionContext, Alert as IAlert, Citation, SessionSummary } from '../types/types';
 import { testTranscriptData } from '../utils/testTranscript';
 
 const App: React.FC = () => {
@@ -54,6 +60,7 @@ const App: React.FC = () => {
   });
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [wordsSinceLastAnalysis, setWordsSinceLastAnalysis] = useState(0);
+  const [selectedAlertIndex, setSelectedAlertIndex] = useState<number | null>(null);
 
   const [transcript, setTranscript] = useState<Array<{
     text: string;
@@ -93,6 +100,13 @@ const App: React.FC = () => {
   }>>([]);
   const [riskLevel] = useState<'low' | 'moderate' | 'high' | null>(null);
   const [showSessionSummary, setShowSessionSummary] = useState(false);
+  const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [sessionSummaryClosed, setSessionSummaryClosed] = useState(false);
+  const [showRationaleModal, setShowRationaleModal] = useState(false);
+  const [citationModalOpen, setCitationModalOpen] = useState(false);
+  const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
   
   // Test mode state
   const [isTestMode, setIsTestMode] = useState(false);
@@ -145,7 +159,7 @@ const App: React.FC = () => {
     }
   });
 
-  const { analyzeSegment } = useTherapyAnalysis({
+  const { analyzeSegment, generateSessionSummary } = useTherapyAnalysis({
     onAnalysis: (analysis) => {
       const analysisType = (analysis as any).analysis_type;
       const isRealtime = analysisType === 'realtime';
@@ -162,7 +176,17 @@ const App: React.FC = () => {
       if (isRealtime) {
         // Real-time analysis: Only update alerts and basic metrics
         if (analysis.alerts && analysis.alerts.length > 0) {
-          setAlerts(prev => [...analysis.alerts!, ...prev].slice(0, 5));
+          const newAlerts = analysis.alerts.map(alert => ({
+            ...alert,
+            sessionTime: sessionDuration,
+            timestamp: new Date().toISOString()
+          }));
+
+          setAlerts(prev => {
+            const existingAlerts = new Set(prev.map(a => a.title));
+            const uniqueNewAlerts = newAlerts.filter(a => !existingAlerts.has(a.title));
+            return [...uniqueNewAlerts, ...prev].slice(0, 5);
+          });
         }
         if (analysis.session_metrics) {
           setSessionMetrics(prev => ({
@@ -324,6 +348,9 @@ const App: React.FC = () => {
   const handleStartSession = async () => {
     setSessionStartTime(new Date());
     setIsRecording(true);
+    setSessionSummaryClosed(false);
+    setSessionSummary(null);
+    setSummaryError(null);
     await startRecording();
   };
 
@@ -333,9 +360,36 @@ const App: React.FC = () => {
     if (isTestMode) {
       stopTestMode();
     }
-    // Show session summary modal if we have transcript data
     if (transcript.length > 0) {
-      setShowSessionSummary(true);
+      requestSummary();
+    }
+  };
+
+  const requestSummary = async () => {
+    setSummaryLoading(true);
+    setSummaryError(null);
+    setSessionSummaryClosed(true);
+    try {
+      const fullTranscript = transcript
+        .filter(t => !t.is_interim)
+        .map(t => ({
+          speaker: 'conversation',
+          text: t.text,
+          timestamp: t.timestamp,
+        }));
+      
+      const result = await generateSessionSummary(fullTranscript, sessionMetrics);
+
+      if (result.summary) {
+        setSessionSummary(result.summary);
+      } else {
+        throw new Error('Invalid summary response');
+      }
+    } catch (err) {
+      console.error('Error generating summary:', err);
+      setSummaryError('Failed to generate session summary. Please try again.');
+    } finally {
+      setSummaryLoading(false);
     }
   };
 
@@ -344,6 +398,11 @@ const App: React.FC = () => {
     setIsRecording(true);
     setSessionStartTime(new Date());
     setTranscript([]);
+    setPathwayGuidance({
+      rationale: "This is a test rationale for the loaded transcript. The pathway is being monitored based on the current interaction.",
+      immediate_actions: ["Test Action: Build more rapport with the client.", "Test Action: Validate the client's feelings about the situation."],
+      contraindications: ["Test Contraindication: Avoid challenging the client's core beliefs at this early stage.", "Test Contraindication: Do not assign homework that is too demanding."],
+    });
     
     let currentIndex = 0;
     testIntervalRef.current = setInterval(() => {
@@ -395,6 +454,13 @@ const App: React.FC = () => {
     }
   };
 
+  const selectedAlert = selectedAlertIndex !== null ? alerts[selectedAlertIndex] : null;
+
+  const handleCitationClick = (citation: Citation) => {
+    setSelectedCitation(citation);
+    setCitationModalOpen(true);
+  };
+
   return (
     <Box sx={{ 
       height: '100vh', 
@@ -404,7 +470,7 @@ const App: React.FC = () => {
       overflow: 'hidden',
     }}>
       {/* Header */}
-      <Box 
+      {/* <Box 
         sx={{ 
           p: 3,
           background: 'linear-gradient(135deg, rgba(11, 87, 208, 0.95) 0%, rgba(0, 99, 155, 0.95) 100%)',
@@ -564,7 +630,7 @@ const App: React.FC = () => {
             )}
           </Box>
         </Box>
-      </Box>
+      </Box> */}
 
       {/* Main Content Area */}
       <Box sx={{ 
@@ -572,7 +638,7 @@ const App: React.FC = () => {
         display: 'flex', 
         gap: 3, 
         p: 3, 
-        overflow: 'hidden', // Changed from 'auto' to 'hidden' to prevent main scrolling
+        overflow: 'auto', // Allow scrolling for the main content
         pr: transcriptOpen ? '450px' : '100px', // Space for right sidebar
         transition: 'padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       }}>
@@ -581,10 +647,328 @@ const App: React.FC = () => {
           flex: 1,
           display: 'grid',
           gap: 3,
-          gridTemplateColumns: isWideScreen ? 'minmax(400px, 2fr) minmax(300px, 1.5fr) minmax(300px, 1.5fr)' : '1fr',
-          gridAutoRows: 'min-content',
+          gridTemplateColumns: isWideScreen ? '1fr 2fr' : '1fr',
         }}>
-          {/* Left Panel - Real-Time Guidance */}
+          {/* Section ID */}
+          <Paper
+            sx={{
+              p: 3,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
+              '&:hover': {
+                boxShadow: '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography 
+                variant="h5" 
+                sx={{ 
+                  color: 'var(--primary)',
+                  fontWeight: 600,
+                }}
+              >
+                John Doe
+              </Typography>
+              {!isRecording ? (
+                <Button
+                  variant="contained"
+                  startIcon={<Mic />}
+                  onClick={handleStartSession}
+                  sx={{ 
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                    },
+                  }}
+                >
+                  Start Session
+                </Button>
+              ) : (
+                <Button
+                  variant="contained"
+                  startIcon={<Stop />}
+                  onClick={handleStopSession}
+                  sx={{ 
+                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                    color: 'white',
+                    '&:hover': { 
+                      background: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
+                    },
+                  }}
+                >
+                  {isTestMode ? 'Stop Test' : 'End Session'}
+                </Button>
+              )}
+            </Box>
+            <Typography variant="body1">Session #1</Typography>
+            <Box>
+              <Typography variant="h6">Phase: Beginning</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Rapport-building, agenda-setting (1-10 minutes)
+              </Typography>
+            </Box>
+            <Paper 
+              sx={{ 
+                p: '2px 8px',
+                backgroundColor: '#10b981', 
+                color: 'white',
+                textAlign: 'center',
+                borderRadius: '12px',
+                width: 'fit-content',
+                alignSelf: 'flex-start'
+              }}
+            >
+              <Typography variant="caption" sx={{ fontWeight: 500 }}>Phase-appropriate Progress</Typography>
+            </Paper>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ flexGrow: 1, backgroundColor: 'grey.300', borderRadius: 1 }}>
+                <Box 
+                  sx={{ 
+                    width: `${(sessionDuration / 300) * 100}%`, // Assumes 5 minutes
+                    backgroundColor: 'primary.main', 
+                    height: '8px', 
+                    borderRadius: 1 
+                  }} 
+                />
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                {formatDuration(sessionDuration)}
+              </Typography>
+            </Box>
+            <Box sx={{ mt: 2 }}>
+              {alerts.map((alert, index) => {
+                const timing = alert.timing || 'info';
+                const getAlertColor = () => {
+                  const normalizedTiming = timing?.toLowerCase();
+                  switch (normalizedTiming) {
+                    case 'now':
+                      return '#dc2626'; // Red
+                    case 'pause':
+                      return '#d97706'; // Amber
+                    case 'info':
+                      return '#059669'; // Green
+                    default:
+                      return '#6b7280'; // Gray
+                  }
+                };
+
+                const getContentIcon = () => {
+                  if (alert.category === 'safety') {
+                    return <Shield sx={{ fontSize: 20, color: getAlertColor() }} />;
+                  }
+                  if (alert.category === 'pathway_change') {
+                    return <SwapHoriz sx={{ fontSize: 20, color: getAlertColor() }} />;
+                  }
+                  return <Psychology sx={{ fontSize: 20, color: getAlertColor() }} />;
+                };
+
+                return (
+                  <Box
+                    key={index}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      mb: 1,
+                      p: 1,
+                      borderRadius: 1,
+                      cursor: 'pointer',
+                      backgroundColor: selectedAlertIndex === index ? 'action.selected' : 'transparent',
+                      '&:hover': {
+                        backgroundColor: 'action.hover',
+                      },
+                    }}
+                    onClick={() => setSelectedAlertIndex(index)}
+                  >
+                    {getContentIcon()}
+                    <Typography variant="body2">{alert.title}</Typography>
+                    {/* <Typography variant="caption" color="text.secondary">
+                      ({formatDuration(alert.sessionTime || 0)})
+                    </Typography> */}
+                  </Box>
+                );
+              })}
+            </Box>
+          </Paper>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Session Vitals */}
+            <SessionVitals metrics={sessionMetrics} />
+
+            {/* Pathway Summary Section */}
+            <Paper
+              sx={{
+                p: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 2,
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: '0 10px 20px -5px rgba(0, 0, 0, 0.05)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
+              <Box>
+                <Typography variant="body2" color="text.secondary">Current Pathway</Typography>
+                <Typography variant="h6" sx={{ color: 'var(--primary)', fontWeight: 600 }}>
+                  {sessionContext.current_approach}
+                </Typography>
+              </Box>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary">Techniques</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>{sessionMetrics.techniques_detected.length}</Typography>
+              </Box>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary">Effectiveness</Typography>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: getStatusColor(pathwayIndicators.current_approach_effectiveness),
+                    fontWeight: 600,
+                    textTransform: 'capitalize'
+                  }}>
+                  {pathwayIndicators.current_approach_effectiveness}
+                </Typography>
+              </Box>
+              <Button variant="outlined" size="small" onClick={() => setShowRationaleModal(true)}>Show Rationale</Button>
+            </Paper>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
+              {/* Evidence Section */}
+              <Paper
+                sx={{
+                  p: 3,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
+                  '&:hover': {
+                    boxShadow: '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
+            <Typography 
+              variant="h5" 
+              gutterBottom 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1.5,
+                color: 'var(--primary)',
+                fontWeight: 600,
+              }}
+            >
+              <Article sx={{ 
+                fontSize: 28,
+                color: 'rgba(11, 87, 208, 0.6)',
+                opacity: 0.8,
+              }} /> 
+              Evidence
+            </Typography>
+            {selectedAlert && selectedAlert.evidence ? (
+              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {selectedAlert.evidence.map((item, index) => (
+                  <Typography key={index} variant="body2" color="text.secondary" fontStyle="italic">
+                    - {item}
+                  </Typography>
+                ))}
+              </Box>
+            ) : (
+              <Box sx={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                py: 6,
+                px: 3,
+                background: 'rgba(250, 251, 253, 0.5)',
+                borderRadius: '12px',
+                border: '1px dashed rgba(196, 199, 205, 0.3)',
+              }}>
+                <Typography 
+                  variant="body1" 
+                  color="text.secondary"
+                  sx={{ fontWeight: 500 }}
+                >
+                  Evidence will appear here.
+                </Typography>
+              </Box>
+            )}
+          </Paper>
+
+              {/* Recommendation Section */}
+              <Paper
+                sx={{
+                  p: 3,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
+                  '&:hover': {
+                    boxShadow: '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
+            <Typography 
+              variant="h5" 
+              gutterBottom 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1.5,
+                color: 'var(--primary)',
+                fontWeight: 600,
+              }}
+            >
+              <Psychology sx={{ 
+                fontSize: 28,
+                color: 'rgba(11, 87, 208, 0.6)',
+                opacity: 0.8,
+              }} /> 
+              Recommendation
+            </Typography>
+            {selectedAlert && selectedAlert.recommendation ? (
+              <Typography variant="body2" color="text.secondary">
+                {selectedAlert.recommendation}
+              </Typography>
+            ) : (
+              <Box sx={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textAlign: 'center',
+                py: 6,
+                px: 3,
+                background: 'rgba(250, 251, 253, 0.5)',
+                borderRadius: '12px',
+                border: '1px dashed rgba(196, 199, 205, 0.3)',
+              }}>
+                <Typography 
+                  variant="body1" 
+                  color="text.secondary"
+                  sx={{ fontWeight: 500 }}
+                >
+                  Recommendations will appear here.
+                </Typography>
+              </Box>
+            )}
+          </Paper>
+            </Box>
+          </Box>
+          {/*
+          // Left Panel - Real-Time Guidance
           <Paper 
             sx={{ 
               p: 3, 
@@ -667,7 +1051,7 @@ const App: React.FC = () => {
                 </Box>
               ) : (
                 <>
-                  {/* Current Alert */}
+                  
                   <Box sx={{ flexShrink: 0 }}>
                     <AlertDisplay
                       key={`${alerts[0].timestamp}-0`}
@@ -677,14 +1061,14 @@ const App: React.FC = () => {
                     />
                   </Box>
 
-                  {/* History Section */}
+                  
                   {alerts.length > 1 && (
                     <Box sx={{ 
                       display: 'flex',
                       flexDirection: 'column',
                       flexShrink: 0,
                     }}>
-                      {/* History Toggle Button */}
+                      
                       <Button
                         onClick={() => setHistoryExpanded(!historyExpanded)}
                         startIcon={historyExpanded ? <ExpandLess /> : <ExpandMore />}
@@ -704,7 +1088,7 @@ const App: React.FC = () => {
                         {historyExpanded ? 'Hide' : 'See'} history ({alerts.length - 1} previous {alerts.length - 1 === 1 ? 'alert' : 'alerts'})
                       </Button>
 
-                      {/* History Content */}
+                      
                       <Collapse in={historyExpanded} timeout="auto">
                         <Box sx={{ 
                           display: 'flex',
@@ -738,8 +1122,10 @@ const App: React.FC = () => {
               )}
             </Box>
           </Paper>
+          */}
 
-          {/* Middle Panel - Session Metrics & Phase */}
+          {/* 
+          // Middle Panel - Session Metrics & Phase
           <Paper 
             sx={{ 
               p: 3,
@@ -794,11 +1180,13 @@ const App: React.FC = () => {
               <SessionMetrics metrics={sessionMetrics} />
             </Box>
             
-            {/* Session Phase Indicator */}
+            
             <SessionPhaseIndicator duration={sessionDuration} />
           </Paper>
+          */}
 
-          {/* Right Panel - Current Pathway */}
+          {/* 
+          // Right Panel - Current Pathway
           <Box sx={{ 
             display: 'flex',
             flexDirection: 'column',
@@ -814,39 +1202,63 @@ const App: React.FC = () => {
               alternativePathways={pathwayGuidance.alternative_pathways}
               citations={citations}
               history={pathwayHistory}
+              onCitationClick={handleCitationClick}
             />
           </Box>
+          */}
         </Box>
       </Box>
 
-      {/* Floating Transcript Toggle Button */}
-      <Fab
-        color="primary"
-        aria-label="transcript"
-        onClick={() => {
-          setTranscriptOpen(!transcriptOpen);
-          if (!transcriptOpen) {
-            setNewTranscriptCount(0);
-          }
-        }}
-        sx={{
-          position: 'fixed',
-          bottom: 24,
-          right: 24,
-          background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-          '&:hover': {
-            background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
-            transform: 'scale(1.1)',
-          },
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
-          zIndex: 1201,
-        }}
-      >
-        <Badge badgeContent={newTranscriptCount} color="error">
-          <Chat />
-        </Badge>
-      </Fab>
+      {/* Floating Action Buttons */}
+      <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1201, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end' }}>
+        {/* Reopen Session Summary Button */}
+        {sessionSummaryClosed && !showSessionSummary && (
+          <Fab
+            color="secondary"
+            variant="extended"
+            aria-label="reopen session summary"
+            onClick={() => setShowSessionSummary(true)}
+            sx={{
+              background: 'linear-gradient(135deg, #673ab7 0%, #512da8 100%)',
+              color: 'white',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #512da8 0%, #673ab7 100%)',
+                transform: 'scale(1.05)',
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: '0 8px 20px -4px rgba(103, 58, 183, 0.35)',
+            }}
+          >
+            <Article sx={{ mr: 1 }} />
+            Summary
+          </Fab>
+        )}
+
+        {/* Floating Transcript Toggle Button */}
+        <Fab
+          color="primary"
+          aria-label="transcript"
+          onClick={() => {
+            setTranscriptOpen(!transcriptOpen);
+            if (!transcriptOpen) {
+              setNewTranscriptCount(0);
+            }
+          }}
+          sx={{
+            background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
+              transform: 'scale(1.1)',
+            },
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
+          }}
+        >
+          <Badge badgeContent={newTranscriptCount} color="error">
+            <Chat />
+          </Badge>
+        </Fab>
+      </Box>
 
       {/* Test Transcript Button */}
       {!isRecording && !isTestMode && (
@@ -997,11 +1409,30 @@ const App: React.FC = () => {
       <SessionSummaryModal
         open={showSessionSummary}
         onClose={() => setShowSessionSummary(false)}
-        transcript={transcript}
-        sessionMetrics={sessionMetrics}
-        sessionContext={sessionContext}
-        sessionDuration={sessionDuration}
+        summary={sessionSummary}
+        loading={summaryLoading}
+        error={summaryError}
+        onRetry={requestSummary}
         sessionId={sessionId}
+      />
+
+      <RationaleModal
+        open={showRationaleModal}
+        onClose={() => setShowRationaleModal(false)}
+        rationale={pathwayGuidance.rationale}
+        immediateActions={pathwayGuidance.immediate_actions}
+        contraindications={pathwayGuidance.contraindications}
+        citations={citations}
+        onCitationClick={handleCitationClick}
+      />
+
+      <CitationModal
+        open={citationModalOpen}
+        onClose={() => {
+          setCitationModalOpen(false);
+          setSelectedCitation(null);
+        }}
+        citation={selectedCitation}
       />
     </Box>
   );

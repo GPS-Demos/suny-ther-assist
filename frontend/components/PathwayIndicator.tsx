@@ -24,6 +24,7 @@ interface PathwayIndicatorProps {
     change_urgency: 'none' | 'monitor' | 'consider' | 'recommended';
     rationale?: string;
   }>;
+  onCitationClick: (citation: Citation) => void;
 }
 
 const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({ 
@@ -33,16 +34,10 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
   immediateActions,
   contraindications,
   alternativePathways,
-  citations = []
+  citations = [],
+  onCitationClick
 }) => {
   const [detailsExpanded, setDetailsExpanded] = useState(true);
-  const [citationModalOpen, setCitationModalOpen] = useState(false);
-  const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
-
-  const handleCitationClick = (citation: Citation) => {
-    setSelectedCitation(citation);
-    setCitationModalOpen(true);
-  };
   const getEffectivenessColor = () => {
     switch (effectiveness) {
       case 'effective':
@@ -324,7 +319,7 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
               <Box sx={{ color: 'text.primary' }}>
                 {renderTextWithCitations(rationale, {
                   citations,
-                  onCitationClick: handleCitationClick,
+                  onCitationClick: onCitationClick,
                   markdown: true
                 })}
               </Box>
@@ -350,7 +345,7 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
                         <Box sx={{ color: 'text.primary' }}>
                           {renderTextWithCitations(action, {
                             citations,
-                            onCitationClick: handleCitationClick,
+                            onCitationClick: onCitationClick,
                             markdown: true
                           })}
                         </Box>
@@ -381,7 +376,7 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
                         <Box sx={{ color: 'text.primary' }}>
                           {renderTextWithCitations(contraindication, {
                             citations,
-                            onCitationClick: handleCitationClick,
+                            onCitationClick: onCitationClick,
                             markdown: true
                           })}
                         </Box>
@@ -418,7 +413,7 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
                   <Box sx={{ color: 'text.secondary', fontSize: '0.875rem', mt: 0.5 }}>
                     {renderTextWithCitations(pathway.reason, {
                       citations,
-                      onCitationClick: handleCitationClick,
+                      onCitationClick: onCitationClick,
                       markdown: true
                     })}
                   </Box>
@@ -442,16 +437,6 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
         </Box>
       </Collapse>
     </Paper>
-
-    {/* Citation Modal */}
-    <CitationModal
-      open={citationModalOpen}
-      onClose={() => {
-        setCitationModalOpen(false);
-        setSelectedCitation(null);
-      }}
-      citation={selectedCitation}
-    />
     </>
   );
 };
