@@ -155,16 +155,25 @@ npm run dev
 ```
 
 ### Backend therapy-analysis-function
-1. Run the Cloud Run Function locally
+1. Navigate to the directory
 ```bash
 cd backend/therapy-analysis-function
+```
+2. Configure your venv & install dependencies
+3. Run the Cloud Run Function locally
+```bash
 export GOOGLE_CLOUD_PROJECT="your-project-id"
 functions-framework --target=therapy_analysis --port=8080
 ```
 
 ### Backend storage-acccess-function
+1. Navigate to the directory
 ```bash
 cd backend/storage-access-function
+```
+2. Configure your venv & install dependencies
+3. Run the Cloud Run Function locally
+```bash
 export GOOGLE_CLOUD_PROJECT="your-project-id"
 functions-framework --target=storage_access --port=8081
 ```
