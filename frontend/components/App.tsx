@@ -11,10 +11,12 @@ import {
 import LandingPage from './LandingPage';
 import NewSession from './NewSession';
 import Patients from './Patients';
+import Patient from './Patient';
 
 const App: React.FC = () => {
   // Navigation state
-  const [currentView, setCurrentView] = useState<'landing' | 'patients' | 'schedule' | 'newSession'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'patients' | 'schedule' | 'newSession' | 'patient'>('landing');
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
   // Navigation handlers
   const handleNavigateToPatients = () => {
@@ -31,6 +33,12 @@ const App: React.FC = () => {
 
   const handleNavigateToLanding = () => {
     setCurrentView('landing');
+    setSelectedPatientId(null);
+  };
+
+  const handleNavigateToPatient = (patientId: string) => {
+    setSelectedPatientId(patientId);
+    setCurrentView('patient');
   };
 
   // Render the appropriate view based on current state
@@ -45,7 +53,23 @@ const App: React.FC = () => {
   }
 
   if (currentView === 'patients') {
-    return <Patients onNavigateToLanding={handleNavigateToLanding} onNavigateToNewSession={handleNavigateToNewSession} />;
+    return (
+      <Patients 
+        onNavigateToLanding={handleNavigateToLanding} 
+        onNavigateToNewSession={handleNavigateToNewSession}
+        onNavigateToPatient={handleNavigateToPatient}
+      />
+    );
+  }
+
+  if (currentView === 'patient' && selectedPatientId) {
+    return (
+      <Patient 
+        patientId={selectedPatientId}
+        onNavigateToLanding={handleNavigateToLanding}
+        onNavigateToNewSession={handleNavigateToNewSession}
+      />
+    );
   }
 
   if (currentView === 'schedule') {

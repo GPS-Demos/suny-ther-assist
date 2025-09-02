@@ -29,9 +29,10 @@ import { mockPatients } from '../utils/mockPatients';
 interface PatientsProps {
   onNavigateToLanding: () => void;
   onNavigateToNewSession: () => void;
+  onNavigateToPatient: (patientId: string) => void;
 }
 
-const Patients: React.FC<PatientsProps> = ({ onNavigateToLanding, onNavigateToNewSession }) => {
+const Patients: React.FC<PatientsProps> = ({ onNavigateToLanding, onNavigateToNewSession, onNavigateToPatient }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>(mockPatients);
 
@@ -170,9 +171,9 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateToLanding, onNavigateToNe
                     <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Age</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Primary Concern</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Next Visit</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Last Visit</TableCell>
-                    <TableCell sx={{ fontWeight: 600, minWidth: 300 }}>Last Visit Summary</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Next Session</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Last Session</TableCell>
+                    <TableCell sx={{ fontWeight: 600, minWidth: 300 }}>Last Session Summary</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Patient Since</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
                   </TableRow>
@@ -244,6 +245,7 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateToLanding, onNavigateToNe
                             size="small" 
                             color="primary"
                             aria-label="view patient details"
+                            onClick={() => onNavigateToPatient(patient.id)}
                           >
                             <Visibility />
                           </IconButton>
