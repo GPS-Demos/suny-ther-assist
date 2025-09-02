@@ -10,6 +10,7 @@ import {
 } from '@mui/icons-material';
 import LandingPage from './LandingPage';
 import NewSession from './NewSession';
+import Patients from './Patients';
 
 const App: React.FC = () => {
   // Navigation state
@@ -44,51 +45,7 @@ const App: React.FC = () => {
   }
 
   if (currentView === 'patients') {
-    return (
-      <Box sx={{ 
-        height: '100vh', 
-        display: 'flex', 
-        flexDirection: 'column',
-        background: 'var(--background-gradient)',
-        overflow: 'hidden',
-      }}>
-        {/* Home Button */}
-        <Box sx={{ position: 'fixed', top: 24, left: 24, zIndex: 1202 }}>
-          <Fab
-            color="primary"
-            aria-label="home"
-            onClick={handleNavigateToLanding}
-            sx={{
-              background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
-                transform: 'scale(1.1)',
-              },
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
-            }}
-          >
-            <Home />
-          </Fab>
-        </Box>
-        <Box sx={{ 
-          flex: 1, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          p: 3,
-        }}>
-          <Paper sx={{ p: 4, textAlign: 'center', maxWidth: 400 }}>
-            <Typography variant="h4" gutterBottom sx={{ color: 'var(--primary)', fontWeight: 600 }}>
-              Patients
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Patient management functionality coming soon.
-            </Typography>
-          </Paper>
-        </Box>
-      </Box>
-    );
+    return <Patients onNavigateToLanding={handleNavigateToLanding} onNavigateToNewSession={handleNavigateToNewSession} />;
   }
 
   if (currentView === 'schedule') {

@@ -43,7 +43,7 @@ import { useTherapyAnalysis } from '../hooks/useTherapyAnalysis';
 import { formatDuration } from '../utils/timeUtils';
 import { getStatusColor } from '../utils/colorUtils';
 import { SessionContext, Alert as IAlert, Citation, SessionSummary } from '../types/types';
-import { testTranscriptData } from '../utils/testTranscript';
+import { testTranscriptData } from '../utils/mockTranscript.ts';
 
 interface NewSessionProps {
   onNavigateToLanding: () => void;

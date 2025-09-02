@@ -97,3 +97,19 @@ export interface SessionSummary {
     factors: string[];
   };
 }
+
+export interface Patient {
+  id: string;
+  name: string;
+  age: number;
+  nextVisit: string | null;
+  lastVisit: string | null;
+  patientSince: string;
+  primaryConcern?: string;
+  status: 'active' | 'inactive' | 'paused';
+  lastVisitSummary?: string;
+  contactInfo?: {
+    phone?: string;
+    email?: string;
+  };
+}
