@@ -6,7 +6,7 @@ import {
   Fab,
 } from '@mui/material';
 import {
-  Home,
+  ArrowBack,
 } from '@mui/icons-material';
 import LandingPage from './LandingPage';
 import NewSession from './NewSession';
@@ -17,28 +17,53 @@ const App: React.FC = () => {
   // Navigation state
   const [currentView, setCurrentView] = useState<'landing' | 'patients' | 'schedule' | 'newSession' | 'patient'>('landing');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [navigationHistory, setNavigationHistory] = useState<Array<{
+    view: 'landing' | 'patients' | 'schedule' | 'newSession' | 'patient';
+    patientId?: string | null;
+  }>>([]);
 
   // Navigation handlers
+  const pushToHistory = (view: typeof currentView, patientId?: string | null) => {
+    setNavigationHistory(prev => [...prev, { view: currentView, patientId: selectedPatientId }]);
+  };
+
   const handleNavigateToPatients = () => {
+    pushToHistory(currentView, selectedPatientId);
     setCurrentView('patients');
   };
 
   const handleNavigateToSchedule = () => {
+    pushToHistory(currentView, selectedPatientId);
     setCurrentView('schedule');
   };
 
   const handleNavigateToNewSession = () => {
+    pushToHistory(currentView, selectedPatientId);
     setCurrentView('newSession');
   };
 
   const handleNavigateToLanding = () => {
     setCurrentView('landing');
     setSelectedPatientId(null);
+    setNavigationHistory([]);
   };
 
   const handleNavigateToPatient = (patientId: string) => {
+    pushToHistory(currentView, selectedPatientId);
     setSelectedPatientId(patientId);
     setCurrentView('patient');
+  };
+
+  const handleGoBack = () => {
+    if (navigationHistory.length > 0) {
+      const previousView = navigationHistory[navigationHistory.length - 1];
+      setNavigationHistory(prev => prev.slice(0, -1));
+      setCurrentView(previousView.view);
+      setSelectedPatientId(previousView.patientId || null);
+    } else {
+      // If no history, go to landing page
+      handleNavigateToLanding();
+    }
   };
 
   // Render the appropriate view based on current state
@@ -55,7 +80,7 @@ const App: React.FC = () => {
   if (currentView === 'patients') {
     return (
       <Patients 
-        onNavigateToLanding={handleNavigateToLanding} 
+        onNavigateBack={handleGoBack} 
         onNavigateToNewSession={handleNavigateToNewSession}
         onNavigateToPatient={handleNavigateToPatient}
       />
@@ -66,7 +91,7 @@ const App: React.FC = () => {
     return (
       <Patient 
         patientId={selectedPatientId}
-        onNavigateToLanding={handleNavigateToLanding}
+        onNavigateBack={handleGoBack}
         onNavigateToNewSession={handleNavigateToNewSession}
       />
     );
@@ -81,25 +106,6 @@ const App: React.FC = () => {
         background: 'var(--background-gradient)',
         overflow: 'hidden',
       }}>
-        {/* Home Button */}
-        <Box sx={{ position: 'fixed', top: 24, left: 24, zIndex: 1202 }}>
-          <Fab
-            color="primary"
-            aria-label="home"
-            onClick={handleNavigateToLanding}
-            sx={{
-              background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
-                transform: 'scale(1.1)',
-              },
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
-            }}
-          >
-            <Home />
-          </Fab>
-        </Box>
         <Box sx={{ 
           flex: 1, 
           display: 'flex', 
@@ -108,6 +114,26 @@ const App: React.FC = () => {
           p: 3,
         }}>
           <Paper sx={{ p: 4, textAlign: 'center', maxWidth: 400 }}>
+            {/* Back Button */}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 3 }}>
+              <Fab
+                size="medium"
+                color="primary"
+                aria-label="back"
+                onClick={handleGoBack}
+                sx={{
+                  background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
+                    transform: 'scale(1.1)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
+                }}
+              >
+                <ArrowBack />
+              </Fab>
+            </Box>
             <Typography variant="h4" gutterBottom sx={{ color: 'var(--primary)', fontWeight: 600 }}>
               Schedule
             </Typography>
@@ -121,7 +147,7 @@ const App: React.FC = () => {
   }
 
   // NewSession view - render the dedicated NewSession component
-  return <NewSession onNavigateToLanding={handleNavigateToLanding} />;
+  return <NewSession onNavigateBack={handleGoBack} />;
 };
 
 export default App;

@@ -27,7 +27,7 @@ import {
   Chat,
   SwapHoriz,
   Psychology,
-  Home,
+  ArrowBack,
 } from '@mui/icons-material';
 import TranscriptDisplay from './TranscriptDisplay';
 import AlertDisplay from './AlertDisplay';
@@ -46,10 +46,10 @@ import { SessionContext, Alert as IAlert, Citation, SessionSummary } from '../ty
 import { testTranscriptData } from '../utils/mockTranscript.ts';
 
 interface NewSessionProps {
-  onNavigateToLanding: () => void;
+  onNavigateBack: () => void;
 }
 
-const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
+const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack }) => {
   const isDesktop = useMediaQuery(useTheme().breakpoints.up('lg'));
   const isWideScreen = useMediaQuery('(min-width:1024px)');
   
@@ -474,26 +474,6 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
       background: 'var(--background-gradient)',
       overflow: 'hidden',
     }}>
-      {/* Home Button */}
-      <Box sx={{ position: 'fixed', top: 24, left: 24, zIndex: 1202 }}>
-        <Fab
-          color="primary"
-          aria-label="home"
-          onClick={onNavigateToLanding}
-          sx={{
-            background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
-              transform: 'scale(1.1)',
-            },
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
-          }}
-        >
-          <Home />
-        </Fab>
-      </Box>
-
       {/* Main Content Area */}
       <Box sx={{ 
         flex: 1, 
@@ -526,9 +506,27 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Back Button and Patient Name */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Fab
+                size="medium"
+                color="primary"
+                aria-label="back"
+                onClick={onNavigateBack}
+                sx={{
+                  background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
+                    transform: 'scale(1.1)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
+                }}
+              >
+                <ArrowBack />
+              </Fab>
               <Typography 
-                variant="h5" 
+                variant="h4" 
                 sx={{ 
                   color: 'var(--primary)',
                   fontWeight: 600,
@@ -536,6 +534,11 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
               >
                 John Doe
               </Typography>
+            </Box>
+            
+            {/* Session Info and Start/Stop Button */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="body1">Session #1</Typography>
               {!isRecording ? (
                 <Button
                   variant="contained"
@@ -568,7 +571,6 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
                 </Button>
               )}
             </Box>
-            <Typography variant="body1">Session #1</Typography>
             <Box>
               <Typography variant="h6">Phase: Beginning</Typography>
               <Typography variant="body2" color="text.secondary">

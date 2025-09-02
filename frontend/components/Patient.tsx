@@ -19,7 +19,7 @@ import {
   Button,
 } from '@mui/material';
 import {
-  Home,
+  ArrowBack,
   Person,
   Phone,
   Email,
@@ -32,7 +32,7 @@ import { mockPatients } from '../utils/mockPatients';
 
 interface PatientProps {
   patientId: string;
-  onNavigateToLanding: () => void;
+  onNavigateBack: () => void;
   onNavigateToNewSession: () => void;
 }
 
@@ -74,7 +74,7 @@ const generateSessionHistory = (patientId: string) => {
   return sessions;
 };
 
-const Patient: React.FC<PatientProps> = ({ patientId, onNavigateToLanding, onNavigateToNewSession }) => {
+const Patient: React.FC<PatientProps> = ({ patientId, onNavigateBack, onNavigateToNewSession }) => {
   const patient = mockPatients.find(p => p.id === patientId);
   const sessionHistory = generateSessionHistory(patientId);
 
@@ -175,39 +175,36 @@ const Patient: React.FC<PatientProps> = ({ patientId, onNavigateToLanding, onNav
       flexDirection: 'column',
       background: 'var(--background-gradient)',
     }}>
-      {/* Home Button */}
-      <Box sx={{ position: 'fixed', top: 24, left: 24, zIndex: 1202 }}>
-        <Fab
-          color="primary"
-          aria-label="home"
-          onClick={onNavigateToLanding}
-          sx={{
-            background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
-              transform: 'scale(1.1)',
-            },
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
-          }}
-        >
-          <Home />
-        </Fab>
-      </Box>
-
       {/* Main Content */}
       <Box sx={{ 
         flex: 1, 
         display: 'flex', 
         flexDirection: 'column',
         p: 3,
-        pt: 10, // Account for home button
         gap: 3,
       }}>
         {/* Patient Information Card */}
         <Paper elevation={3} sx={{ borderRadius: 2 }}>
           <Box sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3 }}>
+              {/* Back Button */}
+              <Fab
+                size="medium"
+                color="primary"
+                aria-label="back"
+                onClick={onNavigateBack}
+                sx={{
+                  background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
+                    transform: 'scale(1.1)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
+                }}
+              >
+                <ArrowBack />
+              </Fab>
               <Avatar
                 sx={{ 
                   width: 80, 

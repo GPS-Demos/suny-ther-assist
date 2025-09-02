@@ -29,21 +29,33 @@ const LandingPage: React.FC<LandingPageProps> = ({
   const tiles = [
     {
       title: 'Patients',
-      icon: <People sx={{ fontSize: 48, color: '#0b57d0' }} />,
+      icon: <People sx={{ 
+        fontSize: 48, 
+        color: 'white',
+        filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))',
+      }} />,
       description: 'View and manage patient records and session histories',
       onClick: onNavigateToPatients,
       gradient: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
     },
     {
       title: 'Schedule',
-      icon: <CalendarToday sx={{ fontSize: 48, color: '#10b981' }} />,
+      icon: <CalendarToday sx={{ 
+        fontSize: 48, 
+        color: 'white',
+        filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))',
+      }} />,
       description: 'Manage appointments and session scheduling',
       onClick: onNavigateToSchedule,
       gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
     },
     {
       title: 'New Session',
-      icon: <Add sx={{ fontSize: 48, color: '#673ab7' }} />,
+      icon: <Add sx={{ 
+        fontSize: 48, 
+        color: 'white',
+        filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))',
+      }} />,
       description: 'Start a new therapy session with real-time analysis',
       onClick: onNavigateToNewSession,
       gradient: 'linear-gradient(135deg, #673ab7 0%, #512da8 100%)',
