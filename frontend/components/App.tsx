@@ -12,8 +12,12 @@ import LandingPage from './LandingPage';
 import NewSession from './NewSession';
 import Patients from './Patients';
 import Patient from './Patient';
+import LoginPage from './LoginPage';
+import { useAuth } from '../contexts/AuthContext';
 
 const App: React.FC = () => {
+  const { currentUser } = useAuth();
+
   // Navigation state
   const [currentView, setCurrentView] = useState<'landing' | 'patients' | 'schedule' | 'newSession' | 'patient'>('landing');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
@@ -21,6 +25,11 @@ const App: React.FC = () => {
     view: 'landing' | 'patients' | 'schedule' | 'newSession' | 'patient';
     patientId?: string | null;
   }>>([]);
+
+  // If user is not authenticated, show login page
+  if (!currentUser) {
+    return <LoginPage />;
+  }
 
   // Navigation handlers
   const pushToHistory = (view: typeof currentView, patientId?: string | null) => {
@@ -114,8 +123,8 @@ const App: React.FC = () => {
           p: 3,
         }}>
           <Paper sx={{ p: 4, textAlign: 'center', maxWidth: 400 }}>
-            {/* Back Button */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-start', mb: 3 }}>
+            {/* Back Button and Title Row */}
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, position: 'relative' }}>
               <Fab
                 size="medium"
                 color="primary"
@@ -133,10 +142,21 @@ const App: React.FC = () => {
               >
                 <ArrowBack />
               </Fab>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  color: 'var(--primary)', 
+                  fontWeight: 600,
+                  position: 'absolute',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '100%',
+                  textAlign: 'center'
+                }}
+              >
+                Schedule
+              </Typography>
             </Box>
-            <Typography variant="h4" gutterBottom sx={{ color: 'var(--primary)', fontWeight: 600 }}>
-              Schedule
-            </Typography>
             <Typography variant="body1" color="text.secondary">
               Schedule management functionality coming soon.
             </Typography>

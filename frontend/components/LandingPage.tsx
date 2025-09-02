@@ -8,12 +8,22 @@ import {
   CardActionArea,
   Grid,
   Container,
+  AppBar,
+  Toolbar,
+  Avatar,
+  Button,
+  Menu,
+  MenuItem,
+  IconButton,
 } from '@mui/material';
 import {
   People,
   CalendarToday,
   Add,
+  AccountCircle,
+  Logout,
 } from '@mui/icons-material';
+import { useAuth } from '../contexts/AuthContext';
 
 interface LandingPageProps {
   onNavigateToPatients: () => void;
@@ -26,6 +36,25 @@ const LandingPage: React.FC<LandingPageProps> = ({
   onNavigateToSchedule,
   onNavigateToNewSession,
 }) => {
+  const { currentUser, logout } = useAuth();
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+
+  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      handleClose();
+    } catch (error) {
+      console.error('Failed to log out', error);
+    }
+  };
   const tiles = [
     {
       title: 'Patients',
@@ -77,8 +106,103 @@ const LandingPage: React.FC<LandingPageProps> = ({
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
         boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.1)',
         py: 4,
+        position: 'relative',
       }}>
         <Container maxWidth="lg">
+          {/* User Menu - Positioned absolutely in top right */}
+          <Box sx={{ 
+            position: 'absolute', 
+            top: 16, 
+            right: 16,
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 2,
+            zIndex: 10,
+          }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: 'white',
+                display: { xs: 'none', sm: 'block' },
+              }}
+            >
+              Welcome, {currentUser?.displayName?.split(' ')[0] || currentUser?.email}!
+            </Typography>
+            <IconButton
+              size="large"
+              aria-label="account of current user"
+              aria-controls="menu-appbar"
+              aria-haspopup="true"
+              onClick={handleMenu}
+              color="inherit"
+              sx={{ color: 'white' }}
+            >
+              {currentUser?.photoURL ? (
+                <Avatar 
+                  src={currentUser.photoURL} 
+                  alt={currentUser.displayName || currentUser.email || 'User'}
+                >
+                  {currentUser.displayName?.[0] || currentUser.email?.[0] || 'U'}
+                </Avatar>
+              ) : (
+                <Avatar 
+                  sx={{ 
+                    width: 32, 
+                    height: 32,
+                    bgcolor: 'white',
+                    color: 'primary.main'
+                  }}
+                >
+                  {currentUser?.displayName?.[0] || currentUser?.email?.[0] || 'U'}
+                </Avatar>
+              )}
+            </IconButton>
+            <Menu
+              id="menu-appbar"
+              anchorEl={anchorEl}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right',
+              }}
+              keepMounted
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+              open={Boolean(anchorEl)}
+              onClose={handleClose}
+            >
+              <MenuItem 
+                onClick={(e) => e.preventDefault()}
+                sx={{ 
+                  cursor: 'default',
+                  '&:hover': { backgroundColor: 'transparent' }
+                }}
+              >
+                <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 200 }}>
+                  <Typography 
+                    variant="body2" 
+                    fontWeight="bold" 
+                    style={{ color: '#000000' }}
+                  >
+                    {currentUser?.displayName || 'User'}
+                  </Typography>
+                  <Typography 
+                    variant="caption" 
+                    style={{ color: '#666666' }}
+                  >
+                    {currentUser?.email}
+                  </Typography>
+                </Box>
+              </MenuItem>
+              <MenuItem onClick={handleLogout}>
+                <Logout fontSize="small" sx={{ mr: 1 }} />
+                Sign Out
+              </MenuItem>
+            </Menu>
+          </Box>
+
+          {/* Main Header Content */}
           <Box sx={{ textAlign: 'center' }}>
             <Typography
               variant="h2"
