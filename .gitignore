@@ -4,6 +4,7 @@ node_modules/
 
 # Environment variables
 .env
+.env.development
 .env.local
 .env.*.local
 *.env
@@ -65,3 +66,8 @@ service-account-key.json
 # Example and test data
 pathways-example/clinical-pathways-sample.zip
 rag-example/backend/rag/materials/Curriculum/**/*.mp4
+
+# Firebase
+.firebase/*
+.firebaserc
+firebase-config-object.ts

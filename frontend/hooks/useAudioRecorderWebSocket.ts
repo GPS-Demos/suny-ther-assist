@@ -3,9 +3,10 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 interface UseAudioRecorderProps {
   onTranscript: (transcript: any) => void;
   onError?: (error: string) => void;
+  authToken?: string | null;
 }
 
-export const useAudioRecorderWebSocket = ({ onTranscript, onError }: UseAudioRecorderProps) => {
+export const useAudioRecorderWebSocket = ({ onTranscript, onError, authToken }: UseAudioRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -37,10 +38,11 @@ export const useAudioRecorderWebSocket = ({ onTranscript, onError }: UseAudioRec
         console.log('WebSocket connected');
         setIsConnected(true);
         
-        // Send session initialization
+        // Send session initialization with auth token
         sessionIdRef.current = `session-${Date.now()}`;
         ws.send(JSON.stringify({
           session_id: sessionIdRef.current,
+          auth_token: authToken,
           config: {
             sample_rate: 48000,
             encoding: 'WEBM_OPUS'

@@ -19,18 +19,26 @@ import {
   MenuBook,
 } from '@mui/icons-material';
 import { Alert, Citation } from '../types/types';
+import RationaleModal from './RationaleModal';
 import CitationModal from './CitationModal';
 
 interface AlertDisplayProps {
   alert: Alert;
   onDismiss: () => void;
   citations?: Citation[];
+  isSelected?: boolean;
 }
 
-const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations = [] }) => {
+const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations = [], isSelected = false }) => {
   const [expanded, setExpanded] = useState(false);
+  const [rationaleModalOpen, setRationaleModalOpen] = useState(false);
   const [citationModalOpen, setCitationModalOpen] = useState(false);
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
+
+  const handleCitationClick = (citation: Citation) => {
+    setSelectedCitation(citation);
+    setCitationModalOpen(true);
+  };
 
   // Use timing directly from backend (simplified!)
   const timing = alert.timing || 'info';
@@ -94,8 +102,7 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
             // Find the citation with the first number (for now, just handle single citations)
             const citation = citations.find(c => citationNumbers.includes(c.citation_number));
             if (citation) {
-              setSelectedCitation(citation);
-              setCitationModalOpen(true);
+              handleCitationClick(citation);
             }
           }}
           sx={{
@@ -142,9 +149,9 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
           borderRadius: 2,
           overflow: 'hidden',
           transition: 'all 0.3s ease',
-          background: timing === 'now' 
+          background: isSelected ? `${alertColor}20` : (timing === 'now' 
             ? `linear-gradient(135deg, ${alertColor}08 0%, ${alertColor}04 100%)`
-            : 'rgba(255, 255, 255, 0.9)',
+            : 'rgba(255, 255, 255, 0.9)'),
           animation: timing === 'now' ? 'urgentPulse 3s infinite' : 'none',
           '@keyframes urgentPulse': {
             '0%': { 
@@ -304,6 +311,13 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
                 {expanded ? <ExpandLess /> : <ExpandMore />}
               </IconButton>
             )}
+             <Button
+              size="small"
+              onClick={() => setRationaleModalOpen(true)}
+              sx={{ mt: 1 }}
+              >
+              Details
+            </Button>
           </Box>
         </Box>
 
@@ -360,6 +374,15 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
       }}
       citation={selectedCitation}
     />
+     <RationaleModal
+        open={rationaleModalOpen}
+        onClose={() => setRationaleModalOpen(false)}
+        rationale={Array.isArray(alert.recommendation) ? alert.recommendation.join('\n\n') : alert.recommendation}
+        immediateActions={alert.immediateActions}
+        contraindications={alert.contraindications}
+        citations={citations}
+        onCitationClick={handleCitationClick}
+      />
   </>
   );
 };

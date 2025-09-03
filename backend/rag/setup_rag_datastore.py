@@ -12,7 +12,7 @@ from google.auth.transport.requests import Request
 import requests
 
 # Configuration
-PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "suny-ther-assist")
+PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT")
 LOCATION = "global"
 DATASTORE_ID = "ebt-corpus"
 DISPLAY_NAME = "EBT Therapy Manuals Corpus"

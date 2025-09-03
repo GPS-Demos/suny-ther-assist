@@ -6,14 +6,16 @@ interface UseTherapyAnalysisProps {
   onAnalysis: (analysis: AnalysisResponse) => void;
   onPathwayGuidance?: (guidance: any) => void;
   onSessionSummary?: (summary: any) => void;
+  authToken?: string | null;
 }
 
 export const useTherapyAnalysis = ({ 
   onAnalysis, 
   onPathwayGuidance,
-  onSessionSummary 
+  onSessionSummary,
+  authToken
 }: UseTherapyAnalysisProps) => {
-  const ANALYSIS_API = import.meta.env.VITE_ANALYSIS_API || 'http://localhost:8081';
+  const ANALYSIS_API = import.meta.env.VITE_ANALYSIS_API;
 
   const analyzeSegment = useCallback(async (
     transcriptSegment: Array<{ speaker: string; text: string; timestamp: string }>,
@@ -35,6 +37,9 @@ export const useTherapyAnalysis = ({
         is_realtime: is_realtime || false,  // Pass as top-level parameter
       }, {
         responseType: 'text',
+        headers: {
+          ...(authToken && { Authorization: `Bearer ${authToken}` })
+        }
       });
 
       const responseTime = performance.now() - startTime;
@@ -80,7 +85,7 @@ export const useTherapyAnalysis = ({
         status: error.response?.status
       });
     }
-  }, [onAnalysis, ANALYSIS_API]);
+  }, [onAnalysis, ANALYSIS_API, authToken]);
 
   const getPathwayGuidance = useCallback(async (
     currentApproach: string,
@@ -96,6 +101,10 @@ export const useTherapyAnalysis = ({
         current_approach: currentApproach,
         session_history: sessionHistory,
         presenting_issues: presentingIssues,
+      }, {
+        headers: {
+          ...(authToken && { Authorization: `Bearer ${authToken}` })
+        }
       });
 
       const responseTime = performance.now() - startTime;
@@ -113,7 +122,7 @@ export const useTherapyAnalysis = ({
       });
       throw error;
     }
-  }, [ANALYSIS_API, onPathwayGuidance]);
+  }, [ANALYSIS_API, onPathwayGuidance, authToken]);
 
   const generateSessionSummary = useCallback(async (
     fullTranscript: Array<{ speaker: string; text: string; timestamp: string }>,
@@ -126,6 +135,10 @@ export const useTherapyAnalysis = ({
         action: 'session_summary',
         full_transcript: fullTranscript,
         session_metrics: sessionMetrics,
+      }, {
+        headers: {
+          ...(authToken && { Authorization: `Bearer ${authToken}` })
+        }
       });
 
       console.log('[useTherapyAnalysis] Session summary generated successfully');
@@ -142,7 +155,7 @@ export const useTherapyAnalysis = ({
       });
       throw error;
     }
-  }, [ANALYSIS_API, onSessionSummary]);
+  }, [ANALYSIS_API, onSessionSummary, authToken]);
 
   return {
     analyzeSegment,

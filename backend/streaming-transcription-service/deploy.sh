@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set variables
-PROJECT_ID="suny-ther-assist"
+PROJECT_ID="${PROJECT_ID}"
 REGION="us-central1"
 SERVICE_NAME="therapy-streaming-transcription"
 IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}"

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -29,155 +29,27 @@ import {
   Print,
   Info,
 } from '@mui/icons-material';
+import { SessionSummary } from '../types/types';
 
 interface SessionSummaryModalProps {
   open: boolean;
   onClose: () => void;
-  transcript: Array<{
-    text: string;
-    timestamp: string;
-    is_interim?: boolean;
-  }>;
-  sessionMetrics: any;
-  sessionContext: any;
-  sessionDuration: number;
+  summary: SessionSummary | null;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
   sessionId: string | null;
-}
-
-interface SessionSummary {
-  session_date: string;
-  duration_minutes: number;
-  key_moments: Array<{
-    time: string;
-    description: string;
-    significance: string;
-  }>;
-  techniques_used: string[];
-  progress_indicators: string[];
-  areas_for_improvement: string[];
-  homework_assignments: Array<{
-    task: string;
-    rationale: string;
-    manual_reference?: string;
-  }>;
-  follow_up_recommendations: string[];
-  risk_assessment: {
-    level: 'low' | 'moderate' | 'high';
-    factors: string[];
-  };
 }
 
 const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
   open,
   onClose,
-  transcript,
-  sessionMetrics,
-  sessionContext,
-  sessionDuration,
+  summary,
+  loading,
+  error,
+  onRetry,
   sessionId,
 }) => {
-  const [loading, setLoading] = useState(false);
-  const [summary, setSummary] = useState<SessionSummary | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open && transcript.length > 0) {
-      generateSummary();
-    }
-  }, [open]);
-
-  const generateSummary = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const API_ENDPOINT = import.meta.env.VITE_ANALYSIS_API_URL || 
-                          'https://therapy-analysis-297463074292.us-central1.run.app';
-      
-      const response = await fetch(API_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'session_summary',
-          full_transcript: transcript
-            .filter(t => !t.is_interim)
-            .map(t => ({
-              speaker: 'conversation',
-              text: t.text,
-              timestamp: t.timestamp,
-            })),
-          session_metrics: sessionMetrics,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.summary) {
-        setSummary(data.summary);
-      } else {
-        throw new Error('Invalid summary response');
-      }
-    } catch (err) {
-      console.error('Error generating summary:', err);
-      setError('Failed to generate session summary. Please try again.');
-      
-      // Fallback summary for demo purposes
-      setSummary({
-        session_date: new Date().toISOString(),
-        duration_minutes: Math.floor(sessionDuration / 60),
-        key_moments: [
-          {
-            time: '00:05:23',
-            description: 'Client expressed anxiety about upcoming presentation',
-            significance: 'Core fear identified - social evaluation',
-          },
-          {
-            time: '00:15:45',
-            description: 'Successful cognitive restructuring of catastrophic thinking',
-            significance: 'Breakthrough in recognizing thinking patterns',
-          },
-        ],
-        techniques_used: ['Cognitive Restructuring', 'Grounding Exercises', 'Thought Recording'],
-        progress_indicators: [
-          'Increased awareness of thought patterns',
-          'Willingness to challenge automatic thoughts',
-          'Engaged in homework assignments',
-        ],
-        areas_for_improvement: [
-          'Practice emotion regulation techniques',
-          'Develop stronger coping strategies for acute anxiety',
-        ],
-        homework_assignments: [
-          {
-            task: 'Complete thought diary for anxiety-provoking situations',
-            rationale: 'Build awareness of cognitive patterns',
-            manual_reference: 'CBT Manual p.45-47',
-          },
-          {
-            task: 'Practice progressive muscle relaxation daily',
-            rationale: 'Develop somatic coping skills',
-            manual_reference: 'Anxiety Workbook p.23',
-          },
-        ],
-        follow_up_recommendations: [
-          'Review thought diary entries at next session',
-          'Consider introducing exposure exercises if ready',
-        ],
-        risk_assessment: {
-          level: 'low',
-          factors: ['No suicidal ideation', 'Strong support system', 'Engaged in treatment'],
-        },
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getRiskColor = (level: string) => {
     switch (level) {
@@ -453,7 +325,7 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
           }}>
             <Warning color="error" sx={{ fontSize: 48 }} />
             <Typography color="error">{error}</Typography>
-            <Button variant="contained" onClick={generateSummary}>
+            <Button variant="contained" onClick={onRetry}>
               Retry
             </Button>
           </Box>

@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Project configuration
-PROJECT_ID="suny-ther-assist"
+PROJECT_ID="${PROJECT_ID}"
 REGION="us-central1"
 
 echo -e "${GREEN}=== Ther-Assist Deployment Script ===${NC}"

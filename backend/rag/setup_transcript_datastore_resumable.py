@@ -16,7 +16,7 @@ import PyPDF2
 from typing import Set, Dict, Any
 
 # Configuration
-PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "suny-ther-assist")
+PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT")
 LOCATION = "global"
 DATASTORE_ID = "transcript-patterns"
 DISPLAY_NAME = "Clinical Therapy Transcripts"

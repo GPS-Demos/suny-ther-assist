@@ -33,7 +33,7 @@ app.add_middleware(
 
 # Get project ID
 credentials, project_id = google.auth.default()
-project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", project_id or "suny-ther-assist")
+project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
 location = "global"
 
 # Initialize Speech client

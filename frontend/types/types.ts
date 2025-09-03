@@ -10,13 +10,16 @@ export interface Alert {
   title: string;
   message: string;
   evidence?: string[];
-  recommendation?: string;
+  recommendation?: string | string[]; // Allow both string and array formats
+  immediateActions?: string[];
+  contraindications?: string[];
   manual_reference?: {
     source: string;
     page?: number;
     section?: string;
   };
   timestamp?: string;
+  sessionTime?: number;
   
   // Legacy fields for backward compatibility (to be removed)
   level?: 'critical' | 'suggestion' | 'info';
@@ -70,4 +73,51 @@ export interface TranscriptionConfig {
   sample_rate: number;
   encoding: string;
   chunk_size_ms: number;
+}
+
+export interface SessionSummary {
+  session_date: string;
+  duration_minutes: number;
+  key_moments: Array<{
+    time: string;
+    description: string;
+    significance: string;
+  }>;
+  techniques_used: string[];
+  progress_indicators: string[];
+  areas_for_improvement: string[];
+  homework_assignments: Array<{
+    task: string;
+    rationale: string;
+    manual_reference?: string;
+  }>;
+  follow_up_recommendations: string[];
+  risk_assessment: {
+    level: 'low' | 'moderate' | 'high';
+    factors: string[];
+  };
+}
+
+export interface SessionHistory {
+  id: string;
+  date: string;
+  duration: number; // in minutes
+  summary: string;
+}
+
+export interface Patient {
+  id: string;
+  name: string;
+  age: number;
+  nextVisit: string | null;
+  lastVisit: string | null;
+  patientSince: string;
+  primaryConcern?: string;
+  status: 'active' | 'inactive' | 'paused';
+  lastVisitSummary?: string;
+  sessionHistory?: SessionHistory[];
+  contactInfo?: {
+    phone?: string;
+    email?: string;
+  };
 }

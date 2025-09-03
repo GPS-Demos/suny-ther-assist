@@ -41,7 +41,7 @@ gcloud auth application-default login
 
 3. Set project:
 ```bash
-export GOOGLE_CLOUD_PROJECT=suny-ther-assist
+export GOOGLE_CLOUD_PROJECT=your-gcp-project
 ```
 
 ### Setting Up EBT Manuals Datastore
@@ -60,6 +60,8 @@ This will:
 - Import documents with 500-token chunking
 - Configure layout-aware parsing for PDFs
 
+NOTE: If your setup_rag_datastore.py job times out while creating (600+ seconds), create the RAG Corpus from the upload files in Storage
+
 ### Setting Up Transcript Patterns Datastore
 
 ```bash
@@ -76,6 +78,8 @@ This will:
 - Create 3-turn dialogue sequences
 - Generate therapeutic pattern library
 - Upload to GCS with 300-token chunking
+
+NOTE: If you run into a 400 error about exceeding the maximum number of files then use the RAG Corpus
 
 ## Corpus Organization
 
@@ -155,7 +159,7 @@ Edit the `create_pattern_library()` function in `setup_transcript_datastore.py` 
 ### Authentication Issues
 ```bash
 gcloud auth application-default login
-gcloud config set project suny-ther-assist
+gcloud config set project your-gcp-project-id
 ```
 
 ### Import Timeout
@@ -168,6 +172,8 @@ pip install -r requirements.txt
 ```
 
 ## Testing
+
+TODO: This doesn't exist yet 
 
 After setup, test the dual-RAG system:
 

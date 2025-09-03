@@ -1,19 +1,15 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCofLr9lmikQsOunuMOmRopDS4LuS_ixLo",
-  authDomain: "suny-ther-assist.firebaseapp.com",
-  projectId: "suny-ther-assist",
-  storageBucket: "suny-ther-assist.firebasestorage.app",
-  messagingSenderId: "177053061068",
-  appId: "1:177053061068:web:b54c447b57937018fed769"
-};
+import { firebaseConfig } from "./firebase-config-object";
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// Initialize Firebase Authentication and get a reference to the service
+export const auth = getAuth(app);
 
 export default app;
