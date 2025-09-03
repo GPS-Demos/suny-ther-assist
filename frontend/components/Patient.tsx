@@ -36,7 +36,7 @@ import { mockPatients } from '../utils/mockPatients';
 interface PatientProps {
   patientId: string;
   onNavigateBack: () => void;
-  onNavigateToNewSession: () => void;
+  onNavigateToNewSession: (patientId?: string) => void;
 }
 
 const Patient: React.FC<PatientProps> = ({ patientId, onNavigateBack, onNavigateToNewSession }) => {
@@ -199,7 +199,7 @@ const Patient: React.FC<PatientProps> = ({ patientId, onNavigateBack, onNavigate
               <Button
                 variant="contained"
                 startIcon={<Add />}
-                onClick={onNavigateToNewSession}
+                onClick={() => onNavigateToNewSession(patientId)}
                 sx={{
                   background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
                   '&:hover': {

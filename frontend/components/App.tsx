@@ -21,9 +21,11 @@ const App: React.FC = () => {
   // Navigation state
   const [currentView, setCurrentView] = useState<'landing' | 'patients' | 'schedule' | 'newSession' | 'patient'>('landing');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [sessionPatientId, setSessionPatientId] = useState<string | null>(null);
   const [navigationHistory, setNavigationHistory] = useState<Array<{
     view: 'landing' | 'patients' | 'schedule' | 'newSession' | 'patient';
     patientId?: string | null;
+    sessionPatientId?: string | null;
   }>>([]);
 
   // If user is not authenticated, show login page
@@ -46,8 +48,9 @@ const App: React.FC = () => {
     setCurrentView('schedule');
   };
 
-  const handleNavigateToNewSession = () => {
+  const handleNavigateToNewSession = (patientId?: string) => {
     pushToHistory(currentView, selectedPatientId);
+    setSessionPatientId(patientId || null);
     setCurrentView('newSession');
   };
 
@@ -167,7 +170,7 @@ const App: React.FC = () => {
   }
 
   // NewSession view - render the dedicated NewSession component
-  return <NewSession onNavigateBack={handleGoBack} />;
+  return <NewSession onNavigateBack={handleGoBack} patientId={sessionPatientId} />;
 };
 
 export default App;
