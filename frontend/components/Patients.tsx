@@ -21,7 +21,7 @@ import {
   Visibility,
   Phone,
   Email,
-  Edit,
+  Add,
 } from '@mui/icons-material';
 import { Patient } from '../types/types';
 import { mockPatients } from '../utils/mockPatients';
@@ -184,7 +184,7 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
                     >
                       <TableCell>
                         <Box>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'blue' }}>
                             {patient.name}
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
@@ -248,11 +248,11 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
                           </IconButton>
                           <IconButton 
                             size="small" 
-                            color="secondary"
+                            color="primary"
                             aria-label="start new session"
                             onClick={onNavigateToNewSession}
                           >
-                            <Edit />
+                            <Add />
                           </IconButton>
                         </Box>
                       </TableCell>

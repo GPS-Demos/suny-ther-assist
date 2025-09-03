@@ -10,7 +10,7 @@ export interface Alert {
   title: string;
   message: string;
   evidence?: string[];
-  recommendation?: string;
+  recommendation?: string | string[]; // Allow both string and array formats
   immediateActions?: string[];
   contraindications?: string[];
   manual_reference?: {
@@ -98,6 +98,13 @@ export interface SessionSummary {
   };
 }
 
+export interface SessionHistory {
+  id: string;
+  date: string;
+  duration: number; // in minutes
+  summary: string;
+}
+
 export interface Patient {
   id: string;
   name: string;
@@ -108,6 +115,7 @@ export interface Patient {
   primaryConcern?: string;
   status: 'active' | 'inactive' | 'paused';
   lastVisitSummary?: string;
+  sessionHistory?: SessionHistory[];
   contactInfo?: {
     phone?: string;
     email?: string;
