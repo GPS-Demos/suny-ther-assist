@@ -27,7 +27,7 @@ import {
   Chat,
   SwapHoriz,
   Psychology,
-  Home,
+  ArrowBack,
 } from '@mui/icons-material';
 import TranscriptDisplay from './TranscriptDisplay';
 import AlertDisplay from './AlertDisplay';
@@ -40,20 +40,24 @@ import CitationModal from './CitationModal';
 import SessionVitals from './SessionVitals';
 import { useAudioRecorderWebSocket } from '../hooks/useAudioRecorderWebSocket';
 import { useTherapyAnalysis } from '../hooks/useTherapyAnalysis';
+import { useAuth } from '../contexts/AuthContext';
 import { formatDuration } from '../utils/timeUtils';
 import { getStatusColor } from '../utils/colorUtils';
+import { renderMarkdown } from '../utils/textRendering';
 import { SessionContext, Alert as IAlert, Citation, SessionSummary } from '../types/types';
 import { testTranscriptData } from '../utils/mockTranscript.ts';
 
 interface NewSessionProps {
-  onNavigateToLanding: () => void;
+  onNavigateBack: () => void;
 }
 
-const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
+const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack }) => {
+  const { currentUser } = useAuth();
   const isDesktop = useMediaQuery(useTheme().breakpoints.up('lg'));
   const isWideScreen = useMediaQuery('(min-width:1024px)');
   
   const [isRecording, setIsRecording] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [sessionDuration, setSessionDuration] = useState(0);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
@@ -124,6 +128,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
     stopRecording, 
     sessionId 
   } = useAudioRecorderWebSocket({
+    authToken,
     onTranscript: (newTranscript: any) => {
       if (newTranscript.is_interim) {
         setTranscript(prev => {
@@ -164,7 +169,27 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
     }
   });
 
+  // Get Firebase auth token
+  useEffect(() => {
+    const getAuthToken = async () => {
+      if (currentUser) {
+        try {
+          const token = await currentUser.getIdToken();
+          setAuthToken(token);
+        } catch (error) {
+          console.error('Error getting auth token:', error);
+          setAuthToken(null);
+        }
+      } else {
+        setAuthToken(null);
+      }
+    };
+
+    getAuthToken();
+  }, [currentUser]);
+
   const { analyzeSegment, generateSessionSummary } = useTherapyAnalysis({
+    authToken,
     onAnalysis: (analysis) => {
       const analysisType = (analysis as any).analysis_type;
       const isRealtime = analysisType === 'realtime';
@@ -461,6 +486,28 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
 
   const selectedAlert = selectedAlertIndex !== null ? alerts[selectedAlertIndex] : null;
 
+  // Log selectedAlert.recommendation whenever a new selectedAlert is chosen
+  useEffect(() => {
+    if (selectedAlert && selectedAlert.recommendation) {
+      console.log('[Alert Selection] Selected alert recommendation:', selectedAlert.recommendation);
+      console.log('[Alert Selection] Full alert details:', {
+        title: selectedAlert.title,
+        category: selectedAlert.category,
+        timing: selectedAlert.timing,
+        recommendation: selectedAlert.recommendation,
+        timestamp: selectedAlert.timestamp
+      });
+    } else if (selectedAlert) {
+      console.log('[Alert Selection] Selected alert has no recommendation:', {
+        title: selectedAlert.title,
+        category: selectedAlert.category,
+        timing: selectedAlert.timing
+      });
+    } else {
+      console.log('[Alert Selection] No alert selected');
+    }
+  }, [selectedAlert, selectedAlertIndex]);
+
   const handleCitationClick = (citation: Citation) => {
     setSelectedCitation(citation);
     setCitationModalOpen(true);
@@ -474,26 +521,6 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
       background: 'var(--background-gradient)',
       overflow: 'hidden',
     }}>
-      {/* Home Button */}
-      <Box sx={{ position: 'fixed', top: 24, left: 24, zIndex: 1202 }}>
-        <Fab
-          color="primary"
-          aria-label="home"
-          onClick={onNavigateToLanding}
-          sx={{
-            background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
-              transform: 'scale(1.1)',
-            },
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
-          }}
-        >
-          <Home />
-        </Fab>
-      </Box>
-
       {/* Main Content Area */}
       <Box sx={{ 
         flex: 1, 
@@ -526,9 +553,27 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Back Button and Patient Name */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Fab
+                size="medium"
+                color="primary"
+                aria-label="back"
+                onClick={onNavigateBack}
+                sx={{
+                  background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
+                    transform: 'scale(1.1)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
+                }}
+              >
+                <ArrowBack />
+              </Fab>
               <Typography 
-                variant="h5" 
+                variant="h4" 
                 sx={{ 
                   color: 'var(--primary)',
                   fontWeight: 600,
@@ -536,6 +581,11 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
               >
                 John Doe
               </Typography>
+            </Box>
+            
+            {/* Session Info and Start/Stop Button */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="body1">Session #1</Typography>
               {!isRecording ? (
                 <Button
                   variant="contained"
@@ -568,7 +618,6 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
                 </Button>
               )}
             </Box>
-            <Typography variant="body1">Session #1</Typography>
             <Box>
               <Typography variant="h6">Phase: Beginning</Typography>
               <Typography variant="body2" color="text.secondary">
@@ -699,71 +748,6 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
             </Paper>
 
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
-              {/* Evidence Section */}
-              <Paper
-                sx={{
-                  p: 3,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 2,
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
-                  '&:hover': {
-                    boxShadow: '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
-                  },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-              >
-                <Typography 
-                  variant="h5" 
-                  gutterBottom 
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 1.5,
-                    color: 'var(--primary)',
-                    fontWeight: 600,
-                  }}
-                >
-                  <Article sx={{ 
-                    fontSize: 28,
-                    color: 'rgba(11, 87, 208, 0.6)',
-                    opacity: 0.8,
-                  }} /> 
-                  Evidence
-                </Typography>
-                {selectedAlert && selectedAlert.evidence ? (
-                  <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {selectedAlert.evidence.map((item, index) => (
-                      <Typography key={index} variant="body2" color="text.secondary" fontStyle="italic">
-                        - {item}
-                      </Typography>
-                    ))}
-                  </Box>
-                ) : (
-                  <Box sx={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center',
-                    py: 6,
-                    px: 3,
-                    background: 'rgba(250, 251, 253, 0.5)',
-                    borderRadius: '12px',
-                    border: '1px dashed rgba(196, 199, 205, 0.3)',
-                  }}>
-                    <Typography 
-                      variant="body1" 
-                      color="text.secondary"
-                      sx={{ fontWeight: 500 }}
-                    >
-                      Evidence will appear here.
-                    </Typography>
-                  </Box>
-                )}
-              </Paper>
-
               {/* Recommendation Section */}
               <Paper
                 sx={{
@@ -798,9 +782,23 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
                   Recommendation
                 </Typography>
                 {selectedAlert && selectedAlert.recommendation ? (
-                  <Typography variant="body2" color="text.secondary">
-                    {selectedAlert.recommendation}
-                  </Typography>
+                  <Box sx={{ color: 'text.secondary' }}>
+                    {Array.isArray(selectedAlert.recommendation) ? (
+                      <Box component="ul" sx={{ margin: 0, paddingLeft: '1.5em' }}>
+                        {selectedAlert.recommendation.map((item, index) => (
+                          <Box component="li" key={index} sx={{ marginBottom: '0.25em' }}>
+                            <Typography variant="body2" color="text.secondary">
+                              {item}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    ) : (
+                      <Box sx={{ '& > *': { color: 'text.secondary !important' } }}>
+                        {renderMarkdown(selectedAlert.recommendation)}
+                      </Box>
+                    )}
+                  </Box>
                 ) : (
                   <Box sx={{
                     flex: 1,
@@ -820,6 +818,78 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateToLanding }) => {
                       sx={{ fontWeight: 500 }}
                     >
                       Recommendations will appear here.
+                    </Typography>
+                  </Box>
+                )}
+              </Paper>
+
+              {/* Evidence Section */}
+              <Paper
+                sx={{
+                  p: 3,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  boxShadow: '0 20px 40px -8px rgba(0, 0, 0, 0.08)',
+                  '&:hover': {
+                    boxShadow: '0 25px 50px -8px rgba(0, 0, 0, 0.1)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
+                <Typography 
+                  variant="h5" 
+                  gutterBottom 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1.5,
+                    color: 'var(--primary)',
+                    fontWeight: 600,
+                  }}
+                >
+                  <Article sx={{ 
+                    fontSize: 28,
+                    color: 'rgba(11, 87, 208, 0.6)',
+                    opacity: 0.8,
+                  }} /> 
+                  Evidence
+                </Typography>
+                {selectedAlert && selectedAlert.message && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {selectedAlert.message}
+                    </Typography>
+                  </Box>
+                )}
+                {selectedAlert && selectedAlert.evidence ? (
+                  <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {selectedAlert.evidence.map((item, index) => (
+                      <Typography key={index} variant="body2" color="text.secondary" fontStyle="italic">
+                        - {item}
+                      </Typography>
+                    ))}
+                  </Box>
+                ) : (
+                  <Box sx={{
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center',
+                    py: 6,
+                    px: 3,
+                    background: 'rgba(250, 251, 253, 0.5)',
+                    borderRadius: '12px',
+                    border: '1px dashed rgba(196, 199, 205, 0.3)',
+                  }}>
+                    <Typography 
+                      variant="body1" 
+                      color="text.secondary"
+                      sx={{ fontWeight: 500 }}
+                    >
+                      Evidence will appear here.
                     </Typography>
                   </Box>
                 )}

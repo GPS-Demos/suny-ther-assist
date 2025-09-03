@@ -26,7 +26,7 @@ Return the MOST RELEVANT guidance (max 1-2 alerts). Format:
         "title": "Brief descriptive title",
         "message": "Specific action or observation (1-3 sentences max)",
         "evidence": ["relevant quote if applicable"],
-        "recommendation": "Action to take if applicable"
+        "recommendation": "Action(s) to take if applicable. IMPORTANT: format each recommendation as a bullet point"
     }}],
     "session_metrics": {{
         "engagement_level": 0.0-1.0,

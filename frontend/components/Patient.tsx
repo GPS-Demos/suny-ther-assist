@@ -17,66 +17,31 @@ import {
   Grid,
   Divider,
   Button,
+  IconButton,
 } from '@mui/material';
 import {
-  Home,
+  ArrowBack,
   Person,
   Phone,
   Email,
   CalendarToday,
   MedicalServices,
   Add,
+  Edit,
+  Delete,
 } from '@mui/icons-material';
 import { Patient as PatientType } from '../types/types';
 import { mockPatients } from '../utils/mockPatients';
 
 interface PatientProps {
   patientId: string;
-  onNavigateToLanding: () => void;
+  onNavigateBack: () => void;
   onNavigateToNewSession: () => void;
 }
 
-// Mock session history data
-const generateSessionHistory = (patientId: string) => {
-  const sessions = [
-    {
-      id: '1',
-      date: '2024-12-15',
-      duration: 50,
-      summary: 'Patient showed significant improvement in managing anxiety triggers through breathing exercises. We discussed upcoming social situations and practiced coping strategies for holiday gatherings.'
-    },
-    {
-      id: '2', 
-      date: '2024-11-30',
-      duration: 45,
-      summary: 'Focused on cognitive restructuring techniques to address negative thought patterns. Patient demonstrated good understanding of identifying and challenging catastrophic thinking.'
-    },
-    {
-      id: '3',
-      date: '2024-11-15',
-      duration: 50,
-      summary: 'Introduced progressive muscle relaxation exercises to help with physical symptoms of anxiety. Patient reported feeling more relaxed and confident in using the technique at home.'
-    },
-    {
-      id: '4',
-      date: '2024-11-01',
-      duration: 45,
-      summary: 'Reviewed homework assignments and discussed progress in daily anxiety journal. Patient noted decreased frequency of panic episodes since implementing mindfulness practices.'
-    },
-    {
-      id: '5',
-      date: '2024-10-18',
-      duration: 50,
-      summary: 'Explored early trauma experiences and their connection to current anxiety patterns. Patient expressed feeling understood and validated in processing difficult memories.'
-    }
-  ];
-
-  return sessions;
-};
-
-const Patient: React.FC<PatientProps> = ({ patientId, onNavigateToLanding, onNavigateToNewSession }) => {
+const Patient: React.FC<PatientProps> = ({ patientId, onNavigateBack, onNavigateToNewSession }) => {
   const patient = mockPatients.find(p => p.id === patientId);
-  const sessionHistory = generateSessionHistory(patientId);
+  const sessionHistory = patient?.sessionHistory || [];
 
   if (!patient) {
     return (
@@ -175,39 +140,36 @@ const Patient: React.FC<PatientProps> = ({ patientId, onNavigateToLanding, onNav
       flexDirection: 'column',
       background: 'var(--background-gradient)',
     }}>
-      {/* Home Button */}
-      <Box sx={{ position: 'fixed', top: 24, left: 24, zIndex: 1202 }}>
-        <Fab
-          color="primary"
-          aria-label="home"
-          onClick={onNavigateToLanding}
-          sx={{
-            background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
-              transform: 'scale(1.1)',
-            },
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
-          }}
-        >
-          <Home />
-        </Fab>
-      </Box>
-
       {/* Main Content */}
       <Box sx={{ 
         flex: 1, 
         display: 'flex', 
         flexDirection: 'column',
         p: 3,
-        pt: 10, // Account for home button
         gap: 3,
       }}>
         {/* Patient Information Card */}
         <Paper elevation={3} sx={{ borderRadius: 2 }}>
           <Box sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 3 }}>
+              {/* Back Button */}
+              <Fab
+                size="medium"
+                color="primary"
+                aria-label="back"
+                onClick={onNavigateBack}
+                sx={{
+                  background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
+                    transform: 'scale(1.1)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
+                }}
+              >
+                <ArrowBack />
+              </Fab>
               <Avatar
                 sx={{ 
                   width: 80, 
@@ -379,6 +341,7 @@ const Patient: React.FC<PatientProps> = ({ patientId, onNavigateToLanding, onNav
                     <TableCell sx={{ fontWeight: 600 }}>Session Date</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Duration</TableCell>
                     <TableCell sx={{ fontWeight: 600, minWidth: 400 }}>Session Summary</TableCell>
+                    <TableCell sx={{ fontWeight: 600, width: 120 }}>Action</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -398,6 +361,38 @@ const Patient: React.FC<PatientProps> = ({ patientId, onNavigateToLanding, onNav
                         <Typography variant="body2" sx={{ lineHeight: 1.5 }}>
                           {session.summary}
                         </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <IconButton
+                            size="small"
+                            sx={{
+                              color: 'var(--primary)',
+                              '&:hover': {
+                                backgroundColor: 'rgba(11, 87, 208, 0.1)',
+                                transform: 'scale(1.1)',
+                              },
+                              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                            }}
+                            aria-label="edit session"
+                          >
+                            <Edit fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            sx={{
+                              color: '#f44336',
+                              '&:hover': {
+                                backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                transform: 'scale(1.1)',
+                              },
+                              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                            }}
+                            aria-label="delete session"
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))}

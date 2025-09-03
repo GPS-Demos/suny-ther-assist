@@ -16,23 +16,23 @@ import {
   Fab,
 } from '@mui/material';
 import {
-  Home,
+  ArrowBack,
   Search,
   Visibility,
   Phone,
   Email,
-  Edit,
+  Add,
 } from '@mui/icons-material';
 import { Patient } from '../types/types';
 import { mockPatients } from '../utils/mockPatients';
 
 interface PatientsProps {
-  onNavigateToLanding: () => void;
+  onNavigateBack: () => void;
   onNavigateToNewSession: () => void;
   onNavigateToPatient: (patientId: string) => void;
 }
 
-const Patients: React.FC<PatientsProps> = ({ onNavigateToLanding, onNavigateToNewSession, onNavigateToPatient }) => {
+const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSession, onNavigateToPatient }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>(mockPatients);
 
@@ -92,33 +92,12 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateToLanding, onNavigateToNe
       flexDirection: 'column',
       background: 'var(--background-gradient)',
     }}>
-      {/* Home Button */}
-      <Box sx={{ position: 'fixed', top: 24, left: 24, zIndex: 1202 }}>
-        <Fab
-          color="primary"
-          aria-label="home"
-          onClick={onNavigateToLanding}
-          sx={{
-            background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
-              transform: 'scale(1.1)',
-            },
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
-          }}
-        >
-          <Home />
-        </Fab>
-      </Box>
-
       {/* Main Content */}
       <Box sx={{ 
         flex: 1, 
         display: 'flex', 
         flexDirection: 'column',
         p: 3,
-        pt: 10, // Account for home button
         pb: 4, // Add bottom padding
       }}>
         <Paper 
@@ -126,23 +105,41 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateToLanding, onNavigateToNe
           sx={{ 
             display: 'flex', 
             flexDirection: 'column',
-            minHeight: 'calc(100vh - 140px)', // Ensure minimum height but allow expansion
+            minHeight: 'calc(100vh - 80px)', // Adjust for reduced padding
             borderRadius: 2,
           }}
         >
           {/* Header */}
           <Box sx={{ p: 3, borderBottom: '1px solid #e0e0e0' }}>
-            <Typography 
-              variant="h4" 
-              gutterBottom 
-              sx={{ 
-                color: 'var(--primary)', 
-                fontWeight: 600,
-                mb: 2 
-              }}
-            >
-              Patients
-            </Typography>
+            {/* Back Button */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+              <Fab
+                size="medium"
+                color="primary"
+                aria-label="back"
+                onClick={onNavigateBack}
+                sx={{
+                  background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
+                    transform: 'scale(1.1)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
+                }}
+              >
+                <ArrowBack />
+              </Fab>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  color: 'var(--primary)', 
+                  fontWeight: 600,
+                }}
+              >
+                Patients
+              </Typography>
+            </Box>
             
             {/* Search Bar */}
             <TextField
@@ -187,7 +184,7 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateToLanding, onNavigateToNe
                     >
                       <TableCell>
                         <Box>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 500 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'blue' }}>
                             {patient.name}
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
@@ -251,11 +248,11 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateToLanding, onNavigateToNe
                           </IconButton>
                           <IconButton 
                             size="small" 
-                            color="secondary"
+                            color="primary"
                             aria-label="start new session"
                             onClick={onNavigateToNewSession}
                           >
-                            <Edit />
+                            <Add />
                           </IconButton>
                         </Box>
                       </TableCell>

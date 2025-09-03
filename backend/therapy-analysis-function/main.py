@@ -1,5 +1,5 @@
 import functions_framework
-from flask import jsonify, Response
+from flask import jsonify, Response, request
 from google import genai
 from google.genai import types
 import os
@@ -8,10 +8,52 @@ import logging
 import re
 from typing import List, Dict, Tuple, Optional
 from datetime import datetime, timedelta
+import firebase_admin
+from firebase_admin import auth, credentials
 from . import constants
 
 # --- Initialize Logging ---
 logging.basicConfig(level=logging.INFO)
+
+# --- Initialize Firebase Admin ---
+try:
+    # Firebase Admin SDK will automatically use the service account when running in Google Cloud
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app()
+    logging.info("Firebase Admin SDK initialized")
+except Exception as e:
+    logging.error(f"Error initializing Firebase Admin SDK: {e}", exc_info=True)
+
+# --- Authorized Email Configuration ---
+AUTHORIZED_EMAILS = [
+    'anitza@albany.edu',
+    'jfboswell197@gmail.com',
+    'Salvador.Dura-Bernal@downstate.edu',
+    'boswell@albany.edu'
+]
+
+def is_email_authorized(email: str) -> bool:
+    """Check if email is authorized (@google.com domain or in whitelist)"""
+    if not email:
+        return False
+    return email.endswith('@google.com') or email in AUTHORIZED_EMAILS
+
+def verify_firebase_token(token: str) -> Optional[Dict]:
+    """Verify Firebase ID token and return decoded claims"""
+    try:
+        decoded_token = auth.verify_id_token(token)
+        email = decoded_token.get('email')
+        
+        if not is_email_authorized(email):
+            logging.warning(f"Unauthorized email attempted access: {email}")
+            return None
+            
+        logging.info(f"Authorized user authenticated: {email}")
+        return decoded_token
+    except Exception as e:
+        logging.error(f"Token verification failed: {e}")
+        return None
+
 
 # --- Initialize Google GenAI ---
 try:
@@ -52,6 +94,7 @@ TRANSCRIPT_RAG_TOOL = types.Tool(
 def therapy_analysis(request):
     """
     HTTP Cloud Function for real-time therapy session analysis.
+    Requires Firebase authentication.
     """
     # --- CORS Handling ---
     logging.warning(request.method)
@@ -59,7 +102,7 @@ def therapy_analysis(request):
         headers = {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET, POST',
-            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
             'Access-Control-Max-Age': '3600'
         }
         return ('', 204, headers)
@@ -67,12 +110,22 @@ def therapy_analysis(request):
     headers = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST',
-        'Access-Control-Allow-Headers': 'Content-Type'
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     }
 
     if request.method != 'POST':
         logging.warning(f"Received non-POST request: {request.method}")
         return (jsonify({'error': 'Method not allowed. Use POST.'}), 405, headers)
+
+    # --- Authentication Check ---
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        logging.warning("Missing or invalid Authorization header")
+        return (jsonify({'error': 'Authentication required'}), 401, headers)
+    token = auth_header.split(' ')[1]
+    decoded_token = verify_firebase_token(token)
+    if not decoded_token:
+        return (jsonify({'error': 'Invalid or unauthorized token'}), 401, headers)
 
     try:
         request_json = request.get_json(silent=True)
