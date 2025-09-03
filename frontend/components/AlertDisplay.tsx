@@ -377,7 +377,7 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
      <RationaleModal
         open={rationaleModalOpen}
         onClose={() => setRationaleModalOpen(false)}
-        rationale={alert.recommendation}
+        rationale={Array.isArray(alert.recommendation) ? alert.recommendation.join('\n\n') : alert.recommendation}
         immediateActions={alert.immediateActions}
         contraindications={alert.contraindications}
         citations={citations}

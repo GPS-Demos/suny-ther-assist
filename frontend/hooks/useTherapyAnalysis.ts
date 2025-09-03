@@ -85,7 +85,7 @@ export const useTherapyAnalysis = ({
         status: error.response?.status
       });
     }
-  }, [onAnalysis, ANALYSIS_API]);
+  }, [onAnalysis, ANALYSIS_API, authToken]);
 
   const getPathwayGuidance = useCallback(async (
     currentApproach: string,
@@ -122,7 +122,7 @@ export const useTherapyAnalysis = ({
       });
       throw error;
     }
-  }, [ANALYSIS_API, onPathwayGuidance]);
+  }, [ANALYSIS_API, onPathwayGuidance, authToken]);
 
   const generateSessionSummary = useCallback(async (
     fullTranscript: Array<{ speaker: string; text: string; timestamp: string }>,
@@ -155,7 +155,7 @@ export const useTherapyAnalysis = ({
       });
       throw error;
     }
-  }, [ANALYSIS_API, onSessionSummary]);
+  }, [ANALYSIS_API, onSessionSummary, authToken]);
 
   return {
     analyzeSegment,
