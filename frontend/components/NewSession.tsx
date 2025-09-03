@@ -12,6 +12,7 @@ import {
   Fab,
   useMediaQuery,
   useTheme,
+  LinearProgress,
 } from '@mui/material';
 import {
   Mic,
@@ -28,6 +29,7 @@ import {
   SwapHoriz,
   Psychology,
   ArrowBack,
+  VolumeUp,
 } from '@mui/icons-material';
 import TranscriptDisplay from './TranscriptDisplay';
 import AlertDisplay from './AlertDisplay';
@@ -38,7 +40,7 @@ import SessionSummaryModal from './SessionSummaryModal';
 import RationaleModal from './RationaleModal';
 import CitationModal from './CitationModal';
 import SessionVitals from './SessionVitals';
-import { useAudioRecorderWebSocket } from '../hooks/useAudioRecorderWebSocket';
+import { useAudioStreamingWebSocket } from '../hooks/useAudioStreamingWebSocket';
 import { useTherapyAnalysis } from '../hooks/useTherapyAnalysis';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDuration } from '../utils/timeUtils';
@@ -123,13 +125,16 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
   const [isTestMode, setIsTestMode] = useState(false);
   const testIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Audio recording hook with WebSocket streaming
+  // Audio streaming hook with WebSocket for both microphone and file
   const { 
     isConnected, 
-    startRecording, 
-    stopRecording, 
+    startMicrophoneRecording, 
+    startAudioFileStreaming,
+    stopStreaming, 
+    isPlayingAudio,
+    audioProgress,
     sessionId 
-  } = useAudioRecorderWebSocket({
+  } = useAudioStreamingWebSocket({
     authToken,
     onTranscript: (newTranscript: any) => {
       if (newTranscript.is_interim) {
@@ -383,12 +388,12 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     setSessionSummaryClosed(false);
     setSessionSummary(null);
     setSummaryError(null);
-    await startRecording();
+    await startMicrophoneRecording();
   };
 
   const handleStopSession = async () => {
     setIsRecording(false);
-    await stopRecording();
+    await stopStreaming();
     if (isTestMode) {
       stopTestMode();
     }
@@ -462,6 +467,18 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
         
         currentIndex++;
     }, 2000);
+  };
+
+  const loadExampleAudio = async () => {
+    setIsRecording(true);
+    setSessionStartTime(new Date());
+    setTranscript([]);
+    setSessionSummaryClosed(false);
+    setSessionSummary(null);
+    setSummaryError(null);
+    
+    // Start streaming the example audio file
+    await startAudioFileStreaming('/audio/example_session_audio.wav');
   };
 
   const stopTestMode = () => {
@@ -625,10 +642,33 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
                     },
                   }}
                 >
-                  {isTestMode ? 'Stop Test' : 'End Session'}
+                  {isTestMode ? 'Stop Test' : isPlayingAudio ? 'Stop Audio' : 'End Session'}
                 </Button>
               )}
             </Box>
+            
+            {/* Audio Progress Bar */}
+            {isPlayingAudio && (
+              <Box sx={{ width: '100%' }}>
+                <Typography variant="caption" color="text.secondary">
+                  Playing Example Audio
+                </Typography>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={audioProgress} 
+                  sx={{ 
+                    mt: 0.5,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                    '& .MuiLinearProgress-bar': {
+                      background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+                      borderRadius: 3,
+                    }
+                  }}
+                />
+              </Box>
+            )}
             <Box>
               <Typography variant="h6">Phase: Beginning</Typography>
               <Typography variant="body2" color="text.secondary">
@@ -961,13 +1001,16 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
         </Fab>
       </Box>
 
-      {/* Test Transcript Button */}
+      {/* Test Buttons */}
       {!isRecording && !isTestMode && (
         <Box sx={{ 
           position: 'fixed', 
           bottom: 24, 
           left: 24,
           zIndex: 1201,
+          display: 'flex',
+          gap: 1,
+          flexDirection: 'column',
         }}>
           <Button
             variant="outlined"
@@ -987,6 +1030,26 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
             }}
           >
             Load Test Transcript
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<VolumeUp />}
+            onClick={loadExampleAudio}
+            sx={{ 
+              borderColor: '#6366f1',
+              color: '#6366f1',
+              '&:hover': {
+                borderColor: '#4f46e5',
+                backgroundColor: 'rgba(99, 102, 241, 0.04)',
+              },
+              fontWeight: 600,
+              borderRadius: '16px',
+              px: 2,
+              py: 0.5,
+            }}
+          >
+            Load Example Audio
           </Button>
         </Box>
       )}

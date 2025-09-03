@@ -36,7 +36,7 @@ lerna-debug.log*
 # Test coverage
 coverage/
 *.lcov
-.nyc_output
+test_scripts/
 
 # Python
 venv/

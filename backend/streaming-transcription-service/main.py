@@ -16,7 +16,10 @@ from google.cloud.speech_v2 import types
 import google.auth
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
@@ -33,7 +36,17 @@ app.add_middleware(
 
 # Get project ID
 credentials, project_id = google.auth.default()
-project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
+# Use the project ID from credentials if env var not set
+if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
+    if project_id:
+        os.environ["GOOGLE_CLOUD_PROJECT"] = project_id
+        logger.info(f"Using project ID from credentials: {project_id}")
+    else:
+        logger.warning("No Google Cloud project ID found. Set GOOGLE_CLOUD_PROJECT env var or run 'gcloud auth application-default login'")
+        project_id = "suny-ther-assist"  # Fallback for testing
+else:
+    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
+
 location = "global"
 
 # Initialize Speech client
@@ -110,6 +123,7 @@ class StreamingTranscriptionSession:
     def streaming_recognize_thread(self):
         """Run the synchronous gRPC streaming in a separate thread"""
         try:
+            logger.info("Starting streaming recognition thread")
             # Create the request generator
             request_generator = self.audio_generator()
             
@@ -119,7 +133,10 @@ class StreamingTranscriptionSession:
             )
             
             # Process responses
+            response_count = 0
             for response in responses:
+                response_count += 1
+                logger.debug(f"Received response #{response_count}")
                 # Put response in async queue for WebSocket processing
                 asyncio.run_coroutine_threadsafe(
                     self.response_queue.put(response),
@@ -127,7 +144,7 @@ class StreamingTranscriptionSession:
                 )
                 
         except Exception as e:
-            logger.error(f"Streaming thread error: {e}")
+            logger.error(f"Streaming thread error: {e}", exc_info=True)
             # Put error in response queue using the main loop
             asyncio.run_coroutine_threadsafe(
                 self.response_queue.put({"error": str(e)}),
@@ -157,6 +174,9 @@ class StreamingTranscriptionSession:
                     # Process speech recognition results
                     for result in response.results:
                         for alternative in result.alternatives:
+                            # Log transcript for debugging
+                            logger.info(f"Transcript: {'[FINAL]' if result.is_final else '[INTERIM]'} {alternative.transcript}")
+                            
                             # Send transcript result (no speaker labeling needed)
                             result_data = {
                                 "type": "transcript",
@@ -244,6 +264,8 @@ async def websocket_transcribe(websocket: WebSocket):
         if init_message["type"] == "websocket.receive" and "text" in init_message:
             init_data = json.loads(init_message["text"])
             session_id = init_data.get("session_id", datetime.now().strftime("%Y%m%d-%H%M%S"))
+            logger.info(f"Session initialized: {session_id}")
+            logger.info(f"Client config: {init_data.get('config', {})}")
         else:
             session_id = datetime.now().strftime("%Y%m%d-%H%M%S")
         
@@ -282,15 +304,19 @@ async def websocket_transcribe(websocket: WebSocket):
                 if message["type"] == "websocket.receive":
                     if "bytes" in message:
                         # Handle binary audio data
+                        audio_size = len(message["bytes"])
+                        logger.debug(f"Received audio chunk: {audio_size} bytes")
                         session.add_audio(message["bytes"])
                     elif "text" in message:
                         # Handle control messages
                         data = json.loads(message["text"])
                         if data.get("type") == "stop":
+                            logger.info("Received stop signal")
                             break
                         elif data.get("type") == "audio" and "data" in data:
                             # Handle base64 audio if sent as JSON
                             audio_bytes = base64.b64decode(data["data"])
+                            logger.debug(f"Received base64 audio: {len(audio_bytes)} bytes")
                             session.add_audio(audio_bytes)
                     
             except WebSocketDisconnect:
