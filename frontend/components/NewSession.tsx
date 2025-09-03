@@ -40,6 +40,7 @@ import CitationModal from './CitationModal';
 import SessionVitals from './SessionVitals';
 import { useAudioRecorderWebSocket } from '../hooks/useAudioRecorderWebSocket';
 import { useTherapyAnalysis } from '../hooks/useTherapyAnalysis';
+import { useAuth } from '../contexts/AuthContext';
 import { formatDuration } from '../utils/timeUtils';
 import { getStatusColor } from '../utils/colorUtils';
 import { renderMarkdown } from '../utils/textRendering';
@@ -51,10 +52,12 @@ interface NewSessionProps {
 }
 
 const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack }) => {
+  const { currentUser } = useAuth();
   const isDesktop = useMediaQuery(useTheme().breakpoints.up('lg'));
   const isWideScreen = useMediaQuery('(min-width:1024px)');
   
   const [isRecording, setIsRecording] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [sessionDuration, setSessionDuration] = useState(0);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
@@ -125,6 +128,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack }) => {
     stopRecording, 
     sessionId 
   } = useAudioRecorderWebSocket({
+    authToken,
     onTranscript: (newTranscript: any) => {
       if (newTranscript.is_interim) {
         setTranscript(prev => {
@@ -165,7 +169,27 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack }) => {
     }
   });
 
+  // Get Firebase auth token
+  useEffect(() => {
+    const getAuthToken = async () => {
+      if (currentUser) {
+        try {
+          const token = await currentUser.getIdToken();
+          setAuthToken(token);
+        } catch (error) {
+          console.error('Error getting auth token:', error);
+          setAuthToken(null);
+        }
+      } else {
+        setAuthToken(null);
+      }
+    };
+
+    getAuthToken();
+  }, [currentUser]);
+
   const { analyzeSegment, generateSessionSummary } = useTherapyAnalysis({
+    authToken,
     onAnalysis: (analysis) => {
       const analysisType = (analysis as any).analysis_type;
       const isRealtime = analysisType === 'realtime';

@@ -34,6 +34,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Helper function to check if email is authorized
+  const isEmailAuthorized = (email: string | null): boolean => {
+    if (!email) return false;
+    
+    const allowedEmails = [
+      'anitza@albany.edu',
+      'jfboswell197@gmail.com',
+      'Salvador.Dura-Bernal@downstate.edu',
+      'boswell@albany.edu'
+    ];
+    
+    return email.endsWith('@google.com') || allowedEmails.includes(email);
+  };
+
   const signup = async (email: string, password: string, displayName?: string) => {
     const result = await createUserWithEmailAndPassword(auth, email, password);
     if (displayName && result.user) {
@@ -52,11 +66,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    return signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider);
+    
+    // Check if the email is authorized
+    const email = result.user?.email;
+    if (!isEmailAuthorized(email)) {
+      // Sign out the user if they don't have an authorized email
+      await signOut(auth);
+      throw new Error('Access restricted to @google.com email addresses and authorized users only.');
+    }
+    
+    return result;
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Check if the current user has an authorized email
+        const email = user.email;
+        if (!isEmailAuthorized(email)) {
+          // Sign out the user if they don't have an authorized email
+          await signOut(auth);
+          setCurrentUser(null);
+          setLoading(false);
+          return;
+        }
+      }
+      
       setCurrentUser(user);
       setLoading(false);
     });

@@ -6,12 +6,14 @@ interface UseTherapyAnalysisProps {
   onAnalysis: (analysis: AnalysisResponse) => void;
   onPathwayGuidance?: (guidance: any) => void;
   onSessionSummary?: (summary: any) => void;
+  authToken?: string | null;
 }
 
 export const useTherapyAnalysis = ({ 
   onAnalysis, 
   onPathwayGuidance,
-  onSessionSummary 
+  onSessionSummary,
+  authToken
 }: UseTherapyAnalysisProps) => {
   const ANALYSIS_API = import.meta.env.VITE_ANALYSIS_API;
 
@@ -35,6 +37,9 @@ export const useTherapyAnalysis = ({
         is_realtime: is_realtime || false,  // Pass as top-level parameter
       }, {
         responseType: 'text',
+        headers: {
+          ...(authToken && { Authorization: `Bearer ${authToken}` })
+        }
       });
 
       const responseTime = performance.now() - startTime;
@@ -96,6 +101,10 @@ export const useTherapyAnalysis = ({
         current_approach: currentApproach,
         session_history: sessionHistory,
         presenting_issues: presentingIssues,
+      }, {
+        headers: {
+          ...(authToken && { Authorization: `Bearer ${authToken}` })
+        }
       });
 
       const responseTime = performance.now() - startTime;
@@ -126,6 +135,10 @@ export const useTherapyAnalysis = ({
         action: 'session_summary',
         full_transcript: fullTranscript,
         session_metrics: sessionMetrics,
+      }, {
+        headers: {
+          ...(authToken && { Authorization: `Bearer ${authToken}` })
+        }
       });
 
       console.log('[useTherapyAnalysis] Session summary generated successfully');
