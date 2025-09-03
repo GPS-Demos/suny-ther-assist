@@ -46,12 +46,14 @@ import { getStatusColor } from '../utils/colorUtils';
 import { renderMarkdown } from '../utils/textRendering';
 import { SessionContext, Alert as IAlert, Citation, SessionSummary } from '../types/types';
 import { testTranscriptData } from '../utils/mockTranscript.ts';
+import { mockPatients } from '../utils/mockPatients';
 
 interface NewSessionProps {
   onNavigateBack: () => void;
+  patientId?: string | null;
 }
 
-const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack }) => {
+const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) => {
   const { currentUser } = useAuth();
   const isDesktop = useMediaQuery(useTheme().breakpoints.up('lg'));
   const isWideScreen = useMediaQuery('(min-width:1024px)');
@@ -513,6 +515,15 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack }) => {
     setCitationModalOpen(true);
   };
 
+  // Get patient name from patientId
+  const getPatientName = () => {
+    if (patientId) {
+      const patient = mockPatients.find(p => p.id === patientId);
+      return patient?.name || 'John Doe';
+    }
+    return 'New Session';
+  };
+
   return (
     <Box sx={{ 
       height: '100vh', 
@@ -579,7 +590,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack }) => {
                   fontWeight: 600,
                 }}
               >
-                John Doe
+                {getPatientName()}
               </Typography>
             </Box>
             

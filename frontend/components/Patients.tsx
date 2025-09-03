@@ -14,6 +14,7 @@ import {
   TextField,
   InputAdornment,
   Fab,
+  TableSortLabel,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -28,26 +29,93 @@ import { mockPatients } from '../utils/mockPatients';
 
 interface PatientsProps {
   onNavigateBack: () => void;
-  onNavigateToNewSession: () => void;
+  onNavigateToNewSession: (patientId?: string) => void;
   onNavigateToPatient: (patientId: string) => void;
 }
 
+type SortableColumn = 'name' | 'age' | 'primaryConcern' | 'nextVisit' | 'lastVisit' | 'lastVisitSummary' | 'patientSince';
+type SortDirection = 'asc' | 'desc';
+
 const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSession, onNavigateToPatient }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortColumn, setSortColumn] = useState<SortableColumn>('nextVisit');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>(mockPatients);
 
-  // Filter patients based on search term
+  // Handle column sort
+  const handleSort = (column: SortableColumn) => {
+    const isAsc = sortColumn === column && sortDirection === 'asc';
+    setSortDirection(isAsc ? 'desc' : 'asc');
+    setSortColumn(column);
+  };
+
+  // Sort function
+  const sortPatients = (patients: Patient[], column: SortableColumn, direction: SortDirection) => {
+    return [...patients].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (column) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'age':
+          aValue = a.age;
+          bValue = b.age;
+          break;
+        case 'primaryConcern':
+          aValue = (a.primaryConcern || '').toLowerCase();
+          bValue = (b.primaryConcern || '').toLowerCase();
+          break;
+        case 'nextVisit':
+          // Handle null dates by treating them as far future for desc, far past for asc
+          aValue = a.nextVisit ? new Date(a.nextVisit).getTime() : (direction === 'desc' ? 0 : Infinity);
+          bValue = b.nextVisit ? new Date(b.nextVisit).getTime() : (direction === 'desc' ? 0 : Infinity);
+          break;
+        case 'lastVisit':
+          aValue = a.lastVisit ? new Date(a.lastVisit).getTime() : 0;
+          bValue = b.lastVisit ? new Date(b.lastVisit).getTime() : 0;
+          break;
+        case 'lastVisitSummary':
+          aValue = (a.lastVisitSummary || '').toLowerCase();
+          bValue = (b.lastVisitSummary || '').toLowerCase();
+          break;
+        case 'patientSince':
+          aValue = new Date(a.patientSince).getTime();
+          bValue = new Date(b.patientSince).getTime();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) {
+        return direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
+  // Filter and sort patients based on search term and sort settings
   React.useEffect(() => {
+    let result = mockPatients;
+    
+    // Apply search filter
     if (searchTerm) {
-      const filtered = mockPatients.filter(patient =>
+      result = result.filter(patient =>
         patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         patient.primaryConcern?.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      setFilteredPatients(filtered);
-    } else {
-      setFilteredPatients(mockPatients);
     }
-  }, [searchTerm]);
+    
+    // Apply sorting
+    result = sortPatients(result, sortColumn, sortDirection);
+    
+    setFilteredPatients(result);
+  }, [searchTerm, sortColumn, sortDirection]);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Not scheduled';
@@ -59,30 +127,11 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'success';
-      case 'paused':
-        return 'warning';
-      case 'inactive':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'Active';
-      case 'paused':
-        return 'Paused';
-      case 'inactive':
-        return 'Inactive';
-      default:
-        return 'Unknown';
-    }
+  const isToday = (dateString: string | null) => {
+    if (!dateString) return false;
+    const today = new Date();
+    const date = new Date(dateString);
+    return today.toDateString() === date.toDateString();
   };
 
   return (
@@ -165,13 +214,69 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Age</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Primary Concern</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Next Session</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Last Session</TableCell>
-                    <TableCell sx={{ fontWeight: 600, minWidth: 300 }}>Last Session Summary</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Patient Since</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      <TableSortLabel
+                        active={sortColumn === 'name'}
+                        direction={sortColumn === 'name' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('name')}
+                      >
+                        Name
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      <TableSortLabel
+                        active={sortColumn === 'age'}
+                        direction={sortColumn === 'age' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('age')}
+                      >
+                        Age
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      <TableSortLabel
+                        active={sortColumn === 'primaryConcern'}
+                        direction={sortColumn === 'primaryConcern' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('primaryConcern')}
+                      >
+                        Primary Concern
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      <TableSortLabel
+                        active={sortColumn === 'nextVisit'}
+                        direction={sortColumn === 'nextVisit' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('nextVisit')}
+                      >
+                        Next Session
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      <TableSortLabel
+                        active={sortColumn === 'lastVisit'}
+                        direction={sortColumn === 'lastVisit' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('lastVisit')}
+                      >
+                        Last Session
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, minWidth: 300 }}>
+                      <TableSortLabel
+                        active={sortColumn === 'lastVisitSummary'}
+                        direction={sortColumn === 'lastVisitSummary' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('lastVisitSummary')}
+                      >
+                        Last Session Summary
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      <TableSortLabel
+                        active={sortColumn === 'patientSince'}
+                        direction={sortColumn === 'patientSince' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('patientSince')}
+                      >
+                        Patient Since
+                      </TableSortLabel>
+                    </TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -184,7 +289,7 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
                     >
                       <TableCell>
                         <Box>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'blue' }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'blue', fontSize: '1.1rem' }}>
                             {patient.name}
                           </Typography>
                           <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
@@ -214,12 +319,32 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <Typography 
-                          variant="body2"
-                          color={patient.nextVisit ? 'text.primary' : 'text.secondary'}
-                        >
-                          {formatDate(patient.nextVisit)}
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                          <Typography 
+                            variant="body2"
+                            color={patient.nextVisit ? 'text.primary' : 'text.secondary'}
+                          >
+                            {formatDate(patient.nextVisit)}
+                          </Typography>
+                          {isToday(patient.nextVisit) && (
+                            <Chip
+                              label="!"
+                              size="small"
+                              sx={{
+                                backgroundColor: '#e3f2fd',
+                                color: '#1976d2',
+                                fontWeight: 600,
+                                fontSize: '0.75rem',
+                                height: 24,
+                                '& .MuiChip-label': {
+                                  px: 1
+                                },
+                                boxShadow: '0 2px 4px rgba(25, 118, 210, 0.2)',
+                                border: '1px solid #bbdefb'
+                              }}
+                            />
+                          )}
+                        </Box>
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2">
@@ -250,7 +375,7 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
                             size="small" 
                             color="primary"
                             aria-label="start new session"
-                            onClick={onNavigateToNewSession}
+                            onClick={() => onNavigateToNewSession(patient.id)}
                           >
                             <Add />
                           </IconButton>
