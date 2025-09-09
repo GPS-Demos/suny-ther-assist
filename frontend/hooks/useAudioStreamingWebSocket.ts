@@ -13,6 +13,8 @@ interface AudioStreamingResult {
   audioProgress: number;
   startMicrophoneRecording: () => Promise<void>;
   startAudioFileStreaming: (audioUrl: string) => Promise<void>;
+  pauseAudioStreaming: () => void;
+  resumeAudioStreaming: () => Promise<void>;
   stopStreaming: () => void;
   sessionId: string;
 }
@@ -32,8 +34,10 @@ export const useAudioStreamingWebSocket = ({
   const sessionIdRef = useRef<string>('');
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const isStreamingFileRef = useRef<boolean>(false);
+  const currentAudioUrlRef = useRef<string>('');
 
   // Get WebSocket URL from environment
   const getWebSocketUrl = () => {
@@ -197,19 +201,16 @@ export const useAudioStreamingWebSocket = ({
         await new Promise(resolve => setTimeout(resolve, 500));
       }
 
+      // Store audio URL for resume functionality
+      currentAudioUrlRef.current = audioUrl;
+
       // Create audio context for processing
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      
-      // Load the audio file
-      const response = await fetch(audioUrl);
-      const arrayBuffer = await response.arrayBuffer();
-      
-      // Decode audio data
-      const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
       
       // Create audio element for playback
       audioElementRef.current = new Audio(audioUrl);
       audioElementRef.current.volume = 1.0;
+      audioElementRef.current.crossOrigin = 'anonymous';
       
       // Track progress
       audioElementRef.current.addEventListener('timeupdate', () => {
@@ -219,12 +220,13 @@ export const useAudioStreamingWebSocket = ({
         }
       });
 
+      // Create audio source from element for capturing
+      audioSourceRef.current = audioContextRef.current.createMediaElementSource(audioElementRef.current);
+      
       // Create a destination that captures the audio
       const dest = audioContextRef.current.createMediaStreamDestination();
-      const source = audioContextRef.current.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(dest);
-      source.connect(audioContextRef.current.destination); // Also play through speakers
+      audioSourceRef.current.connect(dest);
+      audioSourceRef.current.connect(audioContextRef.current.destination); // Also play through speakers
 
       // Create MediaRecorder from the stream
       const options: MediaRecorderOptions = {
@@ -249,14 +251,13 @@ export const useAudioStreamingWebSocket = ({
       // Handle audio end
       audioElementRef.current.addEventListener('ended', () => {
         setIsPlayingAudio(false);
-        setAudioProgress(0);
+        setAudioProgress(100);
         stopStreaming();
       });
 
-      // Start everything
+      // Start recording and playback
       mediaRecorder.start(100); // 100ms chunks
-      source.start();
-      audioElementRef.current.play();
+      await audioElementRef.current.play();
       
       setIsRecording(true);
       setIsPlayingAudio(true);
@@ -270,6 +271,42 @@ export const useAudioStreamingWebSocket = ({
       setIsPlayingAudio(false);
     }
   }, [isConnected, connectWebSocket, onError]);
+
+  // Pause audio streaming
+  const pauseAudioStreaming = useCallback(() => {
+    if (audioElementRef.current && isPlayingAudio) {
+      audioElementRef.current.pause();
+      setIsPlayingAudio(false);
+      
+      // Stop MediaRecorder but keep WebSocket connection
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.pause();
+      }
+      
+      console.log('Audio streaming paused');
+    }
+  }, [isPlayingAudio]);
+
+  // Resume audio streaming
+  const resumeAudioStreaming = useCallback(async () => {
+    try {
+      if (audioElementRef.current && !isPlayingAudio && isStreamingFileRef.current) {
+        // Resume MediaRecorder if it was paused
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'paused') {
+          mediaRecorderRef.current.resume();
+        }
+        
+        // Resume audio playback from current position
+        await audioElementRef.current.play();
+        setIsPlayingAudio(true);
+        
+        console.log('Audio streaming resumed from position:', audioElementRef.current.currentTime);
+      }
+    } catch (error) {
+      console.error('Error resuming audio streaming:', error);
+      onError?.('Failed to resume audio streaming');
+    }
+  }, [isPlayingAudio, onError]);
 
   // Stop any streaming
   const stopStreaming = useCallback(() => {
@@ -323,6 +360,8 @@ export const useAudioStreamingWebSocket = ({
     audioProgress,
     startMicrophoneRecording,
     startAudioFileStreaming,
+    pauseAudioStreaming,
+    resumeAudioStreaming,
     stopStreaming,
     sessionId: sessionIdRef.current
   };
