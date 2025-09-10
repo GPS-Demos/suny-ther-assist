@@ -16,8 +16,16 @@ from google.cloud import speech_v2
 from google.cloud.speech_v2 import types
 import google.auth
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables
+# Load base .env file first
+load_dotenv('.env')
+
+# Load development overrides if .env.development exists
+if os.path.exists('.env.development'):
+    load_dotenv('.env.development', override=True)
+    logger_env = "development"
+else:
+    logger_env = "production"
 
 # Configure logging
 logging.basicConfig(

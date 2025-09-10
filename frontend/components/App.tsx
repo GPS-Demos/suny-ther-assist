@@ -10,6 +10,7 @@ import {
 } from '@mui/icons-material';
 import LandingPage from './LandingPage';
 import NewSession from './NewSession';
+import NewTherSession from './NewTherSession';
 import Patients from './Patients';
 import Patient from './Patient';
 import LoginPage from './LoginPage';
@@ -169,8 +170,8 @@ const App: React.FC = () => {
     );
   }
 
-  // NewSession view - render the dedicated NewSession component
-  return <NewSession onNavigateBack={handleGoBack} patientId={sessionPatientId} />;
+  // NewSession view - render the dedicated NewTherSession component
+  return <NewTherSession onNavigateBack={handleGoBack} patientId={sessionPatientId} />;
 };
 
 export default App;
