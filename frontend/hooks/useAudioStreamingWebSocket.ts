@@ -41,8 +41,8 @@ export const useAudioStreamingWebSocket = ({
 
   // Get WebSocket URL from environment
   const getWebSocketUrl = () => {
-    const baseUrl = import.meta.env.VITE_STREAMING_API || 
-                   'https://therapy-streaming-transcription-mlofelg76a-uc.a.run.app';
+    const baseUrl = import.meta.env.VITE_STREAMING_API;
+    // Handle both HTTP (localhost) and HTTPS (production)
     return baseUrl
       .replace('https://', 'wss://')
       .replace('http://', 'ws://') + '/ws/transcribe';
@@ -274,44 +274,92 @@ export const useAudioStreamingWebSocket = ({
 
   // Pause audio streaming
   const pauseAudioStreaming = useCallback(() => {
-    if (audioElementRef.current && isPlayingAudio) {
-      audioElementRef.current.pause();
-      setIsPlayingAudio(false);
-      
-      // Stop MediaRecorder but keep WebSocket connection
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        mediaRecorderRef.current.pause();
+    try {
+      if (audioElementRef.current && isPlayingAudio) {
+        // Pause audio playback
+        audioElementRef.current.pause();
+        setIsPlayingAudio(false);
+        
+        // Stop MediaRecorder
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
+          mediaRecorderRef.current = null;
+        }
+        
+        // Disconnect WebSocket cleanly
+        disconnectWebSocket();
+        
+        setIsRecording(false);
+        console.log('Audio streaming paused successfully - WebSocket disconnected');
       }
-      
-      console.log('Audio streaming paused');
+    } catch (error) {
+      console.error('Error during pause (non-critical):', error);
+      // Don't call onError for pause operations as they're not critical failures
     }
-  }, [isPlayingAudio]);
+  }, [isPlayingAudio, disconnectWebSocket]);
 
   // Resume audio streaming
   const resumeAudioStreaming = useCallback(async () => {
     try {
       if (audioElementRef.current && !isPlayingAudio && isStreamingFileRef.current) {
-        // Resume MediaRecorder if it was paused
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'paused') {
-          mediaRecorderRef.current.resume();
+        // Reconnect WebSocket first
+        console.log('Reconnecting WebSocket for resume...');
+        await connectWebSocket();
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Restart MediaRecorder with fresh connection
+        if (audioContextRef.current && audioSourceRef.current) {
+          // Disconnect any existing connections to avoid conflicts
+          try {
+            audioSourceRef.current.disconnect();
+          } catch (e) {
+            // Ignore disconnect errors
+          }
+
+          // Create new destination and reconnect
+          const dest = audioContextRef.current.createMediaStreamDestination();
+          audioSourceRef.current.connect(dest);
+          audioSourceRef.current.connect(audioContextRef.current.destination); // Also play through speakers
+          
+          const options: MediaRecorderOptions = {
+            mimeType: 'audio/webm;codecs=opus',
+            audioBitsPerSecond: 128000
+          };
+
+          const mediaRecorder = new MediaRecorder(dest.stream, options);
+          mediaRecorderRef.current = mediaRecorder;
+
+          // Send audio chunks to WebSocket
+          mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
+              wsRef.current.send(event.data);
+            }
+          };
+
+          mediaRecorder.onstop = () => {
+            console.log('Audio file streaming stopped');
+          };
+
+          mediaRecorder.start(100);
+          setIsRecording(true);
         }
         
         // Resume audio playback from current position
         await audioElementRef.current.play();
         setIsPlayingAudio(true);
         
-        console.log('Audio streaming resumed from position:', audioElementRef.current.currentTime);
+        console.log('Audio streaming resumed successfully from position:', audioElementRef.current.currentTime, '- WebSocket reconnected');
       }
     } catch (error) {
       console.error('Error resuming audio streaming:', error);
       onError?.('Failed to resume audio streaming');
     }
-  }, [isPlayingAudio, onError]);
+  }, [isPlayingAudio, onError, connectWebSocket]);
 
   // Stop any streaming
   const stopStreaming = useCallback(() => {
     // Stop MediaRecorder
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && (mediaRecorderRef.current.state === 'recording' || mediaRecorderRef.current.state === 'paused')) {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current = null;
     }
@@ -328,8 +376,8 @@ export const useAudioStreamingWebSocket = ({
       audioElementRef.current = null;
     }
 
-    // Close audio context
-    if (audioContextRef.current) {
+    // Close audio context - but only if we're truly stopping, not pausing
+    if (audioContextRef.current && !isStreamingFileRef.current) {
       audioContextRef.current.close();
       audioContextRef.current = null;
     }

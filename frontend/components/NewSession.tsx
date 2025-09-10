@@ -174,13 +174,9 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
       }
     },
     onError: (error: string) => {
-      setAlerts(prev => [...prev, {
-        timing: 'now' as const,  // System errors need immediate attention
-        category: 'safety' as const,
-        title: 'System Error',
-        message: error,
-        timestamp: new Date().toISOString()
-      }]);
+      // Log streaming errors for debugging but don't show them as alerts
+      // Only show therapeutic guidance alerts from successful analysis
+      console.error('Streaming error (not shown to user):', error);
     }
   });
 
