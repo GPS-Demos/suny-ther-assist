@@ -39,6 +39,7 @@ import AlternativesTab from './AlternativesTab';
 
 interface NewTherSessionProps {
   onNavigateBack?: () => void;
+  onStopRecording?: () => void;
   patientId?: string | null;
   alerts?: Alert[];
   sessionMetrics?: SessionMetrics;
@@ -65,6 +66,7 @@ interface NewTherSessionProps {
 
 const NewTherSession: React.FC<NewTherSessionProps> = ({
   onNavigateBack,
+  onStopRecording,
   patientId,
   alerts = [],
   sessionMetrics = {
@@ -122,6 +124,16 @@ This can help connect physical sensations to thoughts / emotions and identify sp
   const [selectedAction, setSelectedAction] = useState<any>(null);
   const [selectedCitation, setSelectedCitation] = useState<any>(null);
   const [isContraindication, setIsContraindication] = useState(false);
+
+  // Generate current date in the format "Month Day, Year"
+  const getCurrentDate = () => {
+    const today = new Date();
+    return today.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
   const handleActionClick = (action: any, isContra: boolean) => {
     setSelectedAction(action);
@@ -190,36 +202,20 @@ This can help connect physical sensations to thoughts / emotions and identify sp
           }}>
             {/* Title Section */}
             <Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                {onNavigateBack && (
-                  <IconButton
-                    onClick={onNavigateBack}
-                    sx={{
-                      width: 24,
-                      height: 24,
-                      color: '#444746',
-                      '&:hover': {
-                        backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                      },
-                    }}
-                  >
-                    <ArrowBack sx={{ fontSize: 18 }} />
-                  </IconButton>
-                )}
-                <Typography variant="h6" sx={{ 
-                  fontSize: '24px', 
-                  fontWeight: 600, 
-                  color: '#1f1f1f',
-                }}>
-                  John Doe
-                </Typography>
-              </Box>
+              <Typography variant="h6" sx={{ 
+                fontSize: '24px', 
+                fontWeight: 600, 
+                color: '#1f1f1f',
+                mb: 1,
+              }}>
+                John Doe
+              </Typography>
               <Typography variant="body2" sx={{ 
                 fontSize: '14px', 
                 color: '#444746',
                 mb: 2,
               }}>
-                Session #1
+                {getCurrentDate()}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Psychology sx={{ fontSize: 24, color: '#c05a01' }} />
@@ -417,13 +413,35 @@ This can help connect physical sensations to thoughts / emotions and identify sp
             display: 'flex',
             '& > *': { flex: 1 },
           }}>
-            {/* Session ID */}
+            {/* Back Button and Session ID */}
             <Box sx={{ 
-              px: 3, 
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3,
+              px: 2, 
               py: 2, 
               borderRight: '1px solid #f0f4f9',
             }}>
-              <Typography variant="h6" sx={{ fontWeight: 500, fontSize: '28px', color: '#1e1e1e' }}>
+              {onNavigateBack && (
+                <Button
+                  startIcon={<ArrowBack />}
+                  onClick={onNavigateBack}
+                  sx={{
+                    color: '#0b57d0',
+                    textTransform: 'none',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    minWidth: 'auto',
+                    px: 2,
+                    py: 1,
+                    '&:hover': {
+                      backgroundColor: 'rgba(11, 87, 208, 0.04)',
+                    },
+                  }}
+                >
+                </Button>
+              )}
+              <Typography variant="h6" sx={{ fontWeight: 500, fontSize: '24px', color: '#1e1e1e' }}>
                 {sessionId}
               </Typography>
             </Box>
@@ -571,6 +589,7 @@ This can help connect physical sensations to thoughts / emotions and identify sp
                 }} />
               </Box>
               <IconButton
+                onClick={onStopRecording}
                 sx={{
                   backgroundColor: '#f9dedc',
                   color: '#8c1d18',
