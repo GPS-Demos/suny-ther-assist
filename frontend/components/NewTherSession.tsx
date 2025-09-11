@@ -9,6 +9,7 @@ import {
   useMediaQuery,
   IconButton,
   Fab,
+  Tooltip,
 } from '@mui/material';
 import {
   HealthAndSafety,
@@ -22,11 +23,19 @@ import {
   Stop,
   FiberManualRecord,
   ArrowBack,
+  Search,
+  CallSplit,
+  Route,
 } from '@mui/icons-material';
 import { Alert, SessionMetrics, PathwayIndicators } from '../types/types';
 import { formatDuration } from '../utils/timeUtils';
 import { getStatusColor } from '../utils/colorUtils';
 import SessionLineChart from './SessionLineChart';
+import ActionDetailsPanel from './ActionDetailsPanel';
+import EvidenceTab from './EvidenceTab';
+import PathwayTab from './PathwayTab';
+import GuidanceTab from './GuidanceTab';
+import AlternativesTab from './AlternativesTab';
 
 interface NewTherSessionProps {
   onNavigateBack?: () => void;
@@ -110,15 +119,24 @@ This can help connect physical sensations to thoughts / emotions and identify sp
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const [activeTab, setActiveTab] = useState<'guidance' | 'evidence' | 'pathway' | 'alternatives'>('guidance');
+  const [selectedAction, setSelectedAction] = useState<any>(null);
+  const [selectedCitation, setSelectedCitation] = useState<any>(null);
+  const [isContraindication, setIsContraindication] = useState(false);
 
-  const getActionIcon = (iconType: string) => {
-    switch (iconType) {
-      case 'safety': return <HealthAndSafety sx={{ fontSize: 24, color: '#128937' }} />;
-      case 'grounding': return <NaturePeople sx={{ fontSize: 24, color: '#128937' }} />;
-      case 'cognitive': return <Category sx={{ fontSize: 24, color: '#b3261e' }} />;
-      case 'exposure': return <Exposure sx={{ fontSize: 24, color: '#b3261e' }} />;
-      default: return <HealthAndSafety sx={{ fontSize: 24, color: '#128937' }} />;
-    }
+  const handleActionClick = (action: any, isContra: boolean) => {
+    setSelectedAction(action);
+    setSelectedCitation(null); // Clear citation if action is selected
+    setIsContraindication(isContra);
+  };
+
+  const handleCitationClick = (citation: any) => {
+    setSelectedCitation(citation);
+    setSelectedAction(null); // Clear action if citation is selected
+  };
+
+  const handleClosePanel = () => {
+    setSelectedAction(null);
+    setSelectedCitation(null);
   };
 
   const getEmotionalStateColor = (state: string) => {
@@ -129,54 +147,6 @@ This can help connect physical sensations to thoughts / emotions and identify sp
       default: return '#6b7280';
     }
   };
-
-  const ActionCard = ({ action, isContraindication = false }: { 
-    action: any; 
-    isContraindication?: boolean; 
-  }) => (
-    <Paper
-      sx={{
-        p: 1.5,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        border: '1px solid #c4c7c5',
-        borderRadius: '16px',
-        minHeight: '120px',
-        '&:hover': {
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-        },
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5, mb: 2 }}>
-        {getActionIcon(action.icon)}
-      </Box>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-        <Typography 
-          variant="body1" 
-          sx={{ 
-            fontWeight: 600, 
-            fontSize: '16px', 
-            lineHeight: '24px',
-            color: '#1f1f1f',
-          }}
-        >
-          {action.title}
-        </Typography>
-        <Typography 
-          variant="body2" 
-          sx={{ 
-            fontSize: '14px', 
-            lineHeight: '20px',
-            color: '#444746',
-          }}
-        >
-          {action.description}
-        </Typography>
-      </Box>
-    </Paper>
-  );
 
   return (
     <Box sx={{ 
@@ -200,11 +170,20 @@ This can help connect physical sensations to thoughts / emotions and identify sp
           display: 'flex', 
           flex: 1,
           overflow: 'hidden',
+          position: 'relative',
         }}>
+          <ActionDetailsPanel
+            action={selectedAction}
+            citation={selectedCitation}
+            onClose={handleClosePanel}
+            isContraindication={isContraindication}
+          />
           {/* Sidebar */}
           <Box sx={{ 
             width: 351,
             display: 'flex',
+            transform: (selectedAction || selectedCitation) ? 'translateX(-100%)' : 'translateX(0)',
+            transition: 'transform 0.3s ease-in-out',
             flexDirection: 'column',
             gap: 6,
             p: 3,
@@ -242,23 +221,26 @@ This can help connect physical sensations to thoughts / emotions and identify sp
               }}>
                 Session #1
               </Typography>
-              <Typography variant="h5" sx={{ 
-                fontSize: '22px', 
-                fontWeight: 500, 
-                lineHeight: '28px',
-                color: '#444746',
-              }}>
-                {currentGuidance.title}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Psychology sx={{ fontSize: 24, color: '#c05a01' }} />
+                <Typography variant="h5" sx={{ 
+                  fontSize: '22px', 
+                  fontWeight: 500, 
+                  lineHeight: '28px',
+                  color: '#444746',
+                }}>
+                  {currentGuidance.title}
+                </Typography>
+              </Box>
             </Box>
 
             {/* Navigation Menu */}
             <Box>
               {[
-                { key: 'guidance', label: 'Guidance', hasIcon: true },
-                { key: 'evidence', label: 'Evidence', hasIcon: false },
-                { key: 'pathway', label: 'Pathway', hasIcon: false },
-                { key: 'alternatives', label: 'Alternatives', hasIcon: false },
+                { key: 'guidance', label: 'Guidance', icon: <Category sx={{ fontSize: 24, color: '#444746' }} /> },
+                { key: 'evidence', label: 'Evidence', icon: <Search sx={{ fontSize: 24, color: '#444746' }} /> },
+                { key: 'pathway', label: 'Pathway', icon: <Route sx={{ fontSize: 24, color: '#444746' }} /> },
+                { key: 'alternatives', label: 'Alternatives', icon: <CallSplit sx={{ fontSize: 24, color: '#444746' }} /> },
               ].map((item) => (
                 <Box
                   key={item.key}
@@ -266,7 +248,7 @@ This can help connect physical sensations to thoughts / emotions and identify sp
                     display: 'flex',
                     alignItems: 'center',
                     height: 56,
-                    px: item.hasIcon ? 1.5 : 0,
+                    px: 1.5,
                     py: 1,
                     cursor: 'pointer',
                     backgroundColor: activeTab === item.key ? 'rgba(0, 0, 0, 0.04)' : 'transparent',
@@ -277,11 +259,9 @@ This can help connect physical sensations to thoughts / emotions and identify sp
                   }}
                   onClick={() => setActiveTab(item.key as any)}
                 >
-                  {item.hasIcon && (
-                    <Box sx={{ mr: 1.5 }}>
-                      <Category sx={{ fontSize: 24, color: '#444746' }} />
-                    </Box>
-                  )}
+                  <Box sx={{ mr: 1.5, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {activeTab === item.key ? item.icon : null}
+                  </Box>
                   <Typography variant="body1" sx={{ fontSize: '16px', color: '#1f1f1f' }}>
                     {item.label}
                   </Typography>
@@ -300,69 +280,15 @@ This can help connect physical sensations to thoughts / emotions and identify sp
             overflow: 'auto',
             minHeight: 0, // Important for proper flex behavior
           }}>
-            {/* Guidance Content */}
-            <Box sx={{ 
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 6,
-              pb: 4, // Add padding bottom to prevent cutoff
-            }}>
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  fontSize: '24px',
-                  fontWeight: 400,
-                  lineHeight: '28px',
-                  color: '#1f1f1f',
-                  whiteSpace: 'pre-line',
-                }}
-              >
-                {currentGuidance.content}
-              </Typography>
-
-              {/* Action Cards */}
-              <Box sx={{ display: 'flex', gap: 4 }}>
-                {/* Immediate Actions */}
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ 
-                    fontSize: '14px', 
-                    fontWeight: 600, 
-                    color: '#444746',
-                    mb: 2,
-                    letterSpacing: '0.5px',
-                  }}>
-                    IMMEDIATE ACTIONS
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    {currentGuidance.immediateActions.map((action, index) => (
-                      <Box key={index} sx={{ flex: 1 }}>
-                        <ActionCard action={action} />
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-
-                {/* Contraindications */}
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ 
-                    fontSize: '14px', 
-                    fontWeight: 600, 
-                    color: '#444746',
-                    mb: 2,
-                    letterSpacing: '0.5px',
-                  }}>
-                    CONTRAINDICATIONS
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    {currentGuidance.contraindications.map((action, index) => (
-                      <Box key={index} sx={{ flex: 1 }}>
-                        <ActionCard action={action} isContraindication />
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
+            {activeTab === 'guidance' && (
+              <GuidanceTab 
+                currentGuidance={currentGuidance} 
+                onActionClick={handleActionClick} 
+              />
+            )}
+            {activeTab === 'evidence' && <EvidenceTab />}
+            {activeTab === 'pathway' && <PathwayTab onCitationClick={handleCitationClick} />}
+            {activeTab === 'alternatives' && <AlternativesTab />}
           </Box>
         </Box>
 
@@ -400,21 +326,31 @@ This can help connect physical sensations to thoughts / emotions and identify sp
             </Box>
 
             {/* Event markers */}
-            <Box sx={{ position: 'absolute', bottom: -10, left: 86, transform: 'translateX(-50%)' }}>
-              <Psychology sx={{ fontSize: 20, color: '#c05a01' }} />
-            </Box>
-            <Box sx={{ position: 'absolute', bottom: -10, left: 151, transform: 'translateX(-50%)' }}>
-              <Warning sx={{ fontSize: 20, color: '#db372d' }} />
-            </Box>
-            <Box sx={{ position: 'absolute', bottom: -10, left: 414, transform: 'translateX(-50%)' }}>
-              <Psychology sx={{ fontSize: 20, color: '#c05a01' }} />
-            </Box>
-            <Box sx={{ position: 'absolute', bottom: -10, right: 180, transform: 'translateX(50%)' }}>
-              <HealthAndSafety sx={{ fontSize: 20, color: '#128937' }} />
-            </Box>
-            <Box sx={{ position: 'absolute', bottom: -10, right: 60, transform: 'translateX(50%)' }}>
-              <NaturePeople sx={{ fontSize: 20, color: '#128937' }} />
-            </Box>
+            <Tooltip title="Explore Patient's Internal Experience">
+              <IconButton sx={{ position: 'absolute', bottom: -10, left: 86, transform: 'translateX(-50%)' }}>
+                <Psychology sx={{ fontSize: 20, color: '#c05a01' }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Suicidal Ideation Detected">
+              <IconButton sx={{ position: 'absolute', bottom: -10, left: 151, transform: 'translateX(-50%)' }}>
+                <Warning sx={{ fontSize: 20, color: '#db372d' }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Explore Patient's Internal Experience">
+              <IconButton sx={{ position: 'absolute', bottom: -10, left: 414, transform: 'translateX(-50%)' }}>
+                <Psychology sx={{ fontSize: 20, color: '#c05a01' }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Safety Plan Initiated">
+              <IconButton sx={{ position: 'absolute', bottom: -10, right: 180, transform: 'translateX(50%)' }}>
+                <HealthAndSafety sx={{ fontSize: 20, color: '#128937' }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Grounding Exercise">
+              <IconButton sx={{ position: 'absolute', bottom: -10, right: 60, transform: 'translateX(50%)' }}>
+                <NaturePeople sx={{ fontSize: 20, color: '#128937' }} />
+              </IconButton>
+            </Tooltip>
           </Box>
 
         </Box>
