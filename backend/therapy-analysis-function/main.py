@@ -1,3 +1,4 @@
+# pylint: disable=W1203,C0303,C0301
 import functions_framework
 from flask import jsonify, Response, request
 from google import genai

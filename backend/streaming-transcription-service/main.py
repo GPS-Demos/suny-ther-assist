@@ -8,12 +8,24 @@ from typing import Generator, Optional
 from datetime import datetime
 import base64
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from google.cloud import speech_v2
 from google.cloud.speech_v2 import types
 import google.auth
+
+# Load environment variables
+# Load base .env file first
+load_dotenv('.env')
+
+# Load development overrides if .env.development exists
+if os.path.exists('.env.development'):
+    load_dotenv('.env.development', override=True)
+    logger_env = "development"
+else:
+    logger_env = "production"
 
 # Configure logging
 logging.basicConfig(
@@ -34,19 +46,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Get project ID
-credentials, project_id = google.auth.default()
-# Use the project ID from credentials if env var not set
-if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
-    if project_id:
-        os.environ["GOOGLE_CLOUD_PROJECT"] = project_id
-        logger.info(f"Using project ID from credentials: {project_id}")
-    else:
-        logger.warning("No Google Cloud project ID found. Set GOOGLE_CLOUD_PROJECT env var or run 'gcloud auth application-default login'")
-        project_id = "suny-ther-assist"  # Fallback for testing
-else:
-    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
-
+# Get project ID from environment variable (required)
+project_id = os.environ.get("GOOGLE_CLOUD_PROJECT")
+if not project_id:
+    raise ValueError("GOOGLE_CLOUD_PROJECT environment variable must be set")
+logger.info(f"Using Google Cloud project: {project_id}")
 location = "global"
 
 # Initialize Speech client
@@ -365,7 +369,7 @@ async def health():
     try:
         # Test Speech API connectivity
         parent = f"projects/{project_id}/locations/{location}"
-        recognizers = speech_client.list_recognizers(parent=parent, page_size=1)
+        recognizers = speech_client.list_recognizers(parent=parent)
         api_status = "connected"
     except Exception as e:
         api_status = f"error: {str(e)}"
@@ -380,4 +384,5 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run(app, host="0.0.0.0", port=port)

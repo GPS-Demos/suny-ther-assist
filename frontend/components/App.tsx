@@ -10,6 +10,8 @@ import {
 } from '@mui/icons-material';
 import LandingPage from './LandingPage';
 import NewSession from './NewSession';
+import NewTherSession from './NewTherSession';
+import TherSummary from './TherSummary';
 import Patients from './Patients';
 import Patient from './Patient';
 import LoginPage from './LoginPage';
@@ -19,11 +21,11 @@ const App: React.FC = () => {
   const { currentUser } = useAuth();
 
   // Navigation state
-  const [currentView, setCurrentView] = useState<'landing' | 'patients' | 'schedule' | 'newSession' | 'patient'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'patients' | 'schedule' | 'newSession' | 'patient' | 'therSummary'>('landing');
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [sessionPatientId, setSessionPatientId] = useState<string | null>(null);
   const [navigationHistory, setNavigationHistory] = useState<Array<{
-    view: 'landing' | 'patients' | 'schedule' | 'newSession' | 'patient';
+    view: 'landing' | 'patients' | 'schedule' | 'newSession' | 'patient' | 'therSummary';
     patientId?: string | null;
     sessionPatientId?: string | null;
   }>>([]);
@@ -64,6 +66,11 @@ const App: React.FC = () => {
     pushToHistory(currentView, selectedPatientId);
     setSelectedPatientId(patientId);
     setCurrentView('patient');
+  };
+
+  const handleNavigateToTherSummary = () => {
+    pushToHistory(currentView, selectedPatientId);
+    setCurrentView('therSummary');
   };
 
   const handleGoBack = () => {
@@ -169,8 +176,30 @@ const App: React.FC = () => {
     );
   }
 
-  // NewSession view - render the dedicated NewSession component
-  return <NewSession onNavigateBack={handleGoBack} patientId={sessionPatientId} />;
+  if (currentView === 'therSummary') {
+    return (
+      <TherSummary 
+        onNavigateBack={handleGoBack}
+        sessionData={{
+          id: 'Session ID',
+          date: new Date().toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+          }),
+          duration: 2460, // 41 minutes
+          techniquesUsed: 18,
+          riskLevel: 'Low',
+          patientName: 'John Doe',
+        }}
+      />
+    );
+  }
+
+  // NewSession view - render the dedicated NewTherSession component
+  return <NewTherSession onNavigateBack={handleGoBack} onStopRecording={handleNavigateToTherSummary} patientId={sessionPatientId} />;
 };
 
 export default App;

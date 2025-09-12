@@ -16,8 +16,7 @@ export const useAudioRecorderWebSocket = ({ onTranscript, onError, authToken }: 
 
   // Get WebSocket URL from environment
   const getWebSocketUrl = () => {
-    const baseUrl = import.meta.env.VITE_STREAMING_API || 
-                   'https://therapy-streaming-transcription-mlofelg76a-uc.a.run.app';
+    const baseUrl = import.meta.env.VITE_STREAMING_API;
     // Handle both HTTP (localhost) and HTTPS (production)
     const wsUrl = baseUrl
       .replace('https://', 'wss://')

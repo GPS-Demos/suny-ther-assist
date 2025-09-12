@@ -17,12 +17,12 @@ Ther-Assist listens ambiently to therapy sessions and provides near real-time gu
 
 ## Architecture
 
-### Backend Services (Google Cloud Functions)
-1. **Transcription Service** (`backend/transcription-function/`)
+### Backend Services
+1. **Streaming Transcription Service** (`backend/streaming-transcription-service/`)
+   - FastAPI WebSocket service deployed on Cloud Run
    - Uses Google Cloud Speech-to-Text V2 API
-   - Handles real-time audio streaming
-   - Speaker diarization for therapist/patient identification
-   - Medical vocabulary optimization
+   - Real-time audio streaming with low latency
+   - Optimized for therapy conversations
 
 2. **Therapy Analysis Service** (`backend/therapy-analysis-function/`)
    - Uses Gemini 2.5 Flash with thinking mode
@@ -68,12 +68,18 @@ Follow the instructions in the [RAG README.MD](./backend/rag/README)
 
 Deploy Cloud Functions:
 
+#### Deploy Streaming Transcription Service
+```bash
+cd backend/streaming-transcription-service
+export PROJECT_ID="your-project-id"
+./deploy.sh
+```
+
 #### Deploy Storage Access Function
 First give your default compute engine SA the role for Cloud Build Builder, Vertex AI User, Discovery Engine User, and finally the Storage Object & Bucket Viewer roles. Then run the following commands:
 ```bash
-# Deploy transcription function
 cd backend/storage-access-function
-deploy.sh
+./deploy.sh
 ```
 
 #### Deploy analysis function
@@ -141,7 +147,7 @@ firebase deploy
 # Backend API endpoints
 VITE_ANALYSIS_API=http://localhost:8080
 VITE_STORAGE_ACCESS_URL=http://localhost:8081
-VITE_TRANSCRIPTION_API=http://localhost:8082
+VITE_TRANSCRIPTION_WS=ws://localhost:8082
 
 # Google Cloud settings
 VITE_GOOGLE_CLOUD_PROJECT=your-gcp-project
@@ -164,6 +170,21 @@ cd backend/therapy-analysis-function
 ```bash
 export GOOGLE_CLOUD_PROJECT="your-project-id"
 functions-framework --target=therapy_analysis --port=8080
+```
+
+### Backend streaming-transcription-service
+1. Navigate to the directory
+```bash
+cd backend/streaming-transcription-service
+```
+2. Configure your venv & install dependencies
+```bash
+pip install -r requirements.txt
+```
+3. Run the service locally
+```bash
+export GOOGLE_CLOUD_PROJECT="your-project-id"
+python main.py
 ```
 
 ### Backend storage-acccess-function

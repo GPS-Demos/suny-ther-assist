@@ -17,6 +17,8 @@ import {
 import {
   Mic,
   Stop,
+  Pause,
+  PlayArrow,
   Info,
   TrendingUp,
   FiberManualRecord,
@@ -61,8 +63,12 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
   const isWideScreen = useMediaQuery('(min-width:1024px)');
   
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [sessionType, setSessionType] = useState<'microphone' | 'test' | 'audio' | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const [pausedTime, setPausedTime] = useState(0); // Total paused time in seconds
+  const [lastPauseTime, setLastPauseTime] = useState<Date | null>(null);
   const [sessionDuration, setSessionDuration] = useState(0);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [newTranscriptCount, setNewTranscriptCount] = useState(0);
@@ -130,6 +136,8 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     isConnected, 
     startMicrophoneRecording, 
     startAudioFileStreaming,
+    pauseAudioStreaming,
+    resumeAudioStreaming,
     stopStreaming, 
     isPlayingAudio,
     audioProgress,
@@ -166,13 +174,9 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
       }
     },
     onError: (error: string) => {
-      setAlerts(prev => [...prev, {
-        timing: 'now' as const,  // System errors need immediate attention
-        category: 'safety' as const,
-        title: 'System Error',
-        message: error,
-        timestamp: new Date().toISOString()
-      }]);
+      // Log streaming errors for debugging but don't show them as alerts
+      // Only show therapeutic guidance alerts from successful analysis
+      console.error('Streaming error (not shown to user):', error);
     }
   });
 
@@ -277,16 +281,18 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     },
   });
 
-  // Update session duration every second
+  // Update session duration every second (accounting for paused time)
   useEffect(() => {
-    if (!isRecording || !sessionStartTime) return;
+    if (!isRecording || !sessionStartTime || isPaused) return;
 
     const interval = setInterval(() => {
-      setSessionDuration(Math.floor((Date.now() - sessionStartTime.getTime()) / 1000));
+      const now = Date.now();
+      const elapsed = Math.floor((now - sessionStartTime.getTime()) / 1000);
+      setSessionDuration(elapsed - pausedTime);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isRecording, sessionStartTime]);
+  }, [isRecording, sessionStartTime, isPaused, pausedTime]);
 
   // Store analysis functions in refs to avoid recreating intervals
   const analyzeSegmentRef = useRef(analyzeSegment);
@@ -385,14 +391,54 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
   const handleStartSession = async () => {
     setSessionStartTime(new Date());
     setIsRecording(true);
+    setSessionType('microphone');
     setSessionSummaryClosed(false);
     setSessionSummary(null);
     setSummaryError(null);
+    setPausedTime(0);
+    setIsPaused(false);
     await startMicrophoneRecording();
+  };
+
+  const handlePauseResume = async () => {
+    if (isPaused) {
+      // Resume
+      const now = new Date();
+      if (lastPauseTime) {
+        const pauseDuration = Math.floor((now.getTime() - lastPauseTime.getTime()) / 1000);
+        setPausedTime(prev => prev + pauseDuration);
+      }
+      setIsPaused(false);
+      setLastPauseTime(null);
+      
+      // Resume based on session type
+      if (sessionType === 'microphone') {
+        await startMicrophoneRecording();
+      } else if (sessionType === 'audio') {
+        await resumeAudioStreaming();
+      } else if (sessionType === 'test') {
+        resumeTestMode();
+      }
+    } else {
+      // Pause
+      setIsPaused(true);
+      setLastPauseTime(new Date());
+      
+      // Pause based on session type
+      if (sessionType === 'microphone') {
+        await stopStreaming();
+      } else if (sessionType === 'audio') {
+        pauseAudioStreaming();
+      } else if (sessionType === 'test') {
+        pauseTestMode();
+      }
+    }
   };
 
   const handleStopSession = async () => {
     setIsRecording(false);
+    setIsPaused(false);
+    setSessionType(null);
     await stopStreaming();
     if (isTestMode) {
       stopTestMode();
@@ -433,8 +479,11 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
   const loadTestTranscript = () => {
     setIsTestMode(true);
     setIsRecording(true);
+    setSessionType('test');
     setSessionStartTime(new Date());
     setTranscript([]);
+    setPausedTime(0);
+    setIsPaused(false);
     setPathwayGuidance({
       rationale: "This is a test rationale for the loaded transcript. The pathway is being monitored based on the current interaction.",
       immediate_actions: ["Test Action: Build more rapport with the client.", "Test Action: Validate the client's feelings about the situation."],
@@ -469,13 +518,57 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     }, 2000);
   };
 
+  const pauseTestMode = () => {
+    if (testIntervalRef.current) {
+      clearInterval(testIntervalRef.current);
+      testIntervalRef.current = null;
+    }
+  };
+
+  const resumeTestMode = () => {
+    if (isTestMode && !testIntervalRef.current) {
+      // Resume from where we left off
+      const currentTranscriptLength = transcript.filter(t => !t.is_interim).length;
+      let currentIndex = currentTranscriptLength;
+      
+      testIntervalRef.current = setInterval(() => {
+        if (currentIndex >= testTranscriptData.length) {
+          if (testIntervalRef.current) {
+            clearInterval(testIntervalRef.current);
+            testIntervalRef.current = null;
+          }
+          setIsTestMode(false);
+          return;
+        }
+        
+        const entry = testTranscriptData[currentIndex];
+        const formattedEntry = {
+          text: entry.speaker ? `${entry.speaker}: ${entry.text}` : entry.text,
+          timestamp: new Date().toISOString(),
+          is_interim: false,
+        };
+        
+        setTranscript(prev => [...prev, formattedEntry]);
+        
+        if (!transcriptOpen) {
+          setNewTranscriptCount(prev => prev + 1);
+        }
+        
+        currentIndex++;
+      }, 2000);
+    }
+  };
+
   const loadExampleAudio = async () => {
     setIsRecording(true);
+    setSessionType('audio');
     setSessionStartTime(new Date());
     setTranscript([]);
     setSessionSummaryClosed(false);
     setSessionSummary(null);
     setSummaryError(null);
+    setPausedTime(0);
+    setIsPaused(false);
     
     // Start streaming the example audio file
     await startAudioFileStreaming('/audio/example_session_audio.wav');
@@ -611,7 +704,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
               </Typography>
             </Box>
             
-            {/* Session Info and Start/Stop Button */}
+            {/* Session Info and Start/Stop/Pause Buttons */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="body1">Session #1</Typography>
               {!isRecording ? (
@@ -630,20 +723,40 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
                   Start Session
                 </Button>
               ) : (
-                <Button
-                  variant="contained"
-                  startIcon={<Stop />}
-                  onClick={handleStopSession}
-                  sx={{ 
-                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                    color: 'white',
-                    '&:hover': { 
-                      background: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
-                    },
-                  }}
-                >
-                  {isTestMode ? 'Stop Test' : isPlayingAudio ? 'Stop Audio' : 'End Session'}
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={isPaused ? <PlayArrow /> : <Pause />}
+                    onClick={handlePauseResume}
+                    sx={{ 
+                      background: isPaused 
+                        ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                        : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      color: 'white',
+                      '&:hover': { 
+                        background: isPaused
+                          ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)'
+                          : 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)',
+                      },
+                    }}
+                  >
+                    {isPaused ? 'Resume' : 'Pause'}
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<Stop />}
+                    onClick={handleStopSession}
+                    sx={{ 
+                      background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                      color: 'white',
+                      '&:hover': { 
+                        background: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
+                      },
+                    }}
+                  >
+                    {isTestMode ? 'Stop Test' : isPlayingAudio ? 'Stop Audio' : 'End Session'}
+                  </Button>
+                </Box>
               )}
             </Box>
             

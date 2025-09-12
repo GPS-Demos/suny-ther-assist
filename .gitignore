@@ -56,7 +56,6 @@ service-account-key.json
 
 # Large media files
 *.mp4
-*.mov
 *.avi
 *.mkv
 *.zip
