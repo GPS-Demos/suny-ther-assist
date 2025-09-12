@@ -157,8 +157,10 @@ def handle_segment_analysis(request_json, headers):
         session_context = request_json.get('session_context', {})
         session_duration = request_json.get('session_duration_minutes', 0)
         is_realtime = request_json.get('is_realtime', False)  # Flag for fast real-time analysis
+        previous_alert = request_json.get('previous_alert', None)  # Previous alert for deduplication
         
-        logging.info(f"Segment analysis request - duration: {session_duration} minutes, segments: {len(transcript_segment)}, realtime: {is_realtime}")
+        logging.info(f"Segment analysis request - duration: {session_duration} minutes, segments: {len(transcript_segment)}, realtime: {is_realtime}, has_previous_alert: {previous_alert is not None}")
+        logging.info(f"Transcript segment: {transcript_segment}")
         
         if not transcript_segment:
             return (jsonify({'error': 'Missing transcript_segment'}), 400, headers)
@@ -173,11 +175,25 @@ def handle_segment_analysis(request_json, headers):
         analysis_start = datetime.now()
         logging.info(f"[TIMING] Analysis started at: {analysis_start.isoformat()}")
         
+        # Format previous alert context for deduplication
+        if previous_alert and is_realtime:
+            # Only use previous alert context for real-time analysis (where we generate alerts)
+            previous_alert_context = f"""
+Title: {previous_alert.get('title', 'N/A')}
+Category: {previous_alert.get('category', 'N/A')}
+Message: {previous_alert.get('message', 'N/A')}
+Recommendation: {previous_alert.get('recommendation', 'N/A')}
+Timing: {previous_alert.get('timing', 'N/A')}
+"""
+        else:
+            previous_alert_context = "No previous alert to consider."
+
         # Choose analysis mode based on is_realtime flag
         if is_realtime:
             # FAST PATH: Real-time guidance - both safety and helpful suggestions
             analysis_prompt = constants.REALTIME_ANALYSIS_PROMPT.format(
-                transcript_text=transcript_text
+                transcript_text=transcript_text,
+                previous_alert_context=previous_alert_context
             )
         else:
             # COMPREHENSIVE PATH: Full analysis with RAG

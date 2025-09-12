@@ -55,6 +55,7 @@ export interface Citation {
 
 export interface AnalysisResponse {
   alerts?: Alert[];
+  alert?: Alert; // New single alert property
   session_metrics?: SessionMetrics;
   pathway_indicators?: PathwayIndicators;
   citations?: Citation[];

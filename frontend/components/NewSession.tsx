@@ -48,6 +48,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { formatDuration } from '../utils/timeUtils';
 import { getStatusColor } from '../utils/colorUtils';
 import { renderMarkdown } from '../utils/textRendering';
+import { processNewAlert, cleanupOldAlerts } from '../utils/alertDeduplication';
 import { SessionContext, Alert as IAlert, Citation, SessionSummary } from '../types/types';
 import { testTranscriptData } from '../utils/mockTranscript.ts';
 import { mockPatients } from '../utils/mockPatients';
@@ -209,6 +210,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
         type: analysisType,
         isRealtime,
         hasAlerts: !!analysis.alerts,
+        hasAlert: !!analysis.alert,
         hasMetrics: !!analysis.session_metrics,
         hasPathway: !!analysis.pathway_indicators,
         hasCitations: !!analysis.citations
@@ -216,18 +218,39 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
       
       if (isRealtime) {
         // Real-time analysis: Only update alerts and basic metrics
-        if (analysis.alerts && analysis.alerts.length > 0) {
-          const newAlerts = analysis.alerts.map(alert => ({
-            ...alert,
+        
+        if (analysis.alert) {
+          const newAlert = {
+            ...analysis.alert,
             sessionTime: sessionDuration,
             timestamp: new Date().toISOString()
-          }));
+          };
 
           setAlerts(prev => {
-            const existingAlerts = new Set(prev.map(a => a.title));
-            const uniqueNewAlerts = newAlerts.filter(a => !existingAlerts.has(a.title));
-            return [...uniqueNewAlerts, ...prev].slice(0, 5);
+            // Performance timing for deduplication
+            const deduplicationStart = performance.now();
+            // Use the deduplication system
+            const result = processNewAlert(newAlert, prev, {
+              debugMode: true // Enable debug logging for development
+            });
+            const deduplicationEnd = performance.now();
+            const deduplicationTime = deduplicationEnd - deduplicationStart;
+            console.log(`[NewSession] Deduplication completed in ${deduplicationTime.toFixed(2)}ms`);
+
+            if (result.shouldAdd) {
+              const updatedAlerts = [newAlert, ...prev].slice(0, 8); // Keep max 8 alerts
+              console.log('[NewSession] Added new alert. Total alerts:', updatedAlerts.length);
+              return updatedAlerts;
+            } else {
+              console.log('[NewSession] Alert blocked due to deduplication:', {
+                reason: result.debugInfo?.reason,
+                performanceMs: deduplicationTime.toFixed(2)
+              });
+              return prev;
+            }
           });
+        } else {
+          console.log('[NewSession] No alert in real-time analysis response');
         }
         if (analysis.session_metrics) {
           setSessionMetrics(prev => ({
@@ -363,12 +386,19 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
         console.log(`[Word Trigger] Sending ${recentTranscript.length} entries from last 5 minutes`);
         
         if (recentTranscript.length > 0) {
+          // Get the most recent alert for backend deduplication
+          const recentAlert = alertsRef.current.length > 0 ? alertsRef.current[0] : null;
+          
           // 1. Real-time analysis (fast, no RAG) - for immediate guidance
-          console.log('[Word Trigger] Triggering REAL-TIME analysis (unRAGed)');
+          console.log('[Word Trigger] Triggering REAL-TIME analysis (unRAGed)', {
+            hasRecentAlert: !!recentAlert,
+            recentAlertTitle: recentAlert?.title
+          });
           analyzeSegmentRef.current(
             recentTranscript,
             { ...sessionContextRef.current, is_realtime: true },
-            Math.floor(sessionDurationRef.current / 60)
+            Math.floor(sessionDurationRef.current / 60),
+            recentAlert
           );
           
           // 2. Comprehensive analysis (with RAG) - for pathway evaluation
@@ -571,7 +601,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     setIsPaused(false);
     
     // Start streaming the example audio file
-    await startAudioFileStreaming('/audio/example_session_audio.wav');
+    await startAudioFileStreaming('/audio/suny-good-audio.mp3');
   };
 
   const stopTestMode = () => {
@@ -760,28 +790,6 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
               )}
             </Box>
             
-            {/* Audio Progress Bar */}
-            {isPlayingAudio && (
-              <Box sx={{ width: '100%' }}>
-                <Typography variant="caption" color="text.secondary">
-                  Playing Example Audio
-                </Typography>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={audioProgress} 
-                  sx={{ 
-                    mt: 0.5,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-                    '& .MuiLinearProgress-bar': {
-                      background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-                      borderRadius: 3,
-                    }
-                  }}
-                />
-              </Box>
-            )}
             <Box>
               <Typography variant="h6">Phase: Beginning</Typography>
               <Typography variant="body2" color="text.secondary">
@@ -951,14 +959,19 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
                       <Box component="ul" sx={{ margin: 0, paddingLeft: '1.5em' }}>
                         {selectedAlert.recommendation.map((item, index) => (
                           <Box component="li" key={index} sx={{ marginBottom: '0.25em' }}>
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
                               {item}
                             </Typography>
                           </Box>
                         ))}
                       </Box>
                     ) : (
-                      <Box sx={{ '& > *': { color: 'text.secondary !important' } }}>
+                      <Box sx={{ 
+                        '& > *': { 
+                          color: 'text.secondary !important',
+                          fontSize: '1.1rem !important'
+                        } 
+                      }}>
                         {renderMarkdown(selectedAlert.recommendation)}
                       </Box>
                     )}
@@ -1022,20 +1035,21 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
                 </Typography>
                 {selectedAlert && selectedAlert.message && (
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
                       {selectedAlert.message}
                     </Typography>
                   </Box>
                 )}
-                {selectedAlert && selectedAlert.evidence ? (
+                {selectedAlert && selectedAlert.evidence && selectedAlert.evidence.length > 0 && (
                   <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {selectedAlert.evidence.map((item, index) => (
-                      <Typography key={index} variant="body2" color="text.secondary" fontStyle="italic">
+                      <Typography key={index} variant="body1" color="text.secondary" fontStyle="italic" sx={{ fontSize: '1.1rem' }}>
                         - {item}
                       </Typography>
                     ))}
                   </Box>
-                ) : (
+                )}
+                {!selectedAlert && (
                   <Box sx={{
                     flex: 1,
                     display: 'flex',
@@ -1128,25 +1142,6 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
           <Button
             variant="outlined"
             size="small"
-            onClick={loadTestTranscript}
-            sx={{ 
-              borderColor: '#0b57d0',
-              color: '#0b57d0',
-              '&:hover': {
-                borderColor: '#00639b',
-                backgroundColor: 'rgba(11, 87, 208, 0.04)',
-              },
-              fontWeight: 600,
-              borderRadius: '16px',
-              px: 2,
-              py: 0.5,
-            }}
-          >
-            Load Test Transcript
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
             startIcon={<VolumeUp />}
             onClick={loadExampleAudio}
             sx={{ 
@@ -1163,6 +1158,25 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
             }}
           >
             Load Example Audio
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={loadTestTranscript}
+            sx={{ 
+              borderColor: '#0b57d0',
+              color: '#0b57d0',
+              '&:hover': {
+                borderColor: '#00639b',
+                backgroundColor: 'rgba(11, 87, 208, 0.04)',
+              },
+              fontWeight: 600,
+              borderRadius: '16px',
+              px: 2,
+              py: 0.5,
+            }}
+          >
+            Load Test Transcript
           </Button>
         </Box>
       )}

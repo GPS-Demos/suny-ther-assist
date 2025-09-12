@@ -20,7 +20,8 @@ export const useTherapyAnalysis = ({
   const analyzeSegment = useCallback(async (
     transcriptSegment: Array<{ speaker: string; text: string; timestamp: string }>,
     sessionContext: SessionContext | { is_realtime?: boolean } & SessionContext,
-    sessionDurationMinutes: number
+    sessionDurationMinutes: number,
+    previousAlert?: any
   ) => {
     // Extract is_realtime flag if present
     const { is_realtime, ...cleanContext } = sessionContext as any;
@@ -35,6 +36,7 @@ export const useTherapyAnalysis = ({
         session_context: cleanContext,
         session_duration_minutes: sessionDurationMinutes,
         is_realtime: is_realtime || false,  // Pass as top-level parameter
+        previous_alert: previousAlert || null,  // Pass previous alert for backend deduplication
       }, {
         responseType: 'text',
         headers: {
@@ -56,19 +58,19 @@ export const useTherapyAnalysis = ({
             const analysis = JSON.parse(line);
             
             // Log what we received
-            const hasAlerts = analysis.alerts && analysis.alerts.length > 0;
+            const hasAlert = analysis.alert !== undefined && analysis.alert !== null;
             const hasMetrics = analysis.session_metrics !== undefined;
             const hasPathway = analysis.pathway_indicators !== undefined;
             
             console.log(`[useTherapyAnalysis] Parsed response:`, {
-              hasAlerts,
-              alertCount: hasAlerts ? analysis.alerts.length : 0,
+              hasAlert,
               hasMetrics,
-              hasPathway
+              hasPathway,
+              analysisType: analysis.analysis_type
             });
             
             // Always call onAnalysis if we have valid data
-            if (hasAlerts || hasMetrics || hasPathway) {
+            if (hasAlert || hasMetrics || hasPathway) {
               onAnalysis(analysis as AnalysisResponse);
             }
           } catch (e) {
