@@ -10,32 +10,40 @@ THERAPY_PHASES = {
 # Prompts
 REALTIME_ANALYSIS_PROMPT = """Analyze this therapy segment for real-time guidance.
 
-TRANSCRIPT (last 5 minutes):
+TRANSCRIPT (last few sentences):
 {transcript_text}
 
-Provide guidance based on timing priority:
-1. NOW (immediate intervention needed): dissociation, panic, suicidal ideation, self-harm, severe distress
-2. PAUSE (wait for natural pause): therapeutic opportunities, technique suggestions, process observations  
-3. INFO (informational only): positive moments, progress indicators, engagement observations
+PREVIOUS GUIDANCE:
+{previous_alert_context}
 
-Return the MOST RELEVANT guidance (max 1-2 alerts). Format:
+Provide guidance based on timing priority:
+1. NOW (immediate intervention needed): physically sick, dissociation, panic, suicidal ideation, self-harm, severe distress
+2. PAUSE (wait for natural pause): exposure plan, therapeutic opportunities, technique suggestions, process observations
+
+IMPORTANT DEDUPLICATION REQUIREMENTS:
+- The "PREVIOUS GUIDANCE" section above shows what guidance was recently displayed to the therapist
+- Only generate new guidance if there is genuinely NEW or DIFFERENT guidance needed
+- Safety guidance (timing: "now") are exempt from this rule and should always be generated if needed
+
+If no guidance is needed, then simply return an empty JSON. Format:
+{{}}
+
+If an guidance is needed, prioritize actionable guidance and return only the MOST RELEVANT single piece of guidance. Format:
 {{
-    "alerts": [{{
+    "alert": {{
         "timing": "now|pause|info",
         "category": "safety|technique|pathway_change",
         "title": "Brief descriptive title",
         "message": "Specific action or observation (1-3 sentences max)",
         "evidence": ["relevant quote if applicable"],
         "recommendation": "Action(s) to take if applicable. IMPORTANT: format each recommendation as a bullet point"
-    }}],
+    }},
     "session_metrics": {{
         "engagement_level": 0.0-1.0,
         "therapeutic_alliance": "weak|moderate|strong",
         "emotional_state": "calm|anxious|distressed|dissociated|engaged"
     }}
-}}
-
-Prioritize actionable guidance. Even routine moments can have helpful suggestions."""
+}}"""
 
 COMPREHENSIVE_ANALYSIS_PROMPT = """<thinking>
 Analyze this therapy session segment step by step:
@@ -69,16 +77,6 @@ IMPORTANT:
 
 Provide analysis in this JSON format:
 {{
-    "alerts": [
-        {{
-            "timing": "now|pause|info",
-            "category": "safety|technique|pathway_change",
-            "title": "Brief alert title",
-            "message": "Detailed guidance message",
-            "evidence": ["Direct quote from transcript"],
-            "recommendation": "Specific action to take"
-        }}
-    ],
     "session_metrics": {{
         "engagement_level": 0.0-1.0,
         "therapeutic_alliance": "weak|moderate|strong",

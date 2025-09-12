@@ -48,6 +48,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { formatDuration } from '../utils/timeUtils';
 import { getStatusColor } from '../utils/colorUtils';
 import { renderMarkdown } from '../utils/textRendering';
+import { processNewAlert, cleanupOldAlerts } from '../utils/alertDeduplication';
 import { SessionContext, Alert as IAlert, Citation, SessionSummary } from '../types/types';
 import { testTranscriptData } from '../utils/mockTranscript.ts';
 import { mockPatients } from '../utils/mockPatients';
@@ -209,6 +210,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
         type: analysisType,
         isRealtime,
         hasAlerts: !!analysis.alerts,
+        hasAlert: !!analysis.alert,
         hasMetrics: !!analysis.session_metrics,
         hasPathway: !!analysis.pathway_indicators,
         hasCitations: !!analysis.citations
@@ -216,18 +218,39 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
       
       if (isRealtime) {
         // Real-time analysis: Only update alerts and basic metrics
-        if (analysis.alerts && analysis.alerts.length > 0) {
-          const newAlerts = analysis.alerts.map(alert => ({
-            ...alert,
+        
+        if (analysis.alert) {
+          const newAlert = {
+            ...analysis.alert,
             sessionTime: sessionDuration,
             timestamp: new Date().toISOString()
-          }));
+          };
 
           setAlerts(prev => {
-            const existingAlerts = new Set(prev.map(a => a.title));
-            const uniqueNewAlerts = newAlerts.filter(a => !existingAlerts.has(a.title));
-            return [...uniqueNewAlerts, ...prev].slice(0, 5);
+            // Performance timing for deduplication
+            const deduplicationStart = performance.now();
+            // Use the deduplication system
+            const result = processNewAlert(newAlert, prev, {
+              debugMode: true // Enable debug logging for development
+            });
+            const deduplicationEnd = performance.now();
+            const deduplicationTime = deduplicationEnd - deduplicationStart;
+            console.log(`[NewSession] Deduplication completed in ${deduplicationTime.toFixed(2)}ms`);
+
+            if (result.shouldAdd) {
+              const updatedAlerts = [newAlert, ...prev].slice(0, 8); // Keep max 8 alerts
+              console.log('[NewSession] Added new alert. Total alerts:', updatedAlerts.length);
+              return updatedAlerts;
+            } else {
+              console.log('[NewSession] Alert blocked due to deduplication:', {
+                reason: result.debugInfo?.reason,
+                performanceMs: deduplicationTime.toFixed(2)
+              });
+              return prev;
+            }
           });
+        } else {
+          console.log('[NewSession] No alert in real-time analysis response');
         }
         if (analysis.session_metrics) {
           setSessionMetrics(prev => ({
@@ -363,12 +386,19 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
         console.log(`[Word Trigger] Sending ${recentTranscript.length} entries from last 5 minutes`);
         
         if (recentTranscript.length > 0) {
+          // Get the most recent alert for backend deduplication
+          const recentAlert = alertsRef.current.length > 0 ? alertsRef.current[0] : null;
+          
           // 1. Real-time analysis (fast, no RAG) - for immediate guidance
-          console.log('[Word Trigger] Triggering REAL-TIME analysis (unRAGed)');
+          console.log('[Word Trigger] Triggering REAL-TIME analysis (unRAGed)', {
+            hasRecentAlert: !!recentAlert,
+            recentAlertTitle: recentAlert?.title
+          });
           analyzeSegmentRef.current(
             recentTranscript,
             { ...sessionContextRef.current, is_realtime: true },
-            Math.floor(sessionDurationRef.current / 60)
+            Math.floor(sessionDurationRef.current / 60),
+            recentAlert
           );
           
           // 2. Comprehensive analysis (with RAG) - for pathway evaluation
@@ -571,7 +601,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     setIsPaused(false);
     
     // Start streaming the example audio file
-    await startAudioFileStreaming('/audio/example_session_audio.wav');
+    await startAudioFileStreaming('/audio/suny-good-audio.mp3');
   };
 
   const stopTestMode = () => {
