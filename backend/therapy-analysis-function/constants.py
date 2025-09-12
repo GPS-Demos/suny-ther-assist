@@ -25,6 +25,9 @@ IMPORTANT DEDUPLICATION REQUIREMENTS:
 - Only generate new guidance if there is genuinely NEW or DIFFERENT guidance needed
 - Safety guidance (timing: "now") are exempt from this rule and should always be generated if needed
 
+IMPORTANT NOTE:
+If somebody says something like "Im scared but I want to do that. Lets do that" in response to an exposure plan, strongly consider providing guidance (an alert) to re-engage with the exposure plan.
+
 If no guidance is needed, then simply return an empty JSON. Format:
 {{}}
 

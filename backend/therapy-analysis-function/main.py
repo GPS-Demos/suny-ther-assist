@@ -160,6 +160,7 @@ def handle_segment_analysis(request_json, headers):
         previous_alert = request_json.get('previous_alert', None)  # Previous alert for deduplication
         
         logging.info(f"Segment analysis request - duration: {session_duration} minutes, segments: {len(transcript_segment)}, realtime: {is_realtime}, has_previous_alert: {previous_alert is not None}")
+        logging.info(f"Transcript segment: {transcript_segment}")
         
         if not transcript_segment:
             return (jsonify({'error': 'Missing transcript_segment'}), 400, headers)
