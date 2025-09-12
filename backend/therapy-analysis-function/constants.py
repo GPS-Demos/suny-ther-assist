@@ -55,7 +55,7 @@ CURRENT SESSION CONTEXT:
 - Phase: {phase} ({phase_focus})
 - Duration: {session_duration} minutes
 - Session Type: {session_type}
-- Primary Concern: {primary_concern}
+- Focus Topics: {primary_concern}
 - Current Therapeutic Approach: {current_approach}
 
 TRANSCRIPT SEGMENT:

@@ -33,7 +33,7 @@ interface PatientsProps {
   onNavigateToPatient: (patientId: string) => void;
 }
 
-type SortableColumn = 'name' | 'age' | 'primaryConcern' | 'nextVisit' | 'lastVisit' | 'lastVisitSummary' | 'patientSince';
+type SortableColumn = 'name' | 'age' | 'primaryConcern' | 'nextVisit' | 'lastVisit' | 'patientSince';
 type SortDirection = 'asc' | 'desc';
 
 const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSession, onNavigateToPatient }) => {
@@ -65,8 +65,8 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
           bValue = b.age;
           break;
         case 'primaryConcern':
-          aValue = (a.primaryConcern || '').toLowerCase();
-          bValue = (b.primaryConcern || '').toLowerCase();
+          aValue = (a.focusTopics || '').toLowerCase();
+          bValue = (b.focusTopics || '').toLowerCase();
           break;
         case 'nextVisit':
           // Handle null dates by treating them as far future for desc, far past for asc
@@ -76,10 +76,6 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
         case 'lastVisit':
           aValue = a.lastVisit ? new Date(a.lastVisit).getTime() : 0;
           bValue = b.lastVisit ? new Date(b.lastVisit).getTime() : 0;
-          break;
-        case 'lastVisitSummary':
-          aValue = (a.lastVisitSummary || '').toLowerCase();
-          bValue = (b.lastVisitSummary || '').toLowerCase();
           break;
         case 'patientSince':
           aValue = new Date(a.patientSince).getTime();
@@ -107,7 +103,7 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
     if (searchTerm) {
       result = result.filter(patient =>
         patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        patient.primaryConcern?.toLowerCase().includes(searchTerm.toLowerCase())
+        patient.focusTopics?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
@@ -180,7 +176,7 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
                 <ArrowBack />
               </Fab>
               <Typography 
-                variant="h4" 
+                variant="h3" 
                 sx={{ 
                   color: 'var(--primary)', 
                   fontWeight: 600,
@@ -234,15 +230,6 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
                     </TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>
                       <TableSortLabel
-                        active={sortColumn === 'primaryConcern'}
-                        direction={sortColumn === 'primaryConcern' ? sortDirection : 'asc'}
-                        onClick={() => handleSort('primaryConcern')}
-                      >
-                        Primary Concern
-                      </TableSortLabel>
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>
-                      <TableSortLabel
                         active={sortColumn === 'nextVisit'}
                         direction={sortColumn === 'nextVisit' ? sortDirection : 'asc'}
                         onClick={() => handleSort('nextVisit')}
@@ -259,13 +246,16 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
                         Last Session
                       </TableSortLabel>
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600, minWidth: 300 }}>
+                    <TableCell sx={{ fontWeight: 600, minWidth: 400, width: '25%' }}>
+                      Last Session Summary
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, maxWidth: 150, width: '10%' }}>
                       <TableSortLabel
-                        active={sortColumn === 'lastVisitSummary'}
-                        direction={sortColumn === 'lastVisitSummary' ? sortDirection : 'asc'}
-                        onClick={() => handleSort('lastVisitSummary')}
+                        active={sortColumn === 'primaryConcern'}
+                        direction={sortColumn === 'primaryConcern' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('primaryConcern')}
                       >
-                        Last Session Summary
+                        Focus Topics
                       </TableSortLabel>
                     </TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>
@@ -314,11 +304,6 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
                       </TableCell>
                       <TableCell>{patient.age}</TableCell>
                       <TableCell>
-                        <Typography variant="body2">
-                          {patient.primaryConcern || 'Not specified'}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                           <Typography 
                             variant="body2"
@@ -351,9 +336,16 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
                           {formatDate(patient.lastVisit)}
                         </Typography>
                       </TableCell>
-                      <TableCell sx={{ maxWidth: 300 }}>
+                      <TableCell sx={{ minWidth: 400, width: '25%' }}>
                         <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
-                          {patient.lastVisitSummary || 'No summary available'}
+                          {patient.sessionHistory && patient.sessionHistory.length > 0 
+                            ? patient.sessionHistory[patient.sessionHistory.length - 1].summary 
+                            : 'No summary available'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ maxWidth: 150, width: '10%' }}>
+                        <Typography variant="body2">
+                          {patient.focusTopics || 'Not specified'}
                         </Typography>
                       </TableCell>
                       <TableCell>

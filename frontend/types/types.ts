@@ -112,9 +112,8 @@ export interface Patient {
   nextVisit: string | null;
   lastVisit: string | null;
   patientSince: string;
-  primaryConcern?: string;
+  focusTopics?: string;
   status: 'active' | 'inactive' | 'paused';
-  lastVisitSummary?: string;
   sessionHistory?: SessionHistory[];
   contactInfo?: {
     phone?: string;

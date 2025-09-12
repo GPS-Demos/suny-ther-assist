@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -18,6 +18,7 @@ import {
   Divider,
   Button,
   IconButton,
+  TableSortLabel,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -30,7 +31,7 @@ import {
   Edit,
   Delete,
 } from '@mui/icons-material';
-import { Patient as PatientType } from '../types/types';
+import { Patient as PatientType, SessionHistory } from '../types/types';
 import { mockPatients } from '../utils/mockPatients';
 
 interface PatientProps {
@@ -39,9 +40,70 @@ interface PatientProps {
   onNavigateToNewSession: (patientId?: string) => void;
 }
 
+type SortableColumn = 'date' | 'duration' | 'summary';
+type SortDirection = 'asc' | 'desc';
+
 const Patient: React.FC<PatientProps> = ({ patientId, onNavigateBack, onNavigateToNewSession }) => {
   const patient = mockPatients.find(p => p.id === patientId);
+  const [sortColumn, setSortColumn] = useState<SortableColumn>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [sortedSessionHistory, setSortedSessionHistory] = useState<SessionHistory[]>([]);
+
   const sessionHistory = patient?.sessionHistory || [];
+
+  // Handle column sort
+  const handleSort = (column: SortableColumn) => {
+    const isAsc = sortColumn === column && sortDirection === 'asc';
+    setSortDirection(isAsc ? 'desc' : 'asc');
+    setSortColumn(column);
+  };
+
+  // Sort function
+  const sortSessions = (sessions: SessionHistory[], column: SortableColumn, direction: SortDirection) => {
+    return [...sessions].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (column) {
+        case 'date':
+          aValue = new Date(a.date).getTime();
+          bValue = new Date(b.date).getTime();
+          break;
+        case 'duration':
+          aValue = a.duration;
+          bValue = b.duration;
+          break;
+        case 'summary':
+          aValue = a.summary.toLowerCase();
+          bValue = b.summary.toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) {
+        return direction === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
+  // Sort sessions when component mounts or sort settings change
+  useEffect(() => {
+    const sorted = sortSessions(sessionHistory, sortColumn, sortDirection);
+    setSortedSessionHistory(sorted);
+  }, [sessionHistory, sortColumn, sortDirection]);
+
+  // Check if a date is today
+  const isToday = (dateString: string | null) => {
+    if (!dateString) return false;
+    const today = new Date();
+    const date = new Date(dateString);
+    return today.toDateString() === date.toDateString();
+  };
 
   if (!patient) {
     return (
@@ -182,7 +244,7 @@ const Patient: React.FC<PatientProps> = ({ patientId, onNavigateBack, onNavigate
                 {patient.name.split(' ').map(n => n[0]).join('')}
               </Avatar>
               <Box sx={{ flex: 1 }}>
-                <Typography variant="h4" sx={{ fontWeight: 600, color: 'var(--primary)' }}>
+                <Typography variant="h3" sx={{ fontWeight: 600, color: 'var(--primary)' }}>
                   {patient.name}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
@@ -261,18 +323,18 @@ const Patient: React.FC<PatientProps> = ({ patientId, onNavigateBack, onNavigate
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                       <Box>
                         <Typography variant="body2" color="text.secondary">
-                          Primary Concern
-                        </Typography>
-                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                          {patient.primaryConcern || 'Not specified'}
-                        </Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
                           Patient Since
                         </Typography>
                         <Typography variant="body1">
                           {formatDate(patient.patientSince)}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          Focus Topics
+                        </Typography>
+                        <Typography variant="body1">
+                          {patient.focusTopics || 'Not specified'}
                         </Typography>
                       </Box>
                     </Box>
@@ -294,9 +356,29 @@ const Patient: React.FC<PatientProps> = ({ patientId, onNavigateBack, onNavigate
                         <Typography variant="body2" color="text.secondary">
                           Next Session
                         </Typography>
-                        <Typography variant="body1">
-                          {patient.nextVisit ? formatDate(patient.nextVisit) : 'Not scheduled'}
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                          <Typography variant="body1">
+                            {patient.nextVisit ? formatDate(patient.nextVisit) : 'Not scheduled'}
+                          </Typography>
+                          {isToday(patient.nextVisit) && (
+                            <Chip
+                              label="!"
+                              size="small"
+                              sx={{
+                                backgroundColor: '#e3f2fd',
+                                color: '#1976d2',
+                                fontWeight: 600,
+                                fontSize: '0.75rem',
+                                height: 24,
+                                '& .MuiChip-label': {
+                                  px: 1
+                                },
+                                boxShadow: '0 2px 4px rgba(25, 118, 210, 0.2)',
+                                border: '1px solid #bbdefb'
+                              }}
+                            />
+                          )}
+                        </Box>
                       </Box>
                       <Box>
                         <Typography variant="body2" color="text.secondary">
@@ -318,7 +400,9 @@ const Patient: React.FC<PatientProps> = ({ patientId, onNavigateBack, onNavigate
                       Last Session Summary
                     </Typography>
                     <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
-                      {patient.lastVisitSummary || 'No summary available for the last session.'}
+                      {sessionHistory.length > 0 
+                        ? sessionHistory[sessionHistory.length - 1].summary 
+                        : 'No summary available for the last session.'}
                     </Typography>
                   </CardContent>
                 </Card>
@@ -338,14 +422,38 @@ const Patient: React.FC<PatientProps> = ({ patientId, onNavigateBack, onNavigate
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Session Date</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Duration</TableCell>
-                    <TableCell sx={{ fontWeight: 600, minWidth: 400 }}>Session Summary</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      <TableSortLabel
+                        active={sortColumn === 'date'}
+                        direction={sortColumn === 'date' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('date')}
+                      >
+                        Session Date
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      <TableSortLabel
+                        active={sortColumn === 'duration'}
+                        direction={sortColumn === 'duration' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('duration')}
+                      >
+                        Duration
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600, minWidth: 400 }}>
+                      <TableSortLabel
+                        active={sortColumn === 'summary'}
+                        direction={sortColumn === 'summary' ? sortDirection : 'asc'}
+                        onClick={() => handleSort('summary')}
+                      >
+                        Session Summary
+                      </TableSortLabel>
+                    </TableCell>
                     <TableCell sx={{ fontWeight: 600, width: 120 }}>Action</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {sessionHistory.map((session) => (
+                  {sortedSessionHistory.map((session) => (
                     <TableRow key={session.id} hover>
                       <TableCell>
                         <Typography variant="body1" sx={{ fontWeight: 500 }}>

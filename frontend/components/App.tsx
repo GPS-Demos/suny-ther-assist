@@ -198,8 +198,8 @@ const App: React.FC = () => {
     );
   }
 
-  // NewSession view - render the dedicated NewTherSession component
-  return <NewTherSession onNavigateBack={handleGoBack} onStopRecording={handleNavigateToTherSummary} patientId={sessionPatientId} />;
+  // NewSession view - render the NewSession component
+  return <NewSession onNavigateBack={handleGoBack} patientId={sessionPatientId} />;
 };
 
 export default App;

@@ -8,9 +8,8 @@ export const mockPatients: Patient[] = [
     nextVisit: '2025-09-24',
     lastVisit: '2025-07-15',
     patientSince: '2023-10-20',
-    primaryConcern: 'Anxiety Disorders',
+    focusTopics: 'Social Anxiety, Work Performance, Breathing Techniques',
     status: 'active',
-    lastVisitSummary: 'Patient showed significant improvement in managing anxiety triggers through breathing exercises. We discussed upcoming social situations and practiced coping strategies for holiday gatherings.',
     sessionHistory: [
       {
         id: '1-1',
@@ -49,9 +48,8 @@ export const mockPatients: Patient[] = [
     nextVisit: '2025-09-25',
     lastVisit: '2025-07-10',
     patientSince: '2023-06-15',
-    primaryConcern: 'PTSD',
+    focusTopics: 'PTSD, Nightmares, EMDR Therapy',
     status: 'active',
-    lastVisitSummary: 'Completed EMDR session focusing on recent trauma memory that has been causing nightmares. Patient reported feeling less activated when discussing the incident and plans to practice grounding techniques.',
     sessionHistory: [
       {
         id: '2-1',
@@ -96,9 +94,8 @@ export const mockPatients: Patient[] = [
     nextVisit: new Date().toLocaleDateString(), // en-CA gives YYYY-MM-DD format in local timezone
     lastVisit: '2025-07-18',
     patientSince: '2022-02-08',
-    primaryConcern: 'Depression',
+    focusTopics: 'PTSD, Depression, Behavioral Activation',
     status: 'active',
-    lastVisitSummary: 'Patient expressed feeling more motivated and engaged in daily activities since adjusting medication dosage. We reviewed her mood tracking log and discussed maintaining her new exercise routine.',
     sessionHistory: [
       {
         id: '3-1',
@@ -128,7 +125,7 @@ export const mockPatients: Patient[] = [
         id: '3-5',
         date: '2025-07-18',
         duration: 45,
-        summary: 'Patient expressed feeling more motivated and engaged in daily activities since adjusting medication dosage. We reviewed her mood tracking log and discussed maintaining her new exercise routine.'
+        summary: 'Patient touched on the traumatic robbery incident but was unable to fully delve into the memory. She also discussed struggling with motivation and daily functioning since the incident. We are preparing an exposure plan for next session.'
       }
     ],
     contactInfo: {
@@ -143,9 +140,8 @@ export const mockPatients: Patient[] = [
     nextVisit: null,
     lastVisit: '2025-06-22',
     patientSince: '2024-08-10',
-    primaryConcern: 'Social Phobia',
+    focusTopics: 'Social Phobia, CBT Techniques, Exposure Therapy',
     status: 'paused',
-    lastVisitSummary: 'Patient requested a break from therapy to focus on work commitments but acknowledged progress made in group settings. Agreed to resume sessions after the holidays with continued homework assignments.',
     sessionHistory: [
       {
         id: '4-1',
@@ -183,9 +179,8 @@ export const mockPatients: Patient[] = [
     nextVisit: '2025-10-02',
     lastVisit: '2025-07-20',
     patientSince: '2024-04-05',
-    primaryConcern: 'Panic Disorder',
+    focusTopics: 'Panic Disorder, Grounding Techniques, Work Stress',
     status: 'active',
-    lastVisitSummary: 'Excellent progress in recognizing early warning signs of panic attacks before they escalate. Patient successfully used the 5-4-3-2-1 grounding technique during a recent episode at work.',
     sessionHistory: [
       {
         id: '5-1',
@@ -230,9 +225,8 @@ export const mockPatients: Patient[] = [
     nextVisit: null,
     lastVisit: '2025-07-12',
     patientSince: '2022-12-18',
-    primaryConcern: 'OCD',
+    focusTopics: 'OCD, Checking Rituals, Exposure Therapy',
     status: 'active',
-    lastVisitSummary: 'Patient completed another successful exposure exercise without performing compulsive checking behaviors. We reviewed his progress chart and planned more challenging exposures for the next session.',
     sessionHistory: [
       {
         id: '6-1',
