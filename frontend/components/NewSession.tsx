@@ -94,7 +94,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     engagement_level: 0.0,
     therapeutic_alliance: 'moderate' as 'strong' | 'moderate' | 'weak',
     techniques_detected: [] as string[],
-    emotional_state: 'unknown' as 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'unknown',
+    emotional_state: 'unknown' as 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'engaged' | 'unknown',
     phase_appropriate: false,
   });
   const [pathwayIndicators, setPathwayIndicators] = useState({
@@ -252,25 +252,23 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
         } else {
           console.log('[NewSession] No alert in real-time analysis response');
         }
-        if (analysis.session_metrics) {
-          setSessionMetrics(prev => ({
-            ...prev,
-            engagement_level: analysis.session_metrics!.engagement_level || prev.engagement_level,
-            therapeutic_alliance: analysis.session_metrics!.therapeutic_alliance || prev.therapeutic_alliance,
-            emotional_state: analysis.session_metrics!.emotional_state || prev.emotional_state,
-            // Don't update complex metrics from real-time
-            techniques_detected: prev.techniques_detected,
-            phase_appropriate: prev.phase_appropriate,
-          }));
-        }
+        // Real-time analysis no longer includes session_metrics
       } else {
-        // Comprehensive RAG analysis: Update pathway indicators and citations
+        // Comprehensive RAG analysis: Update pathway indicators, citations, and session_metrics
         // Don't update alerts from RAG analysis - keep those real-time only
+        console.log('[NewSession] COMPREHENSIVE:', analysis)
         if (analysis.session_metrics) {
-          setSessionMetrics(prev => ({
-            ...prev,
-            ...analysis.session_metrics
-          }));
+          console.log('[NewSession] Updating session_metrics from comprehensive analysis:', analysis.session_metrics);
+          setSessionMetrics(prev => {
+            const updatedMetrics = {
+              ...prev,
+              ...analysis.session_metrics
+            };
+            console.log('[NewSession] Session metrics updated from:', prev, 'to:', updatedMetrics);
+            return updatedMetrics;
+          });
+        } else {
+          console.log('[NewSession] No session_metrics received from comprehensive analysis');
         }
         if (analysis.pathway_indicators) {
           const newIndicators = analysis.pathway_indicators;
@@ -631,7 +629,6 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
   // Log selectedAlert.recommendation whenever a new selectedAlert is chosen
   useEffect(() => {
     if (selectedAlert && selectedAlert.recommendation) {
-      console.log('[Alert Selection] Selected alert recommendation:', selectedAlert.recommendation);
       console.log('[Alert Selection] Full alert details:', {
         title: selectedAlert.title,
         category: selectedAlert.category,

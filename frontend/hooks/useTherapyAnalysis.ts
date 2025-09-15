@@ -51,7 +51,6 @@ export const useTherapyAnalysis = ({
       const text = response.data;
       if (text) {
         const lines = text.split('\n').filter(Boolean);
-        console.log(`[useTherapyAnalysis] Processing ${lines.length} response lines`);
         
         for (const line of lines) {
           try {

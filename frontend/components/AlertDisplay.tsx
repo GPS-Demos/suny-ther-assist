@@ -17,6 +17,9 @@ import {
   ExpandMore,
   ExpandLess,
   MenuBook,
+  Build,
+  Lightbulb,
+  Assessment,
 } from '@mui/icons-material';
 import { Alert, Citation } from '../types/types';
 import RationaleModal from './RationaleModal';
@@ -64,19 +67,23 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
     if (alert.category === 'safety') {
       return <Shield sx={{ fontSize: 24 }} />;
     }
+    // Specific therapeutic techniques and interventions
+    if (alert.category === 'technique') {
+      return <Build sx={{ fontSize: 24 }} />;
+    }
     // Pathway changes
     if (alert.category === 'pathway_change') {
       return <SwapHoriz sx={{ fontSize: 24 }} />;
     }
     // Engagement/motivation
     if (alert.category === 'engagement') {
-      return <Psychology sx={{ fontSize: 24 }} />;
+      return <Lightbulb sx={{ fontSize: 24 }} />;
     }
     // Process observations
     if (alert.category === 'process') {
-      return <MenuBook sx={{ fontSize: 24 }} />;
+      return <Assessment sx={{ fontSize: 24 }} />;
     }
-    // Technique/intervention (default)
+    // Default fallback (Psychology for unknown categories)
     return <Psychology sx={{ fontSize: 24 }} />;
   };
 

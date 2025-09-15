@@ -5,7 +5,7 @@ import { getStatusColor } from '../utils/colorUtils';
 interface SessionVitalsProps {
   metrics: {
     therapeutic_alliance: 'strong' | 'moderate' | 'weak';
-    emotional_state: 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'unknown';
+    emotional_state: 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'engaged' | 'unknown';
     engagement_level: number;
   };
 }

@@ -7,7 +7,7 @@ import os
 import json
 import logging
 import re
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any
 from datetime import datetime, timedelta
 import firebase_admin
 from firebase_admin import auth, credentials
@@ -32,6 +32,135 @@ AUTHORIZED_EMAILS = [
     'Salvador.Dura-Bernal@downstate.edu',
     'boswell@albany.edu'
 ]
+
+def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
+    """
+    Robust JSON extraction from text that may contain extra content.
+    Tries multiple strategies to find and parse valid JSON.
+    """
+    if not text or not text.strip():
+        logging.warning("Empty text provided for JSON extraction")
+        return None
+    
+    # Strategy 1: Try to parse the entire text as JSON first
+    try:
+        return json.loads(text.strip())
+    except json.JSONDecodeError:
+        logging.debug("Failed to parse entire text as JSON, trying regex extraction")
+    
+    # Strategy 2: Look for JSON objects using more sophisticated regex patterns
+    json_patterns = [
+        # Pattern 1: Look for complete JSON objects (most common)
+        r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}',
+        # Pattern 2: Find JSON that starts with { and ends with } (greedy)
+        r'\{.*\}',
+        # Pattern 3: Look for JSON arrays that might be present
+        r'\[.*\]',
+        # Pattern 4: Find JSON starting after common prefixes
+        r'(?:json|response|result):\s*(\{.*\})',
+        # Pattern 5: Find JSON in code blocks
+        r'```(?:json)?\s*(\{.*\})\s*```',
+    ]
+    
+    for i, pattern in enumerate(json_patterns):
+        try:
+            matches = re.finditer(pattern, text, re.DOTALL | re.IGNORECASE)
+            for match in matches:
+                # For patterns with groups, use the group; otherwise use the full match
+                json_text = match.group(1) if match.groups() else match.group(0)
+                
+                try:
+                    parsed = json.loads(json_text.strip())
+                    logging.info(f"Successfully extracted JSON using pattern {i+1}")
+                    return parsed
+                except json.JSONDecodeError:
+                    logging.debug(f"Pattern {i+1} matched but JSON parsing failed")
+                    continue
+        except Exception as e:
+            logging.debug(f"Error with pattern {i+1}: {e}")
+            continue
+    
+    # Strategy 3: Try to find and fix common JSON issues
+    try:
+        # Look for JSON-like structures and attempt basic repairs
+        cleaned_text = text.strip()
+        
+        # Remove markdown code block markers
+        cleaned_text = re.sub(r'```(?:json)?\s*', '', cleaned_text, flags=re.IGNORECASE)
+        cleaned_text = re.sub(r'\s*```\s*$', '', cleaned_text)
+        
+        # Remove common prefixes
+        prefixes_to_remove = [
+            r'^.*?(?:response|result|output|json):\s*',
+            r'^.*?Here\'s.*?:\s*',
+            r'^.*?```\s*',
+        ]
+        
+        for prefix_pattern in prefixes_to_remove:
+            cleaned_text = re.sub(prefix_pattern, '', cleaned_text, flags=re.IGNORECASE)
+        
+        # Try to find the first { and last } to extract JSON boundaries
+        first_brace = cleaned_text.find('{')
+        last_brace = cleaned_text.rfind('}')
+        
+        if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+            potential_json = cleaned_text[first_brace:last_brace + 1]
+            try:
+                parsed = json.loads(potential_json)
+                logging.info("Successfully extracted JSON using boundary detection")
+                return parsed
+            except json.JSONDecodeError:
+                logging.debug("Boundary detection found text but JSON parsing failed")
+        
+        # Try to fix common JSON issues (trailing commas, single quotes, etc.)
+        if 'potential_json' in locals():
+            potential_fixes = [
+                # Remove trailing commas
+                lambda s: re.sub(r',(\s*[}\]])', r'\1', s),
+                # Replace single quotes with double quotes (basic attempt)
+                lambda s: re.sub(r"'([^']*)':", r'"\1":', s),
+            ]
+            
+            for fix_func in potential_fixes:
+                try:
+                    fixed_text = fix_func(potential_json)
+                    if fixed_text.strip().startswith('{'):
+                        parsed = json.loads(fixed_text)
+                        logging.info("Successfully extracted JSON after applying fixes")
+                        return parsed
+                except (json.JSONDecodeError, Exception):
+                    continue
+                
+    except Exception as e:
+        logging.debug(f"Error in JSON repair attempts: {e}")
+    
+    # Strategy 4: Last resort - look for key-value patterns and construct basic JSON
+    try:
+        # This is a very basic fallback - look for obvious key-value patterns
+        lines = text.split('\n')
+        json_like_lines = []
+        
+        for line in lines:
+            line = line.strip()
+            # Look for lines that might be JSON properties
+            if ':' in line and not line.startswith('//') and not line.startswith('#'):
+                json_like_lines.append(line)
+        
+        if json_like_lines:
+            # Try to construct a basic JSON structure
+            constructed_json = '{\n' + ',\n'.join(json_like_lines) + '\n}'
+            try:
+                parsed = json.loads(constructed_json)
+                logging.info("Successfully constructed JSON from key-value patterns")
+                return parsed
+            except json.JSONDecodeError:
+                logging.debug("Failed to construct valid JSON from patterns")
+                
+    except Exception as e:
+        logging.debug(f"Error in JSON construction attempt: {e}")
+    
+    logging.error(f"All JSON extraction strategies failed for text: {text[:200]}...")
+    return None
 
 def is_email_authorized(email: str) -> bool:
     """Check if email is authorized (@google.com domain or in whitelist)"""
@@ -339,50 +468,26 @@ Timing: {previous_alert.get('timing', 'N/A')}
                 
                 logging.info(f"Streaming complete - {chunk_index} chunks, {len(accumulated_text)} characters")
                 
-                # Parse the accumulated JSON response
-                try:
-                    # Extract JSON from the accumulated text
-                    json_match = re.search(r'\{.*\}', accumulated_text, re.DOTALL)
-                    if json_match:
-                        parsed = json.loads(json_match.group())
-                        
-                        # Add metadata
-                        parsed['timestamp'] = datetime.now().isoformat()
-                        parsed['session_phase'] = phase
-                        parsed['analysis_type'] = 'realtime' if is_realtime else 'comprehensive'
-                        
-                        # Add grounding citations if available
-                        if grounding_chunks:
-                            parsed['citations'] = grounding_chunks
-                            logging.info(f"Added {len(grounding_chunks)} citations to response")
-                        
-                        yield json.dumps(parsed) + "\n"
-                    else:
-                        logging.error(f"No JSON found in response: {accumulated_text[:500]}...")
-                        yield json.dumps({
-                            'error': 'Failed to parse analysis response',
-                            'alerts': [],
-                            'session_metrics': {
-                                'engagement_level': 0.8,
-                                'therapeutic_alliance': 'moderate',
-                                'techniques_detected': [],
-                                'emotional_state': 'unknown',
-                                'phase_appropriate': True
-                            },
-                            'pathway_indicators': {
-                                'current_approach_effectiveness': 'effective',
-                                'alternative_pathways': [],
-                                'change_urgency': 'none'
-                            }
-                        }) + "\n"
-                        
-                except json.JSONDecodeError as e:
-                    logging.error(f"JSON decode error: {e}, Response: {accumulated_text[:500]}...")
+                # Parse the accumulated JSON response using robust extraction
+                parsed = extract_json_from_text(accumulated_text)
+                
+                if parsed:
+                    # Add metadata
+                    parsed['timestamp'] = datetime.now().isoformat()
+                    parsed['session_phase'] = phase
+                    parsed['analysis_type'] = 'realtime' if is_realtime else 'comprehensive'
+                    
+                    # Add grounding citations if available
+                    if grounding_chunks:
+                        parsed['citations'] = grounding_chunks
+                        logging.info(f"Added {len(grounding_chunks)} citations to response")
+                    
+                    yield json.dumps(parsed) + "\n"
+                else:
+                    logging.error(f"Failed to extract JSON from response: {accumulated_text[:500]}...")
                     yield json.dumps({
-                        'error': f'JSON parsing failed: {str(e)}',
-                        'alerts': [],
-                        'session_metrics': {},
-                        'pathway_indicators': {}
+                        'error': 'Failed to parse analysis response - no valid JSON found',
+                        'raw_response': accumulated_text[:200] if accumulated_text else 'No response received'
                     }) + "\n"
                     
             except Exception as e:
@@ -457,49 +562,48 @@ def handle_pathway_guidance(request_json, headers):
         if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
             response_text = response.candidates[0].content.parts[0].text
         
-        # Parse JSON response
-        try:
-            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-            if json_match:
-                parsed_response = json.loads(json_match.group())
-                
-                # Add grounding metadata if available (same format as segment analysis)
-                if response.candidates[0].grounding_metadata:
-                    metadata = response.candidates[0].grounding_metadata
-                    if hasattr(metadata, 'grounding_chunks') and metadata.grounding_chunks:
-                        citations = []
-                        for idx, g_chunk in enumerate(metadata.grounding_chunks):
-                            citation_data = {
-                                "citation_number": idx + 1,  # Maps to [1], [2], etc in text
+        # Parse JSON response using robust extraction
+        parsed_response = extract_json_from_text(response_text)
+        
+        if parsed_response:
+            # Add grounding metadata if available (same format as segment analysis)
+            if response.candidates[0].grounding_metadata:
+                metadata = response.candidates[0].grounding_metadata
+                if hasattr(metadata, 'grounding_chunks') and metadata.grounding_chunks:
+                    citations = []
+                    for idx, g_chunk in enumerate(metadata.grounding_chunks):
+                        citation_data = {
+                            "citation_number": idx + 1,  # Maps to [1], [2], etc in text
+                        }
+                        
+                        if g_chunk.retrieved_context:
+                            ctx = g_chunk.retrieved_context
+                            citation_data["source"] = {
+                                "title": ctx.title if hasattr(ctx, 'title') and ctx.title else "EBT Manual",
+                                "uri": ctx.uri if hasattr(ctx, 'uri') and ctx.uri else None,
+                                "excerpt": ctx.text if hasattr(ctx, 'text') and ctx.text else None
                             }
                             
-                            if g_chunk.retrieved_context:
-                                ctx = g_chunk.retrieved_context
-                                citation_data["source"] = {
-                                    "title": ctx.title if hasattr(ctx, 'title') and ctx.title else "EBT Manual",
-                                    "uri": ctx.uri if hasattr(ctx, 'uri') and ctx.uri else None,
-                                    "excerpt": ctx.text if hasattr(ctx, 'text') and ctx.text else None
-                                }
-                                
-                                # Include page information if available
-                                if hasattr(ctx, 'rag_chunk') and ctx.rag_chunk:
-                                    if hasattr(ctx.rag_chunk, 'page_span') and ctx.rag_chunk.page_span:
-                                        citation_data["source"]["pages"] = {
-                                            "first": ctx.rag_chunk.page_span.first_page,
-                                            "last": ctx.rag_chunk.page_span.last_page
-                                        }
-                            
-                            citations.append(citation_data)
+                            # Include page information if available
+                            if hasattr(ctx, 'rag_chunk') and ctx.rag_chunk:
+                                if hasattr(ctx.rag_chunk, 'page_span') and ctx.rag_chunk.page_span:
+                                    citation_data["source"]["pages"] = {
+                                        "first": ctx.rag_chunk.page_span.first_page,
+                                        "last": ctx.rag_chunk.page_span.last_page
+                                    }
                         
-                        parsed_response['citations'] = citations
-                        logging.info(f"Added {len(citations)} citations to pathway guidance response")
-                
-                return (jsonify(parsed_response), 200, headers)
-            else:
-                return (jsonify({'error': 'Invalid response format'}), 500, headers)
-        except json.JSONDecodeError as e:
-            logging.error(f"JSON decode error: {e}")
-            return (jsonify({'error': 'Failed to parse guidance'}), 500, headers)
+                        citations.append(citation_data)
+                    
+                    parsed_response['citations'] = citations
+                    logging.info(f"Added {len(citations)} citations to pathway guidance response")
+            
+            return (jsonify(parsed_response), 200, headers)
+        else:
+            logging.error(f"Failed to extract JSON from pathway guidance response: {response_text[:500]}...")
+            return (jsonify({
+                'error': 'Failed to parse pathway guidance response - no valid JSON found',
+                'raw_response': response_text[:200] if response_text else 'No response received'
+            }), 500, headers)
         
     except Exception as e:
         logging.exception(f"Error in handle_pathway_guidance: {str(e)}")
@@ -563,17 +667,14 @@ def handle_session_summary(request_json, headers):
         if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
             response_text = response.candidates[0].content.parts[0].text
         
-        # Parse JSON response
-        try:
-            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-            if json_match:
-                parsed_response = json.loads(json_match.group())
-                return (jsonify({'summary': parsed_response}), 200, headers)
-            else:
-                return (jsonify({'summary': response_text}), 200, headers)
-        except json.JSONDecodeError:
+        # Parse JSON response using robust extraction
+        parsed_response = extract_json_from_text(response_text)
+        
+        if parsed_response:
+            return (jsonify({'summary': parsed_response}), 200, headers)
+        else:
             # Return raw text if JSON parsing fails
-            logging.exception(f"Error in handle_session_summary: {str(e)}")
+            logging.warning(f"Failed to extract JSON from session summary response: {response_text[:500]}...")
             return (jsonify({'summary': response_text}), 200, headers)
         
     except Exception as e:

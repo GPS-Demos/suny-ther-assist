@@ -17,7 +17,7 @@ PREVIOUS GUIDANCE:
 {previous_alert_context}
 
 Provide guidance based on timing priority:
-1. NOW (immediate intervention needed): physically sick, dissociation, panic, suicidal ideation, self-harm, severe distress
+1. NOW (immediate intervention needed): physically sick, catastrophic thoughts, dissociation, panic, suicidal ideation, self-harm, severe distress
 2. PAUSE (wait for natural pause): exposure plan, therapeutic opportunities, technique suggestions, process observations
 3. INFO (continue with curent path): re-enforcement of current theraputic path, helpful observations
 
@@ -25,12 +25,13 @@ Categories available:
 - SAFETY: Risk concerns, crisis situations, client wellbeing
 - TECHNIQUE: Specific therapeutic interventions, skill suggestions
 - PATHWAY_CHANGE: Recommendations to switch therapeutic approaches
-- ENGAGEMENT: Theraputic alliance, patient support
+- ENGAGEMENT: Theraputic alliance, patient support, continuation recommendations
 
 IMPORTANT DEDUPLICATION REQUIREMENTS:
 - The "PREVIOUS GUIDANCE" section above shows what guidance was recently displayed to the therapist
-- Do not generate duplicate guidance as the previous guidance
-- Only generate new guidance if there is genuinely NEW or DIFFERENT guidance needed
+- Do not generate duplicate, or similar guidance as the previous guidance
+- Only generate new guidance if there is genuinely NEW or DIFFERENT guidance needed.
+- Most of the time, new guidance will not be needed.
 - Safety guidance (timing: "now") are exempt from this rule and should always be generated if needed
 
 IMPORTANT NOTE:
@@ -48,11 +49,6 @@ If an guidance is needed, prioritize actionable guidance and return only the MOS
         "message": "Specific action or observation (1-3 sentences max)",
         "evidence": ["relevant quote if applicable"],
         "recommendation": "Action(s) to take if applicable. IMPORTANT: format each recommendation as a bullet point"
-    }},
-    "session_metrics": {{
-        "engagement_level": 0.0-1.0,
-        "therapeutic_alliance": "weak|moderate|strong",
-        "emotional_state": "calm|anxious|distressed|dissociated|engaged"
     }}
 }}"""
 
@@ -92,7 +88,7 @@ Provide analysis in this JSON format:
         "engagement_level": 0.0-1.0,
         "therapeutic_alliance": "weak|moderate|strong",
         "techniques_detected": ["technique1", "technique2"],
-        "emotional_state": "calm|anxious|distressed|dissociated",
+        "emotional_state": "calm|anxious|distressed|dissociated|engaged",
         "phase_appropriate": true|false
     }},
     "pathway_indicators": {{

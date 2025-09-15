@@ -1,10 +1,11 @@
-type Status = 'strong' | 'effective' | 'moderate' | 'struggling' | 'weak' | 'ineffective' | 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'unknown';
+type Status = 'strong' | 'effective' | 'moderate' | 'struggling' | 'weak' | 'ineffective' | 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'engaged' | 'unknown';
 
 export const getStatusColor = (status: Status): string => {
   switch (status) {
     case 'strong':
     case 'effective':
     case 'calm':
+    case 'engaged':
       return 'success.main';
     case 'moderate':
     case 'struggling':
