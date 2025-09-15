@@ -108,6 +108,22 @@ export function shouldBlockAlert(
     return alertTime > timeWindow;
   });
   
+  // 0. HARD CHECK: No alerts within the last 7 seconds (regardless of content/category)
+  const sevenSecondsAgo = new Date(now.getTime() - 7 * 1000);
+  const veryRecentAlert = existingAlerts.find(alert => {
+    const alertTime = alert.timestamp ? new Date(alert.timestamp) : new Date(0);
+    return alertTime > sevenSecondsAgo;
+  });
+  
+  if (veryRecentAlert) {
+    const timeSinceLastAlert = now.getTime() - new Date(veryRecentAlert.timestamp || 0).getTime();
+    return {
+      shouldBlock: true,
+      reason: `Hard 7-second block (last alert ${(timeSinceLastAlert / 1000).toFixed(1)}s ago)`,
+      similarAlert: veryRecentAlert
+    };
+  }
+  
   // 1. Exact title match
   const exactTitleMatch = recentAlerts.find(alert => alert.title === newAlert.title);
   if (exactTitleMatch) {

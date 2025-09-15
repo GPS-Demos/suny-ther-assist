@@ -6,7 +6,7 @@ export interface SessionContext {
 
 export interface Alert {
   timing: 'now' | 'pause' | 'info';  // Simplified!
-  category: 'safety' | 'technique' | 'pathway_change';
+  category: 'safety' | 'technique' | 'pathway_change' | 'engagement' | 'process';
   title: string;
   message: string;
   evidence?: string[];

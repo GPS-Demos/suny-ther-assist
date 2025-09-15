@@ -68,6 +68,14 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
     if (alert.category === 'pathway_change') {
       return <SwapHoriz sx={{ fontSize: 24 }} />;
     }
+    // Engagement/motivation
+    if (alert.category === 'engagement') {
+      return <Psychology sx={{ fontSize: 24 }} />;
+    }
+    // Process observations
+    if (alert.category === 'process') {
+      return <MenuBook sx={{ fontSize: 24 }} />;
+    }
     // Technique/intervention (default)
     return <Psychology sx={{ fontSize: 24 }} />;
   };

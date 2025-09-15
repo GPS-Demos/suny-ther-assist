@@ -848,6 +848,12 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
                   if (alert.category === 'pathway_change') {
                     return <SwapHoriz sx={{ fontSize: 20, color: getAlertColor() }} />;
                   }
+                  if (alert.category === 'engagement') {
+                    return <TrendingUp sx={{ fontSize: 20, color: getAlertColor() }} />;
+                  }
+                  if (alert.category === 'process') {
+                    return <Info sx={{ fontSize: 20, color: getAlertColor() }} />;
+                  }
                   return <Psychology sx={{ fontSize: 20, color: getAlertColor() }} />;
                 };
 

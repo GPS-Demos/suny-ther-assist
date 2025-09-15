@@ -19,9 +19,17 @@ PREVIOUS GUIDANCE:
 Provide guidance based on timing priority:
 1. NOW (immediate intervention needed): physically sick, dissociation, panic, suicidal ideation, self-harm, severe distress
 2. PAUSE (wait for natural pause): exposure plan, therapeutic opportunities, technique suggestions, process observations
+3. INFO (continue with curent path): re-enforcement of current theraputic path, helpful observations
+
+Categories available:
+- SAFETY: Risk concerns, crisis situations, client wellbeing
+- TECHNIQUE: Specific therapeutic interventions, skill suggestions
+- PATHWAY_CHANGE: Recommendations to switch therapeutic approaches
+- ENGAGEMENT: Theraputic alliance, patient support
 
 IMPORTANT DEDUPLICATION REQUIREMENTS:
 - The "PREVIOUS GUIDANCE" section above shows what guidance was recently displayed to the therapist
+- Do not generate duplicate guidance as the previous guidance
 - Only generate new guidance if there is genuinely NEW or DIFFERENT guidance needed
 - Safety guidance (timing: "now") are exempt from this rule and should always be generated if needed
 
@@ -35,7 +43,7 @@ If an guidance is needed, prioritize actionable guidance and return only the MOS
 {{
     "alert": {{
         "timing": "now|pause|info",
-        "category": "safety|technique|pathway_change",
+        "category": "safety|technique|pathway_change|engagement|process",
         "title": "Brief descriptive title",
         "message": "Specific action or observation (1-3 sentences max)",
         "evidence": ["relevant quote if applicable"],
