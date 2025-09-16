@@ -82,7 +82,7 @@ IMPORTANT:
 - If you find a similar moment in Beck or PTSD sessions, mention how it was handled
 - ALWAYS provide pathway guidance details (rationale, actions, contraindications) regardless of effectiveness
 
-Provide analysis in this JSON format:
+Provide analysis with a JSON response only, no other text should exist besides the JSON. Format::
 {{
     "session_metrics": {{
         "engagement_level": 0.0-1.0,

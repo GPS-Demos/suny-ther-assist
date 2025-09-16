@@ -205,20 +205,10 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     onAnalysis: (analysis) => {
       const analysisType = (analysis as any).analysis_type;
       const isRealtime = analysisType === 'realtime';
-      
-      console.log('[NewSession] Received analysis:', {
-        type: analysisType,
-        isRealtime,
-        hasAlerts: !!analysis.alerts,
-        hasAlert: !!analysis.alert,
-        hasMetrics: !!analysis.session_metrics,
-        hasPathway: !!analysis.pathway_indicators,
-        hasCitations: !!analysis.citations
-      });
+        console.log(`[onAnalysis] 📊 ${analysisType.toUpperCase()} analysis:`, analysis);
       
       if (isRealtime) {
-        // Real-time analysis: Only update alerts and basic metrics
-        
+        // Real-time analysis: Only update alerts
         if (analysis.alert) {
           const newAlert = {
             ...analysis.alert,
@@ -227,49 +217,28 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
           };
 
           setAlerts(prev => {
-            // Performance timing for deduplication
-            const deduplicationStart = performance.now();
-            // Use the deduplication system
-            const result = processNewAlert(newAlert, prev, {
-              debugMode: true // Enable debug logging for development
-            });
-            const deduplicationEnd = performance.now();
-            const deduplicationTime = deduplicationEnd - deduplicationStart;
-            console.log(`[NewSession] Deduplication completed in ${deduplicationTime.toFixed(2)}ms`);
+            const result = processNewAlert(newAlert, prev, { debugMode: false });
 
             if (result.shouldAdd) {
-              const updatedAlerts = [newAlert, ...prev].slice(0, 8); // Keep max 8 alerts
-              console.log('[NewSession] Added new alert. Total alerts:', updatedAlerts.length);
+              const updatedAlerts = [newAlert, ...prev].slice(0, 8);
+              console.log(`[Session] ⚠️ New ${newAlert.category} alert: "${newAlert.title}" (${newAlert.timing})`);
               return updatedAlerts;
             } else {
-              console.log('[NewSession] Alert blocked due to deduplication:', {
-                reason: result.debugInfo?.reason,
-                performanceMs: deduplicationTime.toFixed(2)
-              });
+              const reason = result.debugInfo?.reason || 'deduplication rules';
+              console.log(`[Session] 🚫 Alert filtered: ${reason}`, analysis.alert);
               return prev;
             }
           });
-        } else {
-          console.log('[NewSession] No alert in real-time analysis response');
         }
-        // Real-time analysis no longer includes session_metrics
       } else {
-        // Comprehensive RAG analysis: Update pathway indicators, citations, and session_metrics
-        // Don't update alerts from RAG analysis - keep those real-time only
-        console.log('[NewSession] COMPREHENSIVE:', analysis)
+        // Comprehensive RAG analysis: Update metrics, pathway, citations
         if (analysis.session_metrics) {
-          console.log('[NewSession] Updating session_metrics from comprehensive analysis:', analysis.session_metrics);
-          setSessionMetrics(prev => {
-            const updatedMetrics = {
-              ...prev,
-              ...analysis.session_metrics
-            };
-            console.log('[NewSession] Session metrics updated from:', prev, 'to:', updatedMetrics);
-            return updatedMetrics;
-          });
-        } else {
-          console.log('[NewSession] No session_metrics received from comprehensive analysis');
+          setSessionMetrics(prev => ({
+            ...prev,
+            ...analysis.session_metrics
+          }));
         }
+        
         if (analysis.pathway_indicators) {
           const newIndicators = analysis.pathway_indicators;
           
@@ -281,7 +250,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
               effectiveness: newIndicators.current_approach_effectiveness || 'unknown',
               change_urgency: newIndicators.change_urgency || 'none',
               rationale: (analysis as any).pathway_guidance?.rationale
-            }].slice(-10)); // Keep last 10 history items
+            }].slice(-10));
           }
           
           setPathwayIndicators(prev => ({
@@ -290,7 +259,6 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
           }));
         }
         
-        // Handle pathway guidance from the same response
         if ((analysis as any).pathway_guidance) {
           setPathwayGuidance((analysis as any).pathway_guidance);
         }
@@ -362,14 +330,13 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     
     setWordsSinceLastAnalysis(prev => {
       const updatedWordCount = prev + newWords;
-      console.log(`[Word Trigger] New words: ${newWords}, Total since last analysis: ${updatedWordCount}`);
       
       // Trigger analysis every 10 words
       const WORDS_PER_ANALYSIS = 10;
       const TRANSCRIPT_WINDOW_MINUTES = 5;
       
       if (updatedWordCount >= WORDS_PER_ANALYSIS) {
-        console.log(`[Word Trigger] 🚀 Triggering real-time guidance and pathway analysis after ${updatedWordCount} words`);
+        console.log(`[Session] 🔄 Auto-analysis triggered (${updatedWordCount} words)`);
         
         // Get last 5 minutes of transcript
         const fiveMinutesAgo = new Date(Date.now() - TRANSCRIPT_WINDOW_MINUTES * 60 * 1000);
@@ -381,17 +348,11 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
             timestamp: t.timestamp
           }));
         
-        console.log(`[Word Trigger] Sending ${recentTranscript.length} entries from last 5 minutes`);
-        
         if (recentTranscript.length > 0) {
           // Get the most recent alert for backend deduplication
           const recentAlert = alertsRef.current.length > 0 ? alertsRef.current[0] : null;
           
-          // 1. Real-time analysis (fast, no RAG) - for immediate guidance
-          console.log('[Word Trigger] Triggering REAL-TIME analysis (unRAGed)', {
-            hasRecentAlert: !!recentAlert,
-            recentAlertTitle: recentAlert?.title
-          });
+          // Trigger both real-time and comprehensive analysis
           analyzeSegmentRef.current(
             recentTranscript,
             { ...sessionContextRef.current, is_realtime: true },
@@ -399,8 +360,6 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
             recentAlert
           );
           
-          // 2. Comprehensive analysis (with RAG) - for pathway evaluation
-          console.log('[Word Trigger] Triggering COMPREHENSIVE analysis (RAGed)');
           analyzeSegmentRef.current(
             recentTranscript,
             { ...sessionContextRef.current, is_realtime: false },

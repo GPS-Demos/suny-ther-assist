@@ -50,16 +50,16 @@ def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
     
     # Strategy 2: Look for JSON objects using more sophisticated regex patterns
     json_patterns = [
-        # Pattern 1: Look for complete JSON objects (most common)
-        r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}',
-        # Pattern 2: Find JSON that starts with { and ends with } (greedy)
+        # Find JSON that starts with { and ends with } (greedy)
         r'\{.*\}',
-        # Pattern 3: Look for JSON arrays that might be present
-        r'\[.*\]',
-        # Pattern 4: Find JSON starting after common prefixes
-        r'(?:json|response|result):\s*(\{.*\})',
-        # Pattern 5: Find JSON in code blocks
+        # Find JSON in code blocks
         r'```(?:json)?\s*(\{.*\})\s*```',
+        # Find JSON starting after common prefixes
+        r'(?:json|response|result):\s*(\{.*\})',
+        # Look for complete JSON objects (most common)
+        r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}',
+        # Look for JSON arrays that might be present
+        r'\[.*\]',
     ]
     
     for i, pattern in enumerate(json_patterns):

@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import axios from 'axios';
 import { AnalysisResponse, SessionContext } from '../types/types';
+import { request } from 'node_modules/axios/index.d.cts';
 
 interface UseTherapyAnalysisProps {
   onAnalysis: (analysis: AnalysisResponse) => void;
@@ -25,19 +26,23 @@ export const useTherapyAnalysis = ({
   ) => {
     // Extract is_realtime flag if present
     const { is_realtime, ...cleanContext } = sessionContext as any;
+    const analysisType = is_realtime ? 'realtime' : 'comprehensive';
     
-    console.log(`[useTherapyAnalysis] Starting segment analysis with ${transcriptSegment.length} entries, realtime: ${is_realtime || false}`);
+    const requestPayload = {
+      action: 'analyze_segment',
+      transcript_segment: transcriptSegment,
+      session_context: cleanContext,
+      session_duration_minutes: sessionDurationMinutes,
+      is_realtime: is_realtime || false,
+      previous_alert: previousAlert || null,
+    };
+    
+    console.log(`[Analysis] 📤 ${analysisType.toUpperCase()} REQUEST:`, requestPayload);
+    
     const startTime = performance.now();
     
     try {
-      const response = await axios.post(`${ANALYSIS_API}/therapy_analysis`, {
-        action: 'analyze_segment',
-        transcript_segment: transcriptSegment,
-        session_context: cleanContext,
-        session_duration_minutes: sessionDurationMinutes,
-        is_realtime: is_realtime || false,  // Pass as top-level parameter
-        previous_alert: previousAlert || null,  // Pass previous alert for backend deduplication
-      }, {
+      const response = await axios.post(`${ANALYSIS_API}/therapy_analysis`, requestPayload, {
         responseType: 'text',
         headers: {
           ...(authToken && { Authorization: `Bearer ${authToken}` })
@@ -45,10 +50,8 @@ export const useTherapyAnalysis = ({
       });
 
       const responseTime = performance.now() - startTime;
-      console.log(`[useTherapyAnalysis] Analysis response received in ${responseTime.toFixed(0)}ms`);
-
-      // Process streaming response
       const text = response.data;
+      
       if (text) {
         const lines = text.split('\n').filter(Boolean);
         
@@ -56,34 +59,24 @@ export const useTherapyAnalysis = ({
           try {
             const analysis = JSON.parse(line);
             
-            // Log what we received
-            const hasAlert = analysis.alert !== undefined && analysis.alert !== null;
-            const hasMetrics = analysis.session_metrics !== undefined;
-            const hasPathway = analysis.pathway_indicators !== undefined;
-            
-            console.log(`[useTherapyAnalysis] Parsed response:`, {
-              hasAlert,
-              hasMetrics,
-              hasPathway,
-              analysisType: analysis.analysis_type
-            });
+            console.log(`[Analysis] 📥 ${analysisType.toUpperCase()} RESPONSE (${responseTime.toFixed(0)}ms):`, analysis);
             
             // Always call onAnalysis if we have valid data
-            if (hasAlert || hasMetrics || hasPathway) {
+            if (analysis.alert || analysis.session_metrics || analysis.pathway_indicators) {
               onAnalysis(analysis as AnalysisResponse);
             }
           } catch (e) {
-            console.error('[useTherapyAnalysis] Error parsing analysis line:', e, 'Line:', line.substring(0, 100));
+            console.error('[Analysis] ❌ Parse error:', e, 'Line:', line.substring(0, 100));
           }
         }
       } else {
-        console.warn('[useTherapyAnalysis] Empty response from analysis API');
+        console.warn('[Analysis] ⚠️ Empty response from backend');
       }
     } catch (error: any) {
-      console.error('[useTherapyAnalysis] Error analyzing segment:', {
+      console.error('[Analysis] ❌ Request failed:', {
         message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
+        data: error.response?.data
       });
     }
   }, [onAnalysis, ANALYSIS_API, authToken]);
@@ -93,8 +86,13 @@ export const useTherapyAnalysis = ({
     sessionHistory: any[],
     presentingIssues: string[]
   ) => {
-    console.log(`[useTherapyAnalysis] Requesting pathway guidance for ${currentApproach}`);
     const startTime = performance.now();
+    
+    console.log(`[Pathway] 📤 REQUEST:`, {
+      approach: currentApproach,
+      historyItems: sessionHistory.length,
+      issues: presentingIssues
+    });
     
     try {
       const response = await axios.post(`${ANALYSIS_API}/therapy_analysis`, {
@@ -109,7 +107,10 @@ export const useTherapyAnalysis = ({
       });
 
       const responseTime = performance.now() - startTime;
-      console.log(`[useTherapyAnalysis] Pathway guidance received in ${responseTime.toFixed(0)}ms`);
+      console.log(`[Pathway] 📥 RESPONSE (${responseTime.toFixed(0)}ms):`, {
+        hasGuidance: !!response.data,
+        keys: response.data ? Object.keys(response.data) : []
+      });
       
       if (onPathwayGuidance && response.data) {
         onPathwayGuidance(response.data);
@@ -117,9 +118,10 @@ export const useTherapyAnalysis = ({
       
       return response.data;
     } catch (error: any) {
-      console.error('[useTherapyAnalysis] Error getting pathway guidance:', {
+      console.error('[Pathway] ❌ Request failed:', {
         message: error.message,
-        response: error.response?.data
+        status: error.response?.status,
+        responseTime: `${(performance.now() - startTime).toFixed(0)}ms`
       });
       throw error;
     }
@@ -129,20 +131,23 @@ export const useTherapyAnalysis = ({
     fullTranscript: Array<{ speaker: string; text: string; timestamp: string }>,
     sessionMetrics: any
   ) => {
-    console.log(`[useTherapyAnalysis] Generating session summary for ${fullTranscript.length} transcript entries`);
+    const startTime = performance.now();
     
     try {
-      const response = await axios.post(`${ANALYSIS_API}/therapy_analysis`, {
-        action: 'session_summary',
-        full_transcript: fullTranscript,
-        session_metrics: sessionMetrics,
-      }, {
+      const summaryReqBody = {
+          action: 'session_summary',
+          full_transcript: fullTranscript,
+          session_metrics: sessionMetrics,
+        }
+      console.log(`[Summary] 📤 REQUEST:`, summaryReqBody);
+      const response = await axios.post(`${ANALYSIS_API}/therapy_analysis`, summaryReqBody, {
         headers: {
           ...(authToken && { Authorization: `Bearer ${authToken}` })
         }
       });
 
-      console.log('[useTherapyAnalysis] Session summary generated successfully');
+      const responseTime = performance.now() - startTime;
+      console.log(`[Summary] 📥 RESPONSE (${responseTime.toFixed(0)}ms):`, response.data);
       
       if (onSessionSummary && response.data) {
         onSessionSummary(response.data);
@@ -150,9 +155,10 @@ export const useTherapyAnalysis = ({
       
       return response.data;
     } catch (error: any) {
-      console.error('[useTherapyAnalysis] Error generating session summary:', {
+      console.error('[Summary] ❌ Request failed:', {
         message: error.message,
-        response: error.response?.data
+        status: error.response?.status,
+        responseTime: `${(performance.now() - startTime).toFixed(0)}ms`
       });
       throw error;
     }
