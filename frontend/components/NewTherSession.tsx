@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Paper,
@@ -10,6 +10,12 @@ import {
   IconButton,
   Fab,
   Tooltip,
+  Drawer,
+  Badge,
+  CircularProgress,
+  Alert as MuiAlert,
+  Collapse,
+  LinearProgress,
 } from '@mui/material';
 import {
   HealthAndSafety,
@@ -26,16 +32,43 @@ import {
   Search,
   CallSplit,
   Route,
+  Mic,
+  Pause,
+  PlayArrow,
+  Chat,
+  Close,
+  VolumeUp,
+  Article,
+  Info,
+  TrendingUp,
+  ExpandLess,
+  ExpandMore,
+  Shield,
+  SwapHoriz,
+  Lightbulb,
+  Assessment,
+  Build,
 } from '@mui/icons-material';
-import { Alert, SessionMetrics, PathwayIndicators } from '../types/types';
+import { Alert, SessionMetrics, PathwayIndicators, SessionContext, Alert as IAlert, Citation, SessionSummary } from '../types/types';
 import { formatDuration } from '../utils/timeUtils';
 import { getStatusColor } from '../utils/colorUtils';
+import { renderMarkdown } from '../utils/textRendering';
+import { processNewAlert, cleanupOldAlerts } from '../utils/alertDeduplication';
+import { mockPatients } from '../utils/mockPatients';
+import { testTranscriptData } from '../utils/mockTranscript';
 import SessionLineChart from './SessionLineChart';
 import ActionDetailsPanel from './ActionDetailsPanel';
 import EvidenceTab from './EvidenceTab';
 import PathwayTab from './PathwayTab';
 import GuidanceTab from './GuidanceTab';
 import AlternativesTab from './AlternativesTab';
+import TranscriptDisplay from './TranscriptDisplay';
+import SessionSummaryModal from './SessionSummaryModal';
+import RationaleModal from './RationaleModal';
+import CitationModal from './CitationModal';
+import { useAudioStreamingWebSocketTher } from '../hooks/useAudioStreamingWebSocketTher';
+import { useTherapyAnalysis } from '../hooks/useTherapyAnalysis';
+import { useAuth } from '../contexts/AuthContext';
 
 interface NewTherSessionProps {
   onNavigateBack?: () => void;
@@ -66,64 +99,372 @@ interface NewTherSessionProps {
 
 const NewTherSession: React.FC<NewTherSessionProps> = ({
   onNavigateBack,
-  onStopRecording,
   patientId,
-  alerts = [],
-  sessionMetrics = {
-    engagement_level: 70,
-    therapeutic_alliance: 'moderate',
-    techniques_detected: ['CBT', 'Cognitive Restructuring'],
-    emotional_state: 'distressed',
-    phase_appropriate: true,
-  },
-  pathwayIndicators = {
-    current_approach_effectiveness: 'effective',
-    alternative_pathways: ['Cognitive Restructuring', 'Strong adherence'],
-    change_urgency: 'none',
-  },
-  sessionDuration = 382, // 06:22 in seconds
-  sessionPhase = 'Beginning (1 - 10 minutes)',
-  sessionId = 'Session ID',
-  currentGuidance = {
-    title: "Explore Patient's Internal Experience",
-    time: '03:22',
-    content: `Consider asking: 'When your heart started racing and you felt like you had to leave, what was going through your mind at that exact moment?'
-
-Alternatively, 'What was it like to experience those physical sensations in that situation?'
-
-This can help connect physical sensations to thoughts / emotions and identify specific triggers or fears.`,
-    immediateActions: [
-      {
-        title: 'Safety Planning',
-        description: 'Immediately complete a comprehensive safety plan with the patient',
-        icon: 'safety',
-      },
-      {
-        title: 'Reinforce Grounding',
-        description: 'Continue and reinforce the use of grounding techniques (e.g., 5-4-3-2-1).',
-        icon: 'grounding',
-      },
-    ],
-    contraindications: [
-      {
-        title: 'Over-reliance on Cognitive Restructuring',
-        description: 'Continuing to push cognitive restructuring is contraindicated.',
-        icon: 'cognitive',
-      },
-      {
-        title: 'Premature or Unsupported Exposure',
-        description: 'While exposure is indicated and proposed, proceeding with exposure exercises could be counterproductive.',
-        icon: 'exposure',
-      },
-    ],
-  },
 }) => {
+  const { currentUser } = useAuth();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+  const isWideScreen = useMediaQuery('(min-width:1024px)');
+  
+  // Core session state
+  const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [sessionType, setSessionType] = useState<'microphone' | 'test' | 'audio' | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const [pausedTime, setPausedTime] = useState(0);
+  const [lastPauseTime, setLastPauseTime] = useState<Date | null>(null);
+  const [sessionDuration, setSessionDuration] = useState(0);
+  
+  // Transcript and analysis state
+  const [transcript, setTranscript] = useState<Array<{
+    text: string;
+    timestamp: string;
+    is_interim?: boolean;
+  }>>([]);
+  const [alerts, setAlerts] = useState<IAlert[]>([]);
+  const [citations, setCitations] = useState<Citation[]>([]);
+  const [sessionMetrics, setSessionMetrics] = useState({
+    engagement_level: 0.0,
+    therapeutic_alliance: 'unknown' as 'strong' | 'moderate' | 'weak' | 'unknown',
+    techniques_detected: [] as string[],
+    emotional_state: 'unknown' as 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'engaged' | 'unknown',
+    phase_appropriate: false,
+  });
+  const [pathwayIndicators, setPathwayIndicators] = useState({
+    current_approach_effectiveness: 'unknown' as 'effective' | 'struggling' | 'ineffective' | 'unknown',
+    alternative_pathways: [] as string[],
+    change_urgency: 'monitor' as 'none' | 'monitor' | 'consider' | 'recommended',
+  });
+  const [pathwayGuidance, setPathwayGuidance] = useState<{
+    rationale?: string;
+    immediate_actions?: string[];
+    contraindications?: string[];
+    alternative_pathways?: Array<{
+      approach: string;
+      reason: string;
+      techniques: string[];
+    }>;
+  }>({});
+  const [pathwayHistory, setPathwayHistory] = useState<Array<{
+    timestamp: string;
+    effectiveness: 'effective' | 'struggling' | 'ineffective' | 'unknown';
+    change_urgency: 'none' | 'monitor' | 'consider' | 'recommended';
+    rationale?: string;
+  }>>([]);
+  
+  // UI state
   const [activeTab, setActiveTab] = useState<'guidance' | 'evidence' | 'pathway' | 'alternatives'>('guidance');
   const [selectedAction, setSelectedAction] = useState<any>(null);
   const [selectedCitation, setSelectedCitation] = useState<any>(null);
   const [isContraindication, setIsContraindication] = useState(false);
+  const [transcriptOpen, setTranscriptOpen] = useState(false);
+  const [newTranscriptCount, setNewTranscriptCount] = useState(0);
+  const [selectedAlertIndex, setSelectedAlertIndex] = useState<number | null>(null);
+  
+  // Session context for AI analysis
+  const [sessionContext] = useState<SessionContext>({
+    session_type: 'CBT',
+    primary_concern: 'Anxiety',
+    current_approach: 'Cognitive Behavioral Therapy',
+  });
+  
+  // Analysis tracking
+  const [wordsSinceLastAnalysis, setWordsSinceLastAnalysis] = useState(0);
+  const [hasReceivedComprehensiveAnalysis, setHasReceivedComprehensiveAnalysis] = useState(false);
+  
+  // Session summary state
+  const [showSessionSummary, setShowSessionSummary] = useState(false);
+  const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [sessionSummaryClosed, setSessionSummaryClosed] = useState(false);
+  
+  // Modal state
+  const [showRationaleModal, setShowRationaleModal] = useState(false);
+  const [citationModalOpen, setCitationModalOpen] = useState(false);
+  const [selectedCitationModal, setSelectedCitationModal] = useState<Citation | null>(null);
+  
+  // Test mode state
+  const [isTestMode, setIsTestMode] = useState(false);
+  const testIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Error and loading state
+  const [error, setError] = useState<string | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+
+  // Audio streaming hook with WebSocket for both microphone and file
+  const { 
+    isConnected, 
+    startMicrophoneRecording, 
+    startAudioFileStreaming,
+    pauseAudioStreaming,
+    resumeAudioStreaming,
+    stopStreaming, 
+    isPlayingAudio,
+    audioProgress,
+    sessionId 
+  } = useAudioStreamingWebSocketTher({
+    authToken,
+    onTranscript: (newTranscript: any) => {
+      if (newTranscript.is_interim) {
+        setTranscript(prev => {
+          const newEntry = {
+            text: newTranscript.transcript || '',
+            timestamp: newTranscript.timestamp || new Date().toISOString(),
+            is_interim: true,
+          };
+          
+          if (prev.length > 0 && prev[prev.length - 1].is_interim) {
+            return [...prev.slice(0, -1), newEntry];
+          }
+          return [...prev, newEntry];
+        });
+      } else {
+        setTranscript(prev => {
+          const filtered = prev.filter(entry => !entry.is_interim);
+          return [...filtered, {
+            text: newTranscript.transcript || '',
+            timestamp: newTranscript.timestamp || new Date().toISOString(),
+            is_interim: false,
+          }];
+        });
+        
+        if (!transcriptOpen) {
+          setNewTranscriptCount(prev => prev + 1);
+        }
+      }
+    },
+    onError: (error: string) => {
+      console.error('Streaming error (not shown to user):', error);
+    }
+  });
+
+  // Get Firebase auth token
+  useEffect(() => {
+    const getAuthToken = async () => {
+      if (currentUser) {
+        try {
+          const token = await currentUser.getIdToken();
+          setAuthToken(token);
+        } catch (error) {
+          console.error('Error getting auth token:', error);
+          setAuthToken(null);
+        }
+      } else {
+        setAuthToken(null);
+      }
+    };
+
+    getAuthToken();
+  }, [currentUser]);
+
+  // Track logged analyses to prevent duplicate logs in Strict Mode
+  const lastLoggedAnalysisRef = useRef<Set<string>>(new Set());
+
+  const { analyzeSegment, generateSessionSummary } = useTherapyAnalysis({
+    authToken,
+    onAnalysis: (analysis) => {
+      const analysisType = (analysis as any).analysis_type;
+      const isRealtime = analysisType === 'realtime';
+      
+      // Create a unique identifier for this analysis to prevent duplicate logs
+      const analysisId = `${analysisType}-${Date.now()}-${JSON.stringify(analysis).length}`;
+      
+      // Only log if we haven't logged this analysis before (prevents Strict Mode duplicate logs)
+      if (!lastLoggedAnalysisRef.current.has(analysisId)) {
+        lastLoggedAnalysisRef.current.add(analysisId);
+        
+        // Clean up old entries to prevent memory leaks (keep only last 50)
+        if (lastLoggedAnalysisRef.current.size > 50) {
+          const entries = Array.from(lastLoggedAnalysisRef.current);
+          lastLoggedAnalysisRef.current = new Set(entries.slice(-25));
+        }
+      }
+      
+      if (isRealtime) {
+        // Real-time analysis: Only update alerts
+        if (analysis.alert) {
+          const newAlert = {
+            ...analysis.alert,
+            sessionTime: sessionDuration,
+            timestamp: new Date().toISOString()
+          };
+
+          setAlerts(prev => {
+            const result = processNewAlert(newAlert, prev, { debugMode: false });
+
+            if (result.shouldAdd) {
+              const updatedAlerts = [newAlert, ...prev].slice(0, 8);
+              
+              // Create unique log identifier for this specific alert
+              const alertLogId = `new-alert-${newAlert.timestamp}-${newAlert.title}`;
+              if (!lastLoggedAnalysisRef.current.has(alertLogId)) {
+                lastLoggedAnalysisRef.current.add(alertLogId);
+                console.log(`[Session] ⚠️ New ${newAlert.category} alert: "${newAlert.title}" (${newAlert.timing})`);
+              }
+              
+              return updatedAlerts;
+            } else {
+              const reason = result.debugInfo?.reason || 'deduplication rules';
+              
+              // Create unique log identifier for this specific filter event
+              const filterLogId = `filter-alert-${Date.now()}-${analysis.alert?.title || 'unknown'}`;
+              if (!lastLoggedAnalysisRef.current.has(filterLogId)) {
+                lastLoggedAnalysisRef.current.add(filterLogId);
+                console.log(`[Session] 🚫 Alert filtered: ${reason}`, analysis.alert);
+              }
+              
+              return prev;
+            }
+          });
+        }
+      } else {
+        // Comprehensive RAG analysis: Update metrics, pathway, citations
+        setHasReceivedComprehensiveAnalysis(true);
+        
+        if (analysis.session_metrics) {
+          setSessionMetrics(prev => ({
+            ...prev,
+            ...analysis.session_metrics
+          }));
+        }
+        
+        if (analysis.pathway_indicators) {
+          const newIndicators = analysis.pathway_indicators;
+          
+          // Check if there's a change in urgency or effectiveness to add to history
+          if (pathwayIndicators.change_urgency !== newIndicators.change_urgency ||
+              pathwayIndicators.current_approach_effectiveness !== newIndicators.current_approach_effectiveness) {
+            setPathwayHistory(prev => [...prev, {
+              timestamp: new Date().toISOString(),
+              effectiveness: newIndicators.current_approach_effectiveness || 'unknown',
+              change_urgency: newIndicators.change_urgency || 'none',
+              rationale: (analysis as any).pathway_guidance?.rationale
+            }].slice(-10));
+          }
+          
+          setPathwayIndicators(prev => ({
+            ...prev,
+            ...newIndicators
+          }));
+        }
+        
+        if ((analysis as any).pathway_guidance) {
+          setPathwayGuidance((analysis as any).pathway_guidance);
+        }
+        
+        if (analysis.citations) {
+          setCitations(analysis.citations);
+        }
+      }
+    },
+  });
+
+  // Update session duration every second (accounting for paused time)
+  useEffect(() => {
+    if (!isRecording || !sessionStartTime || isPaused) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const elapsed = Math.floor((now - sessionStartTime.getTime()) / 1000);
+      setSessionDuration(elapsed - pausedTime);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isRecording, sessionStartTime, isPaused, pausedTime]);
+
+  // Store analysis functions in refs to avoid recreating intervals
+  const analyzeSegmentRef = useRef(analyzeSegment);
+  
+  // Store transcript in ref to avoid stale closures
+  const transcriptRef = useRef(transcript);
+  const sessionMetricsRef = useRef(sessionMetrics);
+  const alertsRef = useRef(alerts);
+  const sessionContextRef = useRef(sessionContext);
+  const sessionDurationRef = useRef(sessionDuration);
+  
+  useEffect(() => {
+    analyzeSegmentRef.current = analyzeSegment;
+  }, [analyzeSegment]);
+  
+  // Update refs when state changes
+  useEffect(() => {
+    transcriptRef.current = transcript;
+  }, [transcript]);
+  
+  useEffect(() => {
+    sessionMetricsRef.current = sessionMetrics;
+  }, [sessionMetrics]);
+  
+  useEffect(() => {
+    alertsRef.current = alerts;
+  }, [alerts]);
+  
+  useEffect(() => {
+    sessionContextRef.current = sessionContext;
+  }, [sessionContext]);
+  
+  useEffect(() => {
+    sessionDurationRef.current = sessionDuration;
+  }, [sessionDuration]);
+
+  // Word-based real-time analysis trigger (simplified)
+  useEffect(() => {
+    if (!isRecording || transcript.length === 0) return;
+    
+    const lastEntry = transcript[transcript.length - 1];
+    if (!lastEntry || lastEntry.is_interim) return;
+    
+    // Count words in the new entry
+    const newWords = lastEntry.text.split(' ').filter(word => word.trim()).length;
+    
+    setWordsSinceLastAnalysis(prev => {
+      const updatedWordCount = prev + newWords;
+      
+      // Trigger analysis every 10 words
+      const WORDS_PER_ANALYSIS = 10;
+      const TRANSCRIPT_WINDOW_MINUTES = 5;
+      
+      if (updatedWordCount >= WORDS_PER_ANALYSIS) {
+        console.log(`[Session] 🔄 Auto-analysis triggered (${updatedWordCount} words)`);
+        
+        // Get last 5 minutes of transcript
+        const fiveMinutesAgo = new Date(Date.now() - TRANSCRIPT_WINDOW_MINUTES * 60 * 1000);
+        const recentTranscript = transcript
+          .filter(t => !t.is_interim && new Date(t.timestamp) > fiveMinutesAgo)
+          .map(t => ({
+            speaker: 'conversation',
+            text: t.text,
+            timestamp: t.timestamp
+          }));
+        
+        if (recentTranscript.length > 0) {
+          // Get the most recent alert for backend deduplication
+          const recentAlert = alertsRef.current.length > 0 ? alertsRef.current[0] : null;
+          
+          // Trigger both real-time and comprehensive analysis
+          analyzeSegmentRef.current(
+            recentTranscript,
+            { ...sessionContextRef.current, is_realtime: true },
+            Math.floor(sessionDurationRef.current / 60),
+            recentAlert
+          );
+          
+          analyzeSegmentRef.current(
+            recentTranscript,
+            { ...sessionContextRef.current, is_realtime: false },
+            Math.floor(sessionDurationRef.current / 60)
+          );
+        }
+        
+        // Reset word count
+        return 0;
+      }
+      
+      return updatedWordCount;
+    });
+  }, [transcript, isRecording]);
 
   // Generate current date in the format "Month Day, Year"
   const getCurrentDate = () => {
@@ -133,6 +474,295 @@ This can help connect physical sensations to thoughts / emotions and identify sp
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  // Get patient name from patientId
+  const getPatientName = () => {
+    if (patientId) {
+      const patient = mockPatients.find(p => p.id === patientId);
+      return patient?.name || 'John Doe';
+    }
+    return 'John Doe';
+  };
+
+  // Determine therapy phase
+  const determineTherapyPhase = (duration: number) => {
+    if (duration <= 10 * 60) {
+      return "Beginning (1-10 minutes)";
+    } else if (duration <= 40 * 60) {
+      return "Middle (10-40 minutes)";
+    } else {
+      return "End (40+ minutes)";
+    }
+  };
+
+  // Get current guidance for Guidance tab (realtime analysis only)
+  const getCurrentGuidance = () => {
+    // Show real-time alerts for Guidance tab
+    if (alerts.length > 0) {
+      const recentAlert = alerts[0];
+      const recommendationText = Array.isArray(recentAlert.recommendation) 
+        ? recentAlert.recommendation.join('\n') 
+        : recentAlert.recommendation;
+      
+      return {
+        title: recentAlert.title || "Current Clinical Guidance",
+        time: formatDuration(sessionDuration),
+        content: recentAlert.message || "Real-time guidance available.",
+        immediateActions: recommendationText ? [{
+          title: recommendationText,
+          description: recommendationText,
+          icon: 'safety' as const
+        }] : [],
+        contraindications: []
+      };
+    }
+    
+    // Default guidance when no realtime alerts available
+    return {
+      title: isRecording ? "Listening for guidance..." : "No guidance available",
+      time: formatDuration(sessionDuration),
+      content: isRecording 
+        ? "AI analysis will provide real-time clinical guidance here as the session progresses."
+        : "Start a session to receive real-time therapeutic guidance.",
+      immediateActions: [],
+      contraindications: []
+    };
+  };
+
+  // Get pathway guidance for Pathway tab (comprehensive analysis only)
+  const getPathwayGuidance = () => {
+    if (pathwayGuidance.rationale) {
+      return {
+        title: "Current Clinical Guidance",
+        time: formatDuration(sessionDuration),
+        content: pathwayGuidance.rationale,
+        immediateActions: pathwayGuidance.immediate_actions?.map(action => ({
+          title: action,
+          description: action,
+          icon: 'safety' as const
+        })) || [],
+        contraindications: pathwayGuidance.contraindications?.map(contra => ({
+          title: contra,
+          description: contra,
+          icon: 'cognitive' as const
+        })) || []
+      };
+    }
+    
+    // Default when no comprehensive analysis available yet
+    return {
+      title: hasReceivedComprehensiveAnalysis ? "No pathway guidance available" : "Waiting for comprehensive analysis...",
+      time: formatDuration(sessionDuration),
+      content: hasReceivedComprehensiveAnalysis 
+        ? "No specific pathway guidance available for this session segment."
+        : "Comprehensive analysis will provide detailed pathway guidance here, including contraindications and alternative approaches.",
+      immediateActions: [],
+      contraindications: []
+    };
+  };
+
+  // Session control functions
+  const handleStartSession = async () => {
+    setSessionStartTime(new Date());
+    setIsRecording(true);
+    setSessionType('microphone');
+    setSessionSummaryClosed(false);
+    setSessionSummary(null);
+    setSummaryError(null);
+    setPausedTime(0);
+    setIsPaused(false);
+    setHasReceivedComprehensiveAnalysis(false);
+    setTranscript([]);
+    setAlerts([]);
+    await startMicrophoneRecording();
+  };
+
+  const handlePauseResume = async () => {
+    if (isPaused) {
+      // Resume
+      const now = new Date();
+      if (lastPauseTime) {
+        const pauseDuration = Math.floor((now.getTime() - lastPauseTime.getTime()) / 1000);
+        setPausedTime(prev => prev + pauseDuration);
+      }
+      setIsPaused(false);
+      setLastPauseTime(null);
+      
+      // Resume based on session type
+      if (sessionType === 'microphone') {
+        await startMicrophoneRecording();
+      } else if (sessionType === 'audio') {
+        await resumeAudioStreaming();
+      } else if (sessionType === 'test') {
+        resumeTestMode();
+      }
+    } else {
+      // Pause
+      setIsPaused(true);
+      setLastPauseTime(new Date());
+      
+      // Pause based on session type
+      if (sessionType === 'microphone') {
+        await stopStreaming();
+      } else if (sessionType === 'audio') {
+        pauseAudioStreaming();
+      } else if (sessionType === 'test') {
+        pauseTestMode();
+      }
+    }
+  };
+
+  const handleStopSession = async () => {
+    setIsRecording(false);
+    setIsPaused(false);
+    setSessionType(null);
+    await stopStreaming();
+    if (isTestMode) {
+      stopTestMode();
+    }
+    if (transcript.length > 0) {
+      requestSummary();
+    }
+  };
+
+  const requestSummary = async () => {
+    setSummaryLoading(true);
+    setSummaryError(null);
+    setSessionSummaryClosed(true);
+    try {
+      const fullTranscript = transcript
+        .filter(t => !t.is_interim)
+        .map(t => ({
+          speaker: 'conversation',
+          text: t.text,
+          timestamp: t.timestamp,
+        }));
+      
+      const result = await generateSessionSummary(fullTranscript, sessionMetrics);
+
+      if (result.summary) {
+        setSessionSummary(result.summary);
+        setShowSessionSummary(true);
+      } else {
+        throw new Error('Invalid summary response');
+      }
+    } catch (err) {
+      console.error('Error generating summary:', err);
+      setSummaryError('Failed to generate session summary. Please try again.');
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  // Test mode functions
+  const loadTestTranscript = () => {
+    setIsTestMode(true);
+    setIsRecording(true);
+    setSessionType('test');
+    setSessionStartTime(new Date());
+    setTranscript([]);
+    setPausedTime(0);
+    setIsPaused(false);
+    setHasReceivedComprehensiveAnalysis(false);
+    setPathwayGuidance({
+      rationale: "This is a test rationale for the loaded transcript. The pathway is being monitored based on the current interaction.",
+      immediate_actions: ["Test Action: Build more rapport with the client.", "Test Action: Validate the client's feelings about the situation."],
+      contraindications: ["Test Contraindication: Avoid challenging the client's core beliefs at this early stage.", "Test Contraindication: Do not assign homework that is too demanding."],
+    });
+    
+    let currentIndex = 0;
+    testIntervalRef.current = setInterval(() => {
+        if (currentIndex >= testTranscriptData.length) {
+          if (testIntervalRef.current) {
+            clearInterval(testIntervalRef.current);
+            testIntervalRef.current = null;
+          }
+          setIsTestMode(false);
+          return;
+        }
+        
+        const entry = testTranscriptData[currentIndex];
+        const formattedEntry = {
+          text: entry.speaker ? `${entry.speaker}: ${entry.text}` : entry.text,
+          timestamp: new Date().toISOString(),
+          is_interim: false,
+        };
+        
+        setTranscript(prev => [...prev, formattedEntry]);
+        
+        if (!transcriptOpen) {
+          setNewTranscriptCount(prev => prev + 1);
+        }
+        
+        currentIndex++;
+    }, 2000);
+  };
+
+  const pauseTestMode = () => {
+    if (testIntervalRef.current) {
+      clearInterval(testIntervalRef.current);
+      testIntervalRef.current = null;
+    }
+  };
+
+  const resumeTestMode = () => {
+    if (isTestMode && !testIntervalRef.current) {
+      // Resume from where we left off
+      const currentTranscriptLength = transcript.filter(t => !t.is_interim).length;
+      let currentIndex = currentTranscriptLength;
+      
+      testIntervalRef.current = setInterval(() => {
+        if (currentIndex >= testTranscriptData.length) {
+          if (testIntervalRef.current) {
+            clearInterval(testIntervalRef.current);
+            testIntervalRef.current = null;
+          }
+          setIsTestMode(false);
+          return;
+        }
+        
+        const entry = testTranscriptData[currentIndex];
+        const formattedEntry = {
+          text: entry.speaker ? `${entry.speaker}: ${entry.text}` : entry.text,
+          timestamp: new Date().toISOString(),
+          is_interim: false,
+        };
+        
+        setTranscript(prev => [...prev, formattedEntry]);
+        
+        if (!transcriptOpen) {
+          setNewTranscriptCount(prev => prev + 1);
+        }
+        
+        currentIndex++;
+      }, 2000);
+    }
+  };
+
+  const stopTestMode = () => {
+    if (testIntervalRef.current) {
+      clearInterval(testIntervalRef.current);
+      testIntervalRef.current = null;
+    }
+    setIsTestMode(false);
+    setIsRecording(false);
+  };
+
+  const loadExampleAudio = async () => {
+    setIsRecording(true);
+    setSessionType('audio');
+    setSessionStartTime(new Date());
+    setTranscript([]);
+    setSessionSummaryClosed(false);
+    setSessionSummary(null);
+    setSummaryError(null);
+    setPausedTime(0);
+    setIsPaused(false);
+    setHasReceivedComprehensiveAnalysis(false);
+    
+    // Start streaming the example audio file
+    await startAudioFileStreaming('/audio/suny-good-audio.mp3');
   };
 
   const handleActionClick = (action: any, isContra: boolean) => {
@@ -151,6 +781,11 @@ This can help connect physical sensations to thoughts / emotions and identify sp
     setSelectedCitation(null);
   };
 
+  const handleCitationModalClick = (citation: Citation) => {
+    setSelectedCitationModal(citation);
+    setCitationModalOpen(true);
+  };
+
   const getEmotionalStateColor = (state: string) => {
     switch (state) {
       case 'calm': return '#128937';
@@ -159,6 +794,58 @@ This can help connect physical sensations to thoughts / emotions and identify sp
       default: return '#6b7280';
     }
   };
+
+  // Get alert category icon
+  const getCategoryIcon = (category: string) => {
+    switch (category.toLowerCase()) {
+      case 'safety':
+        return <Shield sx={{ fontSize: 20, color: '#dc2626' }} />;
+      case 'technique':
+        return <Psychology sx={{ fontSize: 20, color: '#c05a01' }} />;
+      case 'pathway_change':
+        return <SwapHoriz sx={{ fontSize: 20, color: '#f59e0b' }} />;
+      case 'engagement':
+        return <Lightbulb sx={{ fontSize: 20, color: '#10b981' }} />;
+      case 'process':
+        return <Assessment sx={{ fontSize: 20, color: '#6366f1' }} />;
+      default:
+        return <Build sx={{ fontSize: 20, color: '#6b7280' }} />;
+    }
+  };
+
+  // Helper function to ensure recommendations are formatted as bullet points
+  const normalizeRecommendationFormat = (recommendation: string): string => {
+    if (!recommendation) return recommendation;
+    
+    // If it already contains markdown bullet points, return as-is
+    if (recommendation.includes('- ') || recommendation.includes('* ')) {
+      return recommendation;
+    }
+    
+    // Split by periods or newlines to create separate bullet points
+    const lines = recommendation
+      .split(/[.\n]/)
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+    
+    // If we only have one line, return as-is (might be a single sentence)
+    if (lines.length <= 1) {
+      return recommendation;
+    }
+    
+    // Convert to markdown bullet points
+    return lines.map(line => `- ${line}`).join('\n');
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopStreaming();
+      if (testIntervalRef.current) {
+        clearInterval(testIntervalRef.current);
+      }
+    };
+  }, [stopStreaming]);
 
   return (
     <Box sx={{ 
@@ -208,7 +895,7 @@ This can help connect physical sensations to thoughts / emotions and identify sp
                 color: '#1f1f1f',
                 mb: 1,
               }}>
-                John Doe
+                {getPatientName()}
               </Typography>
               <Typography variant="body2" sx={{ 
                 fontSize: '14px', 
@@ -225,7 +912,7 @@ This can help connect physical sensations to thoughts / emotions and identify sp
                   lineHeight: '28px',
                   color: '#444746',
                 }}>
-                  {currentGuidance.title}
+                  {getCurrentGuidance().title}
                 </Typography>
               </Box>
             </Box>
@@ -234,7 +921,6 @@ This can help connect physical sensations to thoughts / emotions and identify sp
             <Box>
               {[
                 { key: 'guidance', label: 'Guidance', icon: <Category sx={{ fontSize: 24, color: '#444746' }} /> },
-                { key: 'evidence', label: 'Evidence', icon: <Search sx={{ fontSize: 24, color: '#444746' }} /> },
                 { key: 'pathway', label: 'Pathway', icon: <Route sx={{ fontSize: 24, color: '#444746' }} /> },
                 { key: 'alternatives', label: 'Alternatives', icon: <CallSplit sx={{ fontSize: 24, color: '#444746' }} /> },
               ].map((item) => (
@@ -278,13 +964,31 @@ This can help connect physical sensations to thoughts / emotions and identify sp
           }}>
             {activeTab === 'guidance' && (
               <GuidanceTab 
-                currentGuidance={currentGuidance} 
+                currentGuidance={getCurrentGuidance()} 
+                alerts={alerts}
+                transcript={transcript}
+                pathwayGuidance={pathwayGuidance}
                 onActionClick={handleActionClick} 
               />
             )}
             {activeTab === 'evidence' && <EvidenceTab />}
-            {activeTab === 'pathway' && <PathwayTab onCitationClick={handleCitationClick} />}
-            {activeTab === 'alternatives' && <AlternativesTab />}
+            {activeTab === 'pathway' && (
+              <PathwayTab 
+                onCitationClick={handleCitationClick} 
+                onActionClick={handleActionClick}
+                currentGuidance={getPathwayGuidance()}
+                citations={citations}
+                techniques={sessionMetrics.techniques_detected}
+              />
+            )}
+            {activeTab === 'alternatives' && (
+              <AlternativesTab 
+                alternativePathways={pathwayGuidance.alternative_pathways}
+                citations={citations}
+                onCitationClick={handleCitationClick}
+                hasReceivedComprehensiveAnalysis={hasReceivedComprehensiveAnalysis}
+              />
+            )}
           </Box>
         </Box>
 
@@ -553,7 +1257,7 @@ This can help connect physical sensations to thoughts / emotions and identify sp
                   textTransform: 'uppercase',
                   letterSpacing: '0.1px',
                 }}>
-                  {sessionPhase}
+                  {determineTherapyPhase(sessionDuration)}
                 </Typography>
                 <Typography variant="body1" sx={{ fontWeight: 600, color: '#1f1f1f' }}>
                   Phase-appropriate
@@ -588,24 +1292,319 @@ This can help connect physical sensations to thoughts / emotions and identify sp
                   transform: 'rotate(45deg)',
                 }} />
               </Box>
-              <IconButton
-                onClick={onStopRecording}
-                sx={{
-                  backgroundColor: '#f9dedc',
-                  color: '#8c1d18',
-                  width: 40,
-                  height: 40,
-                  '&:hover': {
-                    backgroundColor: '#f5c6c6',
-                  },
-                }}
-              >
-                <Stop />
-              </IconButton>
+              {!isRecording ? (
+                <Button
+                  variant="contained"
+                  startIcon={<Mic />}
+                  onClick={handleStartSession}
+                  sx={{ 
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                    },
+                  }}
+                >
+                  Start Session
+                </Button>
+              ) : (
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={isPaused ? <PlayArrow /> : <Pause />}
+                    onClick={handlePauseResume}
+                    sx={{ 
+                      background: isPaused 
+                        ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                        : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      color: 'white',
+                      '&:hover': { 
+                        background: isPaused
+                          ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)'
+                          : 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)',
+                      },
+                    }}
+                  >
+                    {isPaused ? 'Resume' : 'Pause'}
+                  </Button>
+                  <IconButton
+                    onClick={handleStopSession}
+                    sx={{
+                      backgroundColor: '#f9dedc',
+                      color: '#8c1d18',
+                      width: 40,
+                      height: 40,
+                      '&:hover': {
+                        backgroundColor: '#f5c6c6',
+                      },
+                    }}
+                  >
+                    <Stop />
+                  </IconButton>
+                </Box>
+              )}
             </Box>
           </Box>
         </Box>
       </Box>
+
+      {/* Floating Action Buttons */}
+      <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1201, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end' }}>
+        {/* Reopen Session Summary Button */}
+        {sessionSummaryClosed && !showSessionSummary && (
+          <Fab
+            color="secondary"
+            variant="extended"
+            aria-label="reopen session summary"
+            onClick={() => setShowSessionSummary(true)}
+            sx={{
+              background: 'linear-gradient(135deg, #673ab7 0%, #512da8 100%)',
+              color: 'white',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #512da8 0%, #673ab7 100%)',
+                transform: 'scale(1.05)',
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: '0 8px 20px -4px rgba(103, 58, 183, 0.35)',
+            }}
+          >
+            <Article sx={{ mr: 1 }} />
+            Summary
+          </Fab>
+        )}
+
+        {/* Floating Transcript Toggle Button */}
+        <Fab
+          color="primary"
+          aria-label="transcript"
+          onClick={() => {
+            setTranscriptOpen(!transcriptOpen);
+            if (!transcriptOpen) {
+              setNewTranscriptCount(0);
+            }
+          }}
+          sx={{
+            background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
+              transform: 'scale(1.1)',
+            },
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
+          }}
+        >
+          <Badge badgeContent={newTranscriptCount} color="error">
+            <Chat />
+          </Badge>
+        </Fab>
+      </Box>
+
+      {/* Test Buttons */}
+      {!isRecording && !isTestMode && (
+        <Box sx={{ 
+          position: 'fixed', 
+          bottom: 24, 
+          left: 24,
+          zIndex: 1201,
+          display: 'flex',
+          gap: 1,
+          flexDirection: 'column',
+        }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<VolumeUp />}
+            onClick={loadExampleAudio}
+            sx={{ 
+              borderColor: '#6366f1',
+              color: '#6366f1',
+              '&:hover': {
+                borderColor: '#4f46e5',
+                backgroundColor: 'rgba(99, 102, 241, 0.04)',
+              },
+              fontWeight: 600,
+              borderRadius: '16px',
+              px: 2,
+              py: 0.5,
+            }}
+          >
+            Load Example Audio
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={loadTestTranscript}
+            sx={{ 
+              borderColor: '#0b57d0',
+              color: '#0b57d0',
+              '&:hover': {
+                borderColor: '#00639b',
+                backgroundColor: 'rgba(11, 87, 208, 0.04)',
+              },
+              fontWeight: 600,
+              borderRadius: '16px',
+              px: 2,
+              py: 0.5,
+            }}
+          >
+            Load Test Transcript
+          </Button>
+        </Box>
+      )}
+
+      {/* Right Sidebar - Transcript */}
+      <Drawer
+        anchor="right"
+        open={transcriptOpen}
+        onClose={() => setTranscriptOpen(false)}
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: isDesktop ? 400 : 350,
+            p: 3,
+            pt: 10,
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(248, 250, 252, 0.85) 100%)',
+            backdropFilter: 'blur(24px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+            boxShadow: '-8px 0 32px -4px rgba(0, 0, 0, 0.12)',
+            borderLeft: '1px solid rgba(255, 255, 255, 0.5)',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%)',
+              pointerEvents: 'none',
+            },
+          },
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1.5,
+              color: 'var(--primary)',
+              fontWeight: 600,
+            }}
+          >
+            <Article sx={{ 
+              fontSize: 28,
+              background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }} />
+            Live Transcript
+          </Typography>
+          <IconButton 
+            onClick={() => setTranscriptOpen(false)}
+            sx={{ 
+              color: 'var(--on-surface-variant)',
+              '&:hover': {
+                background: 'rgba(0, 0, 0, 0.04)',
+              },
+            }}
+          >
+            <Close />
+          </IconButton>
+        </Box>
+        
+        {(isRecording || isTestMode) && transcript.length > 0 && (
+          <Box sx={{ mb: 2 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => {
+                console.log('[Manual Analysis] Triggering both real-time and comprehensive analyses');
+                const recentTranscript = transcript.slice(-10);
+                if (recentTranscript.length > 0) {
+                  const formattedTranscript = recentTranscript
+                    .filter(t => !t.is_interim)
+                    .map(t => ({
+                      speaker: 'conversation',
+                      text: t.text,
+                      timestamp: t.timestamp
+                    }));
+                  
+                  if (formattedTranscript.length > 0) {
+                    // Trigger both analyses like the automatic word trigger does
+                    analyzeSegment(
+                      formattedTranscript, 
+                      { ...sessionContext, is_realtime: true }, 
+                      Math.floor(sessionDuration / 60)
+                    );
+                    analyzeSegment(
+                      formattedTranscript, 
+                      { ...sessionContext, is_realtime: false }, 
+                      Math.floor(sessionDuration / 60)
+                    );
+                  }
+                }
+              }}
+              sx={{ 
+                borderColor: '#10b981',
+                color: '#10b981',
+                '&:hover': {
+                  borderColor: '#059669',
+                  backgroundColor: 'rgba(16, 185, 129, 0.04)',
+                },
+                fontWeight: 600,
+                borderRadius: '16px',
+                px: 2,
+                py: 0.5,
+              }}
+            >
+              Analyze Now
+            </Button>
+          </Box>
+        )}
+        
+        <Box sx={{ flex: 1, overflow: 'auto' }}>
+          <TranscriptDisplay transcript={transcript} />
+        </Box>
+      </Drawer>
+
+      {/* Error Display */}
+      {error && (
+        <Box sx={{ position: 'fixed', top: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 1300 }}>
+          <MuiAlert severity="error" onClose={() => setError(null)}>
+            {error}
+          </MuiAlert>
+        </Box>
+      )}
+
+      {/* Session Summary Modal */}
+      <SessionSummaryModal
+        open={showSessionSummary}
+        onClose={() => setShowSessionSummary(false)}
+        summary={sessionSummary}
+        loading={summaryLoading}
+        error={summaryError}
+        onRetry={requestSummary}
+        sessionId={sessionId}
+      />
+
+      <RationaleModal
+        open={showRationaleModal}
+        onClose={() => setShowRationaleModal(false)}
+        rationale={pathwayGuidance.rationale}
+        immediateActions={pathwayGuidance.immediate_actions}
+        contraindications={pathwayGuidance.contraindications}
+        citations={citations}
+        onCitationClick={handleCitationModalClick}
+      />
+
+      <CitationModal
+        open={citationModalOpen}
+        onClose={() => {
+          setCitationModalOpen(false);
+          setSelectedCitationModal(null);
+        }}
+        citation={selectedCitationModal}
+      />
 
     </Box>
   );

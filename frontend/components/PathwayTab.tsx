@@ -1,11 +1,48 @@
 import React from 'react';
-import { Box, Typography, Chip } from '@mui/material';
+import { Box, Typography, Chip, Paper } from '@mui/material';
+import { HealthAndSafety, NaturePeople, Category, Exposure } from '@mui/icons-material';
+import { renderTextWithCitations } from '../utils/textRendering';
 
 interface PathwayTabProps {
   onCitationClick?: (citation: any) => void;
+  onActionClick?: (action: any, isContraindication: boolean) => void;
+  currentGuidance?: {
+    title: string;
+    time: string;
+    content: string;
+    immediateActions: Array<{
+      title: string;
+      description: string;
+      icon: 'safety' | 'grounding';
+    }>;
+    contraindications: Array<{
+      title: string;
+      description: string;
+      icon: 'cognitive' | 'exposure';
+    }>;
+  };
+  citations?: Array<{
+    citation_number: number;
+    source?: {
+      title?: string;
+      uri?: string;
+      excerpt?: string;
+      pages?: {
+        first: number;
+        last: number;
+      };
+    };
+  }>;
+  techniques?: string[];
 }
 
-const PathwayTab: React.FC<PathwayTabProps> = ({ onCitationClick }) => {
+const PathwayTab: React.FC<PathwayTabProps> = ({ 
+  onCitationClick, 
+  onActionClick,
+  currentGuidance,
+  citations = [],
+  techniques = []
+}) => {
   const handleCitationClick = () => {
     const citationData = {
       citation_number: 1,
@@ -26,126 +63,144 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
     }
   };
 
+  const getActionIcon = (iconType: string) => {
+    switch (iconType) {
+      case 'safety': return <HealthAndSafety sx={{ fontSize: 24, color: '#128937' }} />;
+      case 'grounding': return <NaturePeople sx={{ fontSize: 24, color: '#128937' }} />;
+      case 'cognitive': return <Category sx={{ fontSize: 24, color: '#b3261e' }} />;
+      case 'exposure': return <Exposure sx={{ fontSize: 24, color: '#b3261e' }} />;
+      default: return <HealthAndSafety sx={{ fontSize: 24, color: '#128937' }} />;
+    }
+  };
+
+  const ActionCard = ({ action, isContraindication = false }: { 
+    action: any; 
+    isContraindication?: boolean; 
+  }) => (
+    <Paper
+      onClick={() => onActionClick && onActionClick(action, isContraindication)}
+      sx={{
+        p: 1.5,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        border: '1px solid #c4c7c5',
+        borderRadius: '16px',
+        minHeight: '120px',
+        cursor: 'pointer',
+        '&:hover': {
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+        },
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5, mb: 2 }}>
+        {getActionIcon(action.icon)}
+      </Box>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+        <div style={{ 
+          fontWeight: 600, 
+          fontSize: '16px', 
+          lineHeight: '24px',
+          color: '#1f1f1f',
+        }}>
+          {renderTextWithCitations(action.title, {
+            citations,
+            onCitationClick: onCitationClick || (() => {}),
+            markdown: true
+          })}
+        </div>
+        <div style={{ 
+          fontSize: '14px', 
+          lineHeight: '20px',
+          color: '#444746',
+        }}>
+          {renderTextWithCitations(action.description, {
+            citations,
+            onCitationClick: onCitationClick || (() => {}),
+            markdown: true
+          })}
+        </div>
+      </Box>
+    </Paper>
+  );
+
   return (
     <Box sx={{ 
       display: 'flex',
       flexDirection: 'column',
-      gap: 4,
+      gap: 6,
       pb: 4,
       position: 'relative',
     }}>
-      {/* Main pathway content */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <Typography 
-          variant="h5" 
-          sx={{ 
-            fontSize: '28px',
-            fontWeight: 400,
-            lineHeight: '36px',
-            color: '#1f1f1f',
-          }}
-        >
-          The patient's increasing distress, dissociative symptoms, and disclosure of suicidal ideation indicate that the current cognitive-heavy approach is insufficient to manage their overwhelming anxiety and ensure safety.
-        </Typography>
+      {/* Main pathway content - comprehensive analysis */}
+      {currentGuidance && currentGuidance.content && (
+        <div style={{
+          fontSize: '28px',
+          fontWeight: 400,
+          lineHeight: '36px',
+          color: '#1f1f1f',
+          whiteSpace: 'pre-line',
+        }}>
+          {renderTextWithCitations(currentGuidance.content, {
+            citations,
+            onCitationClick: onCitationClick || (() => {}),
+            markdown: true
+          })}
+        </div>
+      )}
 
-        <Typography 
-          variant="h5" 
-          sx={{ 
-            fontSize: '28px',
-            fontWeight: 400,
-            lineHeight: '36px',
-            color: '#1f1f1f',
-          }}
-        >
-          While cognitive restructuring is a core CBT technique¹, it is not effectively translating to real-world symptom reduction for this patient, highlighting a need for more immediate, experiential, and skills-based interventions.
-        </Typography>
+      {/* Action Cards */}
+      {currentGuidance && (currentGuidance.immediateActions?.length > 0 || currentGuidance.contraindications?.length > 0) && (
+        <Box sx={{ display: 'flex', gap: 4 }}>
+          {/* Immediate Actions */}
+          {currentGuidance.immediateActions?.length > 0 && (
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" sx={{ 
+                fontSize: '14px', 
+                fontWeight: 600, 
+                color: '#444746',
+                mb: 2,
+                letterSpacing: '0.5px',
+              }}>
+                IMMEDIATE ACTIONS
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                {currentGuidance.immediateActions.slice(0, 2).map((action, index) => (
+                  <Box key={index} sx={{ flex: 1 }}>
+                    <ActionCard action={action} />
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
 
-        <Typography 
-          variant="h5" 
-          sx={{ 
-            fontSize: '28px',
-            fontWeight: 400,
-            lineHeight: '36px',
-            color: '#1f1f1f',
-          }}
-        >
-          The patient's explicit feedback ('Maybe this approach just isn't working for me') is a crucial indicator that the current emphasis needs adjustment
-        </Typography>
-      </Box>
-
-      {/* Techniques and Citations Row */}
-      <Box sx={{ display: 'flex', gap: 6, mt: 2 }}>
-        {/* Techniques Detected */}
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="body2" sx={{ 
-            fontSize: '14px', 
-            fontWeight: 600, 
-            color: '#444746',
-            mb: 2,
-            letterSpacing: '0.5px',
-          }}>
-            TECHNIQUES DETECTED
-          </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            <Chip
-              label="Cognitive Restructuring"
-              size="medium"
-              sx={{
-                backgroundColor: '#e8f0fe',
-                border: '1px solid #c4c7c5',
-                borderRadius: '20px',
-                '& .MuiChip-label': { 
-                  fontSize: '14px',
-                  fontWeight: 400,
-                  color: '#1f1f1f',
-                },
-              }}
-            />
-            <Chip
-              label="Psychoeducation"
-              size="medium"
-              sx={{
-                backgroundColor: '#e8f0fe',
-                border: '1px solid #c4c7c5',
-                borderRadius: '20px',
-                '& .MuiChip-label': { 
-                  fontSize: '14px',
-                  fontWeight: 400,
-                  color: '#1f1f1f',
-                },
-              }}
-            />
-            <Chip
-              label="Grounding (5-4-3-2-1)"
-              size="medium"
-              sx={{
-                backgroundColor: '#e8f0fe',
-                border: '1px solid #c4c7c5',
-                borderRadius: '20px',
-                '& .MuiChip-label': { 
-                  fontSize: '14px',
-                  fontWeight: 400,
-                  color: '#1f1f1f',
-                },
-              }}
-            />
-            <Chip
-              label="Exposure (proposed)"
-              size="medium"
-              sx={{
-                backgroundColor: '#e8f0fe',
-                border: '1px solid #c4c7c5',
-                borderRadius: '20px',
-                '& .MuiChip-label': { 
-                  fontSize: '14px',
-                  fontWeight: 400,
-                  color: '#1f1f1f',
-                },
-              }}
-            />
-          </Box>
+          {/* Contraindications */}
+          {currentGuidance.contraindications?.length > 0 && (
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" sx={{ 
+                fontSize: '14px', 
+                fontWeight: 600, 
+                color: '#444746',
+                mb: 2,
+                letterSpacing: '0.5px',
+              }}>
+                CONTRAINDICATIONS
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                {currentGuidance.contraindications.slice(0, 2).map((action, index) => (
+                  <Box key={index} sx={{ flex: 1 }}>
+                    <ActionCard action={action} isContraindication />
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
         </Box>
+      )}
 
+      {/* Citations and Techniques Row */}
+      <Box sx={{ display: 'flex', gap: 6, mt: 2 }}>
         {/* Citations */}
         <Box sx={{ flex: 1 }}>
           <Typography variant="body2" sx={{ 
@@ -157,21 +212,84 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
           }}>
             CITATIONS
           </Typography>
-          <Typography 
-            variant="body2" 
-            onClick={handleCitationClick}
-            sx={{ 
-              fontSize: '14px',
-              color: '#0b57d0',
-              textDecoration: 'underline',
-              cursor: 'pointer',
-              '&:hover': {
-                textDecoration: 'none',
-              },
-            }}
-          >
-            1. Comprehensive-CBT-for-Social-Phobia-Manual.pdf
+          {citations.length > 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {citations.map((citation, index) => (
+                <Typography 
+                  key={index}
+                  variant="body2" 
+                  onClick={() => onCitationClick && onCitationClick(citation)}
+                  sx={{ 
+                    fontSize: '14px',
+                    color: '#0b57d0',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      textDecoration: 'none',
+                    },
+                  }}
+                >
+                  {citation.citation_number}. {citation.source?.title || 'Unknown Source'}
+                </Typography>
+              ))}
+            </Box>
+          ) : (
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontSize: '14px',
+                color: '#6b7280',
+                fontStyle: 'italic',
+              }}
+            >
+              No citations available yet
+            </Typography>
+          )}
+        </Box>
+
+        {/* Techniques Detected */}
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="body2" sx={{ 
+            fontSize: '14px', 
+            fontWeight: 600, 
+            color: '#444746',
+            mb: 2,
+            letterSpacing: '0.5px',
+          }}>
+            TECHNIQUES DETECTED
           </Typography>
+          {techniques.length > 0 ? (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {techniques.map((technique, index) => (
+                <Chip
+                  key={index}
+                  label={technique}
+                  size="medium"
+                  sx={{
+                    backgroundColor: '#e8f0fe',
+                    border: '1px solid #c4c7c5',
+                    borderRadius: '20px',
+                    '& .MuiChip-label': { 
+                      fontSize: '14px',
+                      fontWeight: 400,
+                      color: '#1f1f1f',
+                    },
+                  }}
+                />
+              ))}
+            </Box>
+          ) : (
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontSize: '14px',
+                color: '#6b7280',
+                fontStyle: 'italic',
+              }}
+            >
+              No techniques detected yet
+            </Typography>
+          )}
         </Box>
       </Box>
 

@@ -321,6 +321,7 @@ Timing: {previous_alert.get('timing', 'N/A')}
         if is_realtime:
             # FAST PATH: Real-time guidance - both safety and helpful suggestions
             analysis_prompt = constants.REALTIME_ANALYSIS_PROMPT.format(
+                current_approach=session_context.get('current_approach', 'Cognitive Behavioral Therapy'),
                 transcript_text=transcript_text,
                 previous_alert_context=previous_alert_context
             )
@@ -332,7 +333,7 @@ Timing: {previous_alert.get('timing', 'N/A')}
                 session_duration=session_duration,
                 session_type=session_context.get('session_type', 'General Therapy'),
                 primary_concern=session_context.get('primary_concern', 'Not specified'),
-                current_approach=session_context.get('current_approach', 'Not specified'),
+                current_approach=session_context.get('current_approach', 'Cognitive Behavioral Therapy'),
                 transcript_text=transcript_text
             )
         

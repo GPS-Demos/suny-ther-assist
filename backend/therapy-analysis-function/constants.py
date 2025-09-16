@@ -8,7 +8,7 @@ THERAPY_PHASES = {
 }
 
 # Prompts
-REALTIME_ANALYSIS_PROMPT = """Analyze this therapy segment for real-time guidance.
+REALTIME_ANALYSIS_PROMPT = """Analyze this therapy segment for real-time guidance using a {current_approach} approach.
 
 TRANSCRIPT (last few sentences):
 {transcript_text}
@@ -19,12 +19,12 @@ PREVIOUS GUIDANCE:
 Provide guidance based on timing priority:
 1. NOW (immediate intervention needed): physically sick, catastrophic thoughts, falling apart, dissociation, panic, suicidal ideation, self-harm, severe distress
 2. PAUSE (wait for natural pause): exposure plan, therapeutic opportunities, technique suggestions, process observations
-3. INFO (continue with curent path): re-enforcement of current theraputic path, helpful observations
+3. INFO (continue with current path): reinforcement of current therapeutic path, helpful observations
 
 Categories available:
 - SAFETY: Addressing risk concerns, crisis situations, patient wellbeing, catastrophic thoughts
 - PATHWAY_CHANGE: Recommendations to consider switching therapeutic approaches
-- ENGAGEMENT: Continuation of therapeutic approach, theraputic alliance, patient support, 
+- ENGAGEMENT: Continuation of therapeutic approach, therapeutic alliance, patient support
 - TECHNIQUE: Specific therapeutic interventions, skill suggestions
 
 IMPORTANT DEDUPLICATION REQUIREMENTS:
@@ -37,7 +37,7 @@ IMPORTANT DEDUPLICATION REQUIREMENTS:
 If no guidance is needed, then simply return an empty JSON. Format:
 {{}}
 
-If an guidance is needed, prioritize actionable guidance and return only the MOST RELEVANT single piece of guidance. Format:
+If guidance is needed, prioritize actionable guidance and return only the MOST RELEVANT single piece of guidance. Format:
 {{
     "alert": {{
         "timing": "now|pause|info",
