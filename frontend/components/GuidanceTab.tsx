@@ -1,6 +1,17 @@
 import React from 'react';
 import { Box, Paper, Typography } from '@mui/material';
-import { HealthAndSafety, NaturePeople, Category, Exposure } from '@mui/icons-material';
+import { 
+  HealthAndSafety, 
+  NaturePeople, 
+  Category, 
+  Exposure,
+  Shield,
+  Psychology,
+  SwapHoriz,
+  Build,
+  Lightbulb,
+  Assessment
+} from '@mui/icons-material';
 import { Alert as IAlert } from '../types/types';
 
 interface GuidanceTabProps {
@@ -36,17 +47,20 @@ interface GuidanceTabProps {
 const QuoteCard = ({ time, text }: { time: string, text: string }) => (
   <Paper
     sx={{
-      p: 2,
+      p: 3,
       display: 'flex',
       flexDirection: 'column',
-      gap: 2,
       border: '1px solid #c4c7c5',
       borderRadius: '16px',
       flex: 1,
-      minHeight: '140px',
     }}
   >
-    <Typography variant="body2" sx={{ color: '#444746', fontSize: '14px', lineHeight: '20px' }}>
+    <Typography variant="body1" sx={{
+      fontWeight: 400,
+      fontSize: '16px',
+      lineHeight: '24px',
+      color: '#1f1f1f',
+    }}>
       {text}
     </Typography>
   </Paper>
@@ -69,6 +83,37 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
     }
   };
 
+  // Get alert icon based on category and timing (matching AlertDisplay.tsx logic)
+  const getAlertIcon = (category: string, timing: string) => {
+    // Color based on timing: now=red, pause=orange, info=green
+    const getColor = () => {
+      switch (timing?.toLowerCase()) {
+        case 'now': return '#dc2626'; // Red
+        case 'pause': return '#d97706'; // Orange
+        case 'info': return '#059669'; // Green
+        default: return '#6b7280'; // Gray
+      }
+    };
+
+    const iconColor = getColor();
+    const iconSize = 32;
+
+    switch (category) {
+      case 'safety':
+        return <Shield sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'technique':
+        return <Build sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'pathway_change':
+        return <SwapHoriz sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'engagement':
+        return <Lightbulb sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'process':
+        return <Assessment sx={{ fontSize: iconSize, color: iconColor }} />;
+      default:
+        return <Psychology sx={{ fontSize: iconSize, color: iconColor }} />;
+    }
+  };
+
   // Extract relevant quotes from recent alerts or transcript
   const getRelevantQuotes = () => {
     const quotes: Array<{ time: string; text: string }> = [];
@@ -80,7 +125,7 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
       Array.isArray(alert.evidence)
     );
     
-    safetyAlerts.slice(0, 2).forEach(alert => {
+    safetyAlerts.slice(0, 1).forEach(alert => {
       if (alert.evidence && alert.evidence.length > 0) {
         const evidence = alert.evidence[0]; // This is a string
         if (evidence.includes('"')) {
@@ -103,13 +148,13 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
     });
     
     // If we don't have enough quotes from alerts, extract from recent transcript
-    if (quotes.length < 2) {
+    if (quotes.length < 1) {
       const recentTranscript = transcript
         .filter(entry => !entry.is_interim && entry.text.length > 20)
         .slice(-10); // Last 10 entries
       
       for (const entry of recentTranscript) {
-        if (quotes.length >= 2) break;
+        if (quotes.length >= 1) break;
         
         // Look for concerning keywords
         const concerningKeywords = ['anxiety', 'stress', 'worried', 'scared', 'overwhelmed', 'difficult', 'hard'];
@@ -123,21 +168,17 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
       }
     }
     
-    // Default quotes if no dynamic content available
+    // Default quote if no dynamic content available
     if (quotes.length === 0) {
       return [
         {
-          time: "02:47",
-          text: `"I haven't done anything, but the thoughts are getting stronger. Yesterday I was looking at my knife set in the kitchen and... I had to leave the room."`
-        },
-        {
-          time: "03:01", 
-          text: `"Sometimes when everything gets too overwhelming, I have thoughts about... hurting myself. Just to make the anxiety stop."`
+          time: "",
+          text: "Direct quotes will appear here."
         }
       ];
     }
     
-    return quotes.slice(0, 2); // Return max 2 quotes
+    return quotes.slice(0, 1); // Return max 1 quote
   };
 
   // Get dynamic evidence from alerts
@@ -145,24 +186,15 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
     const recentAlert = alerts.length > 0 ? alerts[0] : null;
     
     if (recentAlert && recentAlert.category === 'safety') {
-      return {
-        primary: recentAlert.message || "Safety concerns detected in the conversation requiring immediate clinical attention.",
-        secondary: recentAlert.recommendation || "This requires immediate assessment and appropriate intervention protocols."
-      };
+      return recentAlert.message || "Safety concerns detected in the conversation requiring immediate clinical attention.";
     }
     
     if (recentAlert) {
-      return {
-        primary: recentAlert.message || "Clinical guidance available based on recent conversation analysis.",
-        secondary: recentAlert.recommendation || "Consider the suggested interventions and monitor client response."
-      };
+      return recentAlert.message || "Clinical guidance available based on recent conversation analysis.";
     }
     
     // Default evidence
-    return {
-      primary: "The patient has disclosed suicidal ideation ('thoughts about hurting myself... to make the anxiety stop') and a recent specific incident ('looking at my knife set... had to leave the room').",
-      secondary: "This requires immediate, direct assessment of intent, plan, and means, followed by collaborative safety planning."
-    };
+    return "Evidence will appear here.";
   };
 
   // Get main guidance content - prioritize real-time alerts
@@ -170,16 +202,19 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
     // Use the most recent real-time alert first
     if (alerts.length > 0) {
       const recentAlert = alerts[0];
-      if (recentAlert.title && recentAlert.recommendation) {
-        return `${recentAlert.title}\n\n${recentAlert.recommendation}`;
-      }
-      if (recentAlert.recommendation) {
-        return recentAlert.recommendation;
-      }
+      return {
+        hasAlert: true,
+        alert: recentAlert,
+        content: recentAlert.recommendation || recentAlert.message || "Alert detected",
+      };
     }
     
     // Use currentGuidance content or default
-    return currentGuidance.content || "Start a session to receive real-time therapeutic guidance.";
+    return {
+      hasAlert: false,
+      alert: null,
+      content: currentGuidance.content || "Start a session to receive real-time therapeutic guidance.",
+    };
   };
 
   const ActionCard = ({ action, isContraindication = false }: { 
@@ -241,15 +276,55 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
       position: 'relative',
     }}>
       {/* Main guidance content - large text */}
-      <div style={{
-        fontSize: '28px',
-        fontWeight: 400,
-        lineHeight: '36px',
-        color: '#1f1f1f',
-        whiteSpace: 'pre-line',
-      }}>
-        {getMainGuidanceContent()}
-      </div>
+      {(() => {
+        const mainContent = getMainGuidanceContent();
+        
+        if (mainContent.hasAlert && mainContent.alert) {
+          return (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* Alert title with icon */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                {getAlertIcon(mainContent.alert.category, mainContent.alert.timing || 'info')}
+                <Typography
+                  variant="h4"
+                  sx={{
+                    fontSize: '28px',
+                    fontWeight: 600,
+                    lineHeight: '36px',
+                    color: '#1f1f1f',
+                  }}
+                >
+                  {mainContent.alert.title}
+                </Typography>
+              </Box>
+              
+              {/* Alert content */}
+              <div style={{
+                fontSize: '28px',
+                fontWeight: 400,
+                lineHeight: '36px',
+                color: '#1f1f1f',
+                whiteSpace: 'pre-line',
+              }}>
+                {mainContent.content}
+              </div>
+            </Box>
+          );
+        }
+        
+        // Default content without alert
+        return (
+          <div style={{
+            fontSize: '28px',
+            fontWeight: 400,
+            lineHeight: '36px',
+            color: '#1f1f1f',
+            whiteSpace: 'pre-line',
+          }}>
+            {mainContent.content}
+          </div>
+        );
+      })()}
 
       {/* Evidence and Direct Quotes sections */}
       <Box sx={{ display: 'flex', gap: 4 }}>
@@ -268,20 +343,17 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
             p: 3,
             display: 'flex',
             flexDirection: 'column',
-            gap: 2,
             border: '1px solid #c4c7c5',
             borderRadius: '16px',
             backgroundColor: '#fff',
-            minHeight: '200px',
           }}>
             <Typography variant="body1" sx={{
               fontWeight: 400,
               fontSize: '16px',
               lineHeight: '24px',
               color: '#1f1f1f',
-              mb: 1,
             }}>
-              {getEvidenceContent().primary}
+              {getEvidenceContent()}
             </Typography>
           </Paper>
         </Box>

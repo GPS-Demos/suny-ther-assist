@@ -48,6 +48,8 @@ import {
   Lightbulb,
   Assessment,
   Build,
+  ContactSupport,
+  Explore,
 } from '@mui/icons-material';
 import { Alert, SessionMetrics, PathwayIndicators, SessionContext, Alert as IAlert, Citation, SessionSummary } from '../types/types';
 import { formatDuration } from '../utils/timeUtils';
@@ -523,7 +525,7 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
       title: isRecording ? "Listening for guidance..." : "No guidance available",
       time: formatDuration(sessionDuration),
       content: isRecording 
-        ? "AI analysis will provide real-time clinical guidance here as the session progresses."
+        ? "Listening..."
         : "Start a session to receive real-time therapeutic guidance.",
       immediateActions: [],
       contraindications: []
@@ -555,8 +557,8 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
       title: hasReceivedComprehensiveAnalysis ? "No pathway guidance available" : "Waiting for comprehensive analysis...",
       time: formatDuration(sessionDuration),
       content: hasReceivedComprehensiveAnalysis 
-        ? "No specific pathway guidance available for this session segment."
-        : "Comprehensive analysis will provide detailed pathway guidance here, including contraindications and alternative approaches.",
+        ? "Thinking..."
+        : "Start a session to receive comprehensive therapeutic guidance.",
       immediateActions: [],
       contraindications: []
     };
@@ -919,11 +921,11 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
 
             {/* Navigation Menu */}
             <Box>
-              {[
-                { key: 'guidance', label: 'Guidance', icon: <Category sx={{ fontSize: 24, color: '#444746' }} /> },
-                { key: 'pathway', label: 'Pathway', icon: <Route sx={{ fontSize: 24, color: '#444746' }} /> },
-                { key: 'alternatives', label: 'Alternatives', icon: <CallSplit sx={{ fontSize: 24, color: '#444746' }} /> },
-              ].map((item) => (
+            {[
+              { key: 'guidance', label: 'Guidance', icon: <Explore sx={{ fontSize: 24, color: '#444746' }} /> },
+              { key: 'pathway', label: 'Pathway', icon: <Route sx={{ fontSize: 24, color: '#444746' }} /> },
+              { key: 'alternatives', label: 'Alternatives', icon: <CallSplit sx={{ fontSize: 24, color: '#444746' }} /> },
+            ].map((item) => (
                 <Box
                   key={item.key}
                   sx={{

@@ -44,7 +44,7 @@ If guidance is needed, prioritize actionable guidance and return only the MOST R
         "category": "safety|technique|pathway_change|engagement",
         "title": "Brief descriptive title",
         "message": "Specific action or observation (1-3 sentences max)",
-        "evidence": ["relevant quote if applicable"],
+        "evidence": ["relevant quote(s) from the patient"],
         "recommendation": "Action(s) to take if applicable. IMPORTANT: format each recommendation as a markdown bullet point using '- ' prefix (e.g., '- First action\n- Second action')"
     }}
 }}
