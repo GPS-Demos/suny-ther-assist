@@ -30,7 +30,7 @@ export interface SessionMetrics {
   engagement_level: number;
   therapeutic_alliance: 'weak' | 'moderate' | 'strong';
   techniques_detected: string[];
-  emotional_state: 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'unknown';
+  emotional_state: 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'engaged' | 'unknown';
   phase_appropriate: boolean;
 }
 
