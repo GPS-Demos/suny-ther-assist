@@ -17,25 +17,22 @@ PREVIOUS GUIDANCE:
 {previous_alert_context}
 
 Provide guidance based on timing priority:
-1. NOW (immediate intervention needed): physically sick, catastrophic thoughts, dissociation, panic, suicidal ideation, self-harm, severe distress
+1. NOW (immediate intervention needed): physically sick, catastrophic thoughts, falling apart, dissociation, panic, suicidal ideation, self-harm, severe distress
 2. PAUSE (wait for natural pause): exposure plan, therapeutic opportunities, technique suggestions, process observations
 3. INFO (continue with curent path): re-enforcement of current theraputic path, helpful observations
 
 Categories available:
-- SAFETY: Risk concerns, crisis situations, client wellbeing
+- SAFETY: Addressing risk concerns, crisis situations, patient wellbeing, catastrophic thoughts
+- PATHWAY_CHANGE: Recommendations to consider switching therapeutic approaches
+- ENGAGEMENT: Continuation of therapeutic approach, theraputic alliance, patient support, 
 - TECHNIQUE: Specific therapeutic interventions, skill suggestions
-- PATHWAY_CHANGE: Recommendations to switch therapeutic approaches
-- ENGAGEMENT: Theraputic alliance, patient support, continuation recommendations
 
 IMPORTANT DEDUPLICATION REQUIREMENTS:
 - The "PREVIOUS GUIDANCE" section above shows what guidance was recently displayed to the therapist
-- Do not generate duplicate, or similar guidance as the previous guidance
-- Only generate new guidance if there is genuinely NEW or DIFFERENT guidance needed.
-- Most of the time, new guidance will not be needed.
+- Do not generate duplicate, or even similar guidance as the PREVIOUS GUIDANCE. Only generate genuinely NEW or DIFFERENT guidance.
+- Do not generate new guidance with the same alert.category as PREVIOUS GUIDANCE. Select a different category.
 - Safety guidance (timing: "now") are exempt from this rule and should always be generated if needed
-
-IMPORTANT NOTE:
-If somebody says something like "Im scared but I want to do that. Lets do that" in response to an exposure plan, strongly consider providing guidance (an alert) to re-engage with the exposure plan.
+- IMPORTANT: Most of the time, no new guidance will be needed. Do not provide guidance if not needed.
 
 If no guidance is needed, then simply return an empty JSON. Format:
 {{}}
@@ -44,13 +41,16 @@ If an guidance is needed, prioritize actionable guidance and return only the MOS
 {{
     "alert": {{
         "timing": "now|pause|info",
-        "category": "safety|technique|pathway_change|engagement|process",
+        "category": "safety|technique|pathway_change|engagement",
         "title": "Brief descriptive title",
         "message": "Specific action or observation (1-3 sentences max)",
         "evidence": ["relevant quote if applicable"],
-        "recommendation": "Action(s) to take if applicable. IMPORTANT: format each recommendation as a bullet point"
+        "recommendation": "Action(s) to take if applicable. IMPORTANT: format each recommendation as a markdown bullet point using '- ' prefix (e.g., '- First action\n- Second action')"
     }}
-}}"""
+}}
+
+IMPORTANT NOTE:
+Always refer to the patient as 'patient'"""
 
 COMPREHENSIVE_ANALYSIS_PROMPT = """<thinking>
 Analyze this therapy session segment step by step:
@@ -86,13 +86,13 @@ Provide analysis with a JSON response only, no other text should exist besides t
 {{
     "session_metrics": {{
         "engagement_level": 0.0-1.0,
-        "therapeutic_alliance": "weak|moderate|strong",
+        "therapeutic_alliance": "weak|moderate|strong IMPORTANT: only return one of the provided options",
         "techniques_detected": ["technique1", "technique2"],
-        "emotional_state": "calm|anxious|distressed|dissociated|engaged",
+        "emotional_state": "calm|anxious|distressed|dissociated|engaged IMPORTANT: only return one of the provided options",
         "phase_appropriate": true|false
     }},
     "pathway_indicators": {{
-        "current_approach_effectiveness": "effective|struggling|ineffective",
+        "current_approach_effectiveness": "effective|struggling|ineffective IMPORTANT: only return one of the provided options",
         "alternative_pathways": ["pathway1", "pathway2"],
         "change_urgency": "none|monitor|consider|recommended"
     }},
@@ -111,7 +111,10 @@ Provide analysis with a JSON response only, no other text should exist besides t
     }}
 }}
 
-Focus on clinically actionable insights. Only surface critical information that requires immediate attention. Always provide pathway guidance even when the current approach is effective."""
+Focus on clinically actionable insights. Only surface critical information that requires immediate attention. Always provide pathway guidance even when the current approach is effective.
+
+IMPORTANT NOTE:
+Always refer to the patient as 'patient'"""
 
 PATHWAY_GUIDANCE_PROMPT = """You are a clinical supervisor providing pathway guidance for a therapy session.
 

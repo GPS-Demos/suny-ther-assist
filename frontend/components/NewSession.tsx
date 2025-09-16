@@ -32,6 +32,9 @@ import {
   Psychology,
   ArrowBack,
   VolumeUp,
+  Build,
+  Lightbulb,
+  Assessment,
 } from '@mui/icons-material';
 import TranscriptDisplay from './TranscriptDisplay';
 import AlertDisplay from './AlertDisplay';
@@ -92,7 +95,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
   const [citations, setCitations] = useState<Citation[]>([]);
   const [sessionMetrics, setSessionMetrics] = useState({
     engagement_level: 0.0,
-    therapeutic_alliance: 'moderate' as 'strong' | 'moderate' | 'weak',
+    therapeutic_alliance: 'unknown' as 'strong' | 'moderate' | 'weak' | 'unknown',
     techniques_detected: [] as string[],
     emotional_state: 'unknown' as 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'engaged' | 'unknown',
     phase_appropriate: false,
@@ -127,6 +130,9 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
   const [showRationaleModal, setShowRationaleModal] = useState(false);
   const [citationModalOpen, setCitationModalOpen] = useState(false);
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
+  
+  // Comprehensive analysis tracking
+  const [hasReceivedComprehensiveAnalysis, setHasReceivedComprehensiveAnalysis] = useState(false);
   
   // Test mode state
   const [isTestMode, setIsTestMode] = useState(false);
@@ -200,12 +206,28 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     getAuthToken();
   }, [currentUser]);
 
+  // Track logged analyses to prevent duplicate logs in Strict Mode
+  const lastLoggedAnalysisRef = useRef<Set<string>>(new Set());
+
   const { analyzeSegment, generateSessionSummary } = useTherapyAnalysis({
     authToken,
     onAnalysis: (analysis) => {
       const analysisType = (analysis as any).analysis_type;
       const isRealtime = analysisType === 'realtime';
-        console.log(`[onAnalysis] 📊 ${analysisType.toUpperCase()} analysis:`, analysis);
+      
+      // Create a unique identifier for this analysis to prevent duplicate logs
+      const analysisId = `${analysisType}-${Date.now()}-${JSON.stringify(analysis).length}`;
+      
+      // Only log if we haven't logged this analysis before (prevents Strict Mode duplicate logs)
+      if (!lastLoggedAnalysisRef.current.has(analysisId)) {
+        lastLoggedAnalysisRef.current.add(analysisId);
+        
+        // Clean up old entries to prevent memory leaks (keep only last 50)
+        if (lastLoggedAnalysisRef.current.size > 50) {
+          const entries = Array.from(lastLoggedAnalysisRef.current);
+          lastLoggedAnalysisRef.current = new Set(entries.slice(-25));
+        }
+      }
       
       if (isRealtime) {
         // Real-time analysis: Only update alerts
@@ -221,17 +243,33 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
 
             if (result.shouldAdd) {
               const updatedAlerts = [newAlert, ...prev].slice(0, 8);
-              console.log(`[Session] ⚠️ New ${newAlert.category} alert: "${newAlert.title}" (${newAlert.timing})`);
+              
+              // Create unique log identifier for this specific alert
+              const alertLogId = `new-alert-${newAlert.timestamp}-${newAlert.title}`;
+              if (!lastLoggedAnalysisRef.current.has(alertLogId)) {
+                lastLoggedAnalysisRef.current.add(alertLogId);
+                console.log(`[Session] ⚠️ New ${newAlert.category} alert: "${newAlert.title}" (${newAlert.timing})`);
+              }
+              
               return updatedAlerts;
             } else {
               const reason = result.debugInfo?.reason || 'deduplication rules';
-              console.log(`[Session] 🚫 Alert filtered: ${reason}`, analysis.alert);
+              
+              // Create unique log identifier for this specific filter event
+              const filterLogId = `filter-alert-${Date.now()}-${analysis.alert?.title || 'unknown'}`;
+              if (!lastLoggedAnalysisRef.current.has(filterLogId)) {
+                lastLoggedAnalysisRef.current.add(filterLogId);
+                console.log(`[Session] 🚫 Alert filtered: ${reason}`, analysis.alert);
+              }
+              
               return prev;
             }
           });
         }
       } else {
         // Comprehensive RAG analysis: Update metrics, pathway, citations
+        setHasReceivedComprehensiveAnalysis(true);
+        
         if (analysis.session_metrics) {
           setSessionMetrics(prev => ({
             ...prev,
@@ -384,6 +422,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     setSummaryError(null);
     setPausedTime(0);
     setIsPaused(false);
+    setHasReceivedComprehensiveAnalysis(false);
     await startMicrophoneRecording();
   };
 
@@ -471,6 +510,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     setTranscript([]);
     setPausedTime(0);
     setIsPaused(false);
+    setHasReceivedComprehensiveAnalysis(false);
     setPathwayGuidance({
       rationale: "This is a test rationale for the loaded transcript. The pathway is being monitored based on the current interaction.",
       immediate_actions: ["Test Action: Build more rapport with the client.", "Test Action: Validate the client's feelings about the situation."],
@@ -556,6 +596,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     setSummaryError(null);
     setPausedTime(0);
     setIsPaused(false);
+    setHasReceivedComprehensiveAnalysis(false);
     
     // Start streaming the example audio file
     await startAudioFileStreaming('/audio/suny-good-audio.mp3');
@@ -585,24 +626,42 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
 
   const selectedAlert = selectedAlertIndex !== null ? alerts[selectedAlertIndex] : null;
 
+  // Track the last logged alert to prevent duplicate logs in Strict Mode
+  const lastLoggedAlertRef = useRef<{
+    selectedAlertIndex: number | null;
+    alertId: string | null;
+  }>({ selectedAlertIndex: null, alertId: null });
+
   // Log selectedAlert.recommendation whenever a new selectedAlert is chosen
   useEffect(() => {
-    if (selectedAlert && selectedAlert.recommendation) {
-      console.log('[Alert Selection] Full alert details:', {
-        title: selectedAlert.title,
-        category: selectedAlert.category,
-        timing: selectedAlert.timing,
-        recommendation: selectedAlert.recommendation,
-        timestamp: selectedAlert.timestamp
-      });
-    } else if (selectedAlert) {
-      console.log('[Alert Selection] Selected alert has no recommendation:', {
-        title: selectedAlert.title,
-        category: selectedAlert.category,
-        timing: selectedAlert.timing
-      });
-    } else {
-      console.log('[Alert Selection] No alert selected');
+    // Create a unique identifier for the current alert state
+    const alertId = selectedAlert ? `${selectedAlert.timestamp}-${selectedAlert.title}` : null;
+    const currentState = { selectedAlertIndex, alertId };
+    
+    // Only log if the state has actually changed (prevents Strict Mode duplicate logs)
+    if (
+      lastLoggedAlertRef.current.selectedAlertIndex !== currentState.selectedAlertIndex ||
+      lastLoggedAlertRef.current.alertId !== currentState.alertId
+    ) {
+      lastLoggedAlertRef.current = currentState;
+      
+      if (selectedAlert && selectedAlert.recommendation) {
+        console.log('[Alert Selection] Full alert details:', {
+          title: selectedAlert.title,
+          category: selectedAlert.category,
+          timing: selectedAlert.timing,
+          recommendation: selectedAlert.recommendation,
+          timestamp: selectedAlert.timestamp
+        });
+      } else if (selectedAlert) {
+        console.log('[Alert Selection] Selected alert has no recommendation:', {
+          title: selectedAlert.title,
+          category: selectedAlert.category,
+          timing: selectedAlert.timing
+        });
+      } else {
+        console.log('[Alert Selection] No alert selected');
+      }
     }
   }, [selectedAlert, selectedAlertIndex]);
 
@@ -618,6 +677,30 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
       return patient?.name || 'John Doe';
     }
     return 'New Session';
+  };
+
+  // Helper function to ensure recommendations are formatted as bullet points
+  const normalizeRecommendationFormat = (recommendation: string): string => {
+    if (!recommendation) return recommendation;
+    
+    // If it already contains markdown bullet points, return as-is
+    if (recommendation.includes('- ') || recommendation.includes('* ')) {
+      return recommendation;
+    }
+    
+    // Split by periods or newlines to create separate bullet points
+    const lines = recommendation
+      .split(/[.\n]/)
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+    
+    // If we only have one line, return as-is (might be a single sentence)
+    if (lines.length <= 1) {
+      return recommendation;
+    }
+    
+    // Convert to markdown bullet points
+    return lines.map(line => `- ${line}`).join('\n');
   };
 
   return (
@@ -797,20 +880,30 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
                   }
                 };
 
+                const category = alert.category.toLowerCase() || 'process';
                 const getContentIcon = () => {
-                  if (alert.category === 'safety') {
+                  // Safety takes precedence
+                  if (category === 'safety') {
                     return <Shield sx={{ fontSize: 20, color: getAlertColor() }} />;
                   }
-                  if (alert.category === 'pathway_change') {
+                  // Specific therapeutic techniques and interventions
+                  if (category === 'technique') {
+                  return <Psychology sx={{ fontSize: 20, color: getAlertColor() }} />;
+                  }
+                  // Pathway changes
+                  if (category === 'pathway_change') {
                     return <SwapHoriz sx={{ fontSize: 20, color: getAlertColor() }} />;
                   }
-                  if (alert.category === 'engagement') {
-                    return <TrendingUp sx={{ fontSize: 20, color: getAlertColor() }} />;
+                  // Engagement/motivation
+                  if (category === 'engagement') {
+                    return <Lightbulb sx={{ fontSize: 20, color: getAlertColor() }} />;
                   }
-                  if (alert.category === 'process') {
-                    return <Info sx={{ fontSize: 20, color: getAlertColor() }} />;
+                  // Process observations
+                  if (category === 'process') {
+                    return <Assessment sx={{ fontSize: 20, color: getAlertColor() }} />;
                   }
-                  return <Psychology sx={{ fontSize: 20, color: getAlertColor() }} />;
+                  // Default fallback (Psychology for unknown categories)
+                  return <Build sx={{ fontSize: 20, color: getAlertColor() }} />;
                 };
 
                 return (
@@ -841,7 +934,10 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {/* Session Vitals */}
-            <SessionVitals metrics={sessionMetrics} />
+            <SessionVitals 
+              metrics={sessionMetrics} 
+              isListening={isRecording && !hasReceivedComprehensiveAnalysis} 
+            />
 
             {/* Pathway Summary Section */}
             <Paper
@@ -864,21 +960,50 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
               </Box>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="body2" color="text.secondary">Techniques</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>{sessionMetrics.techniques_detected.length}</Typography>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 600,
+                    color: (isRecording && !hasReceivedComprehensiveAnalysis) || !hasReceivedComprehensiveAnalysis
+                      ? 'text.secondary'
+                      : 'inherit'
+                  }}
+                >
+                  {isRecording && !hasReceivedComprehensiveAnalysis
+                    ? 'Listening...'
+                    : !hasReceivedComprehensiveAnalysis
+                    ? 'Unknown'
+                    : sessionMetrics.techniques_detected.length
+                  }
+                </Typography>
               </Box>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="body2" color="text.secondary">Effectiveness</Typography>
                 <Typography
                   variant="h6"
                   sx={{
-                    color: getStatusColor(pathwayIndicators.current_approach_effectiveness),
+                    color: isRecording && !hasReceivedComprehensiveAnalysis
+                      ? 'text.secondary'
+                      : getStatusColor(pathwayIndicators.current_approach_effectiveness),
                     fontWeight: 600,
                     textTransform: 'capitalize'
                   }}>
-                  {pathwayIndicators.current_approach_effectiveness}
+                  {isRecording && !hasReceivedComprehensiveAnalysis
+                    ? 'Listening...'
+                    : !hasReceivedComprehensiveAnalysis
+                    ? 'Unknown'
+                    : pathwayIndicators.current_approach_effectiveness
+                  }
                 </Typography>
               </Box>
-              <Button variant="outlined" size="small" onClick={() => setShowRationaleModal(true)}>Show Rationale</Button>
+              <Button 
+                variant="outlined" 
+                size="small" 
+                onClick={() => setShowRationaleModal(true)}
+                disabled={!hasReceivedComprehensiveAnalysis}
+              >
+                Show Rationale
+              </Button>
             </Paper>
 
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
@@ -934,7 +1059,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
                           fontSize: '1.1rem !important'
                         } 
                       }}>
-                        {renderMarkdown(selectedAlert.recommendation)}
+                        {renderMarkdown(normalizeRecommendationFormat(selectedAlert.recommendation))}
                       </Box>
                     )}
                   </Box>

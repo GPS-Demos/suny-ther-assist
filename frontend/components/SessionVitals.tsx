@@ -4,20 +4,37 @@ import { getStatusColor } from '../utils/colorUtils';
 
 interface SessionVitalsProps {
   metrics: {
-    therapeutic_alliance: 'strong' | 'moderate' | 'weak';
-    emotional_state: 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'engaged' | 'unknown';
+    therapeutic_alliance: 'strong' | 'moderate' | 'weak' | 'unknown' | 'listening';
+    emotional_state: 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'engaged' | 'unknown' | 'listening';
     engagement_level: number;
   };
+  isListening?: boolean;
 }
 
-const SessionVitals: React.FC<SessionVitalsProps> = ({ metrics }) => {
+const SessionVitals: React.FC<SessionVitalsProps> = ({ metrics, isListening = false }) => {
   const { therapeutic_alliance, emotional_state, engagement_level } = metrics;
 
-  const getEngagementStatus = (level: number): 'strong' | 'moderate' | 'weak' => {
+  const getEngagementStatus = (level: number): 'strong' | 'moderate' | 'weak' | 'unknown' | 'listening' => {
+    if (isListening || therapeutic_alliance === 'listening' || emotional_state === 'listening') return 'listening';
+    if (therapeutic_alliance === 'unknown' || emotional_state === 'unknown') return 'unknown';
     if (level > 0.7) return 'strong';
     if (level > 0.4) return 'moderate';
     return 'weak';
   };
+
+  const getDisplayValue = (value: string, isListening: boolean) => {
+    if (isListening) return 'Listening...';
+    if (value === 'unknown') return 'Unknown';
+    return value;
+  };
+
+  const getEngagementDisplayValue = (level: number, status: string) => {
+    if (status === 'listening') return 'Listening...';
+    if (status === 'unknown') return 'Unknown';
+    return `${(level * 100).toFixed(0)}%`;
+  };
+
+  const engagementStatus = getEngagementStatus(engagement_level);
 
   return (
     <Paper
@@ -35,19 +52,19 @@ const SessionVitals: React.FC<SessionVitalsProps> = ({ metrics }) => {
       <Box sx={{ textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">Therapeutic Alliance</Typography>
         <Typography variant="h6" sx={{ fontWeight: 600, textTransform: 'capitalize', color: getStatusColor(therapeutic_alliance) }}>
-          {therapeutic_alliance}
+          {getDisplayValue(therapeutic_alliance, isListening)}
         </Typography>
       </Box>
       <Box sx={{ textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">Emotional State</Typography>
         <Typography variant="h6" sx={{ fontWeight: 600, textTransform: 'capitalize', color: getStatusColor(emotional_state) }}>
-          {emotional_state}
+          {getDisplayValue(emotional_state, isListening)}
         </Typography>
       </Box>
       <Box sx={{ textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">Engagement Level</Typography>
-        <Typography variant="h6" sx={{ fontWeight: 600, color: getStatusColor(getEngagementStatus(engagement_level)) }}>
-          {(engagement_level * 100).toFixed(0)}%
+        <Typography variant="h6" sx={{ fontWeight: 600, color: getStatusColor(engagementStatus) }}>
+          {getEngagementDisplayValue(engagement_level, engagementStatus)}
         </Typography>
       </Box>
     </Paper>
