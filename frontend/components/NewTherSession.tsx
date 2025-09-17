@@ -58,6 +58,7 @@ import { renderMarkdown } from '../utils/textRendering';
 import { processNewAlert, cleanupOldAlerts } from '../utils/alertDeduplication';
 import { mockPatients } from '../utils/mockPatients';
 import { testTranscriptData } from '../utils/mockTranscript';
+import { ChartDataPoint, createChartDataPoint, pruneChartData } from '../utils/chartDataUtils';
 import SessionLineChart from './SessionLineChart';
 import ActionDetailsPanel from './ActionDetailsPanel';
 import EvidenceTab from './EvidenceTab';
@@ -154,6 +155,9 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
     change_urgency: 'none' | 'monitor' | 'consider' | 'recommended';
     rationale?: string;
   }>>([]);
+  
+  // Chart data state - collects data from comprehensive analysis regardless of UI blocking
+  const [chartDataHistory, setChartDataHistory] = useState<ChartDataPoint[]>([]);
   
   // UI state
   const [activeTab, setActiveTab] = useState<'guidance' | 'evidence' | 'pathway' | 'alternatives'>('guidance');
@@ -346,7 +350,27 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
           });
         }
       } else {
-        // Comprehensive RAG analysis: Only update if jobId matches waiting comprehensive jobId
+        // Comprehensive RAG analysis: Always collect chart data, but conditionally update UI
+        
+        // ALWAYS collect chart data from comprehensive analysis (regardless of job ID matching)
+        if (analysis.session_metrics && analysis.pathway_indicators) {
+          const newChartDataPoint = createChartDataPoint(
+            analysis.session_metrics,
+            analysis.pathway_indicators,
+            sessionDurationRef.current,
+            jobId
+          );
+          
+          setChartDataHistory(prev => {
+            const updatedHistory = [...prev, newChartDataPoint];
+            // Prune to keep reasonable size
+            return pruneChartData(updatedHistory, 100);
+          });
+          
+          console.log(`[Session] 📊 Chart data collected - Job ID: ${jobId}, Engagement: ${Math.round(analysis.session_metrics.engagement_level * 100)}%, Alliance: ${analysis.session_metrics.therapeutic_alliance}`);
+        }
+        
+        // Conditionally update UI components based on job ID matching
         const currentWaitingJobId = waitingForComprehensiveJobIdRef.current;
         if (jobId && jobId === currentWaitingJobId) {
           setHasReceivedComprehensiveAnalysis(true);
@@ -390,7 +414,7 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
             setCitations(analysis.citations);
           }
         } else {
-          console.log(`[Session] 🚫 Comprehensive results ignored - Job ID: ${jobId} (waiting for: ${currentWaitingJobId})`);
+          console.log(`[Session] 🚫 Comprehensive results ignored for UI - Job ID: ${jobId} (waiting for: ${currentWaitingJobId})`);
         }
       }
     },
@@ -677,6 +701,9 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
     setPathwayGuidance({});
     setCitations([]);
     
+    // Clear chart data for new session
+    setChartDataHistory([]);
+    
     await startMicrophoneRecording();
   };
 
@@ -774,6 +801,9 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
     setWaitingForComprehensiveJobId(null);
     setPathwayGuidance({});
     setCitations([]);
+    
+    // Clear chart data for new session
+    setChartDataHistory([]);
     
     // Set test pathway guidance (will be overridden by real analysis)
     setPathwayGuidance({
@@ -878,6 +908,9 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
     setWaitingForComprehensiveJobId(null);
     setPathwayGuidance({});
     setCitations([]);
+    
+    // Clear chart data for new session
+    setChartDataHistory([]);
     
     // Start streaming the example audio file
     await startAudioFileStreaming('/audio/suny-good-audio.mp3');
@@ -1154,7 +1187,11 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
                 />
               ))}
               
-              <SessionLineChart duration={sessionDuration} />
+              <SessionLineChart 
+                duration={sessionDuration} 
+                chartData={chartDataHistory}
+                isLiveSession={isRecording}
+              />
             </Box>
 
             {/* Event markers */}
