@@ -169,7 +169,7 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
                 fontStyle: 'italic',
               }}
             >
-              No immediate actions identified yet
+              No immediate actions available yet
             </Typography>
           )}
         </Box>
@@ -202,7 +202,7 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
                 fontStyle: 'italic',
               }}
             >
-              No contraindications identified yet
+              No contraindications available yet
             </Typography>
           )}
         </Box>
@@ -296,7 +296,7 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
                 fontStyle: 'italic',
               }}
             >
-              No techniques detected yet
+              No techniques available yet
             </Typography>
           )}
         </Box>
