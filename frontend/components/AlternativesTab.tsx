@@ -1,7 +1,94 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Button } from '@mui/material';
+import { 
+  Shield,
+  Psychology,
+  SwapHoriz,
+  Build,
+  Lightbulb,
+  Assessment
+} from '@mui/icons-material';
+import { Citation } from '../types/types';
+import { renderTextWithCitations } from '../utils/textRendering';
 
-const AlternativesTab: React.FC = () => {
+interface AlternativePathway {
+  approach: string;
+  reason: string;
+  techniques: string[];
+}
+
+interface AlternativesTabProps {
+  alternativePathways?: AlternativePathway[];
+  citations?: Citation[];
+  onCitationClick?: (citation: Citation) => void;
+  hasReceivedComprehensiveAnalysis?: boolean;
+  waitingForComprehensiveJobId?: number | null;
+  displayedComprehensiveJobId?: number | null;
+  displayedRealtimeJobId?: number | null;
+  currentAlert?: {
+    title: string;
+    category: string;
+    timing: string;
+  } | null;
+}
+
+const AlternativesTab: React.FC<AlternativesTabProps> = ({ 
+  alternativePathways = [], 
+  citations = [], 
+  onCitationClick,
+  hasReceivedComprehensiveAnalysis = false,
+  waitingForComprehensiveJobId,
+  displayedComprehensiveJobId,
+  displayedRealtimeJobId,
+  currentAlert
+}) => {
+  // Helper function to handle citation clicks in rendered markdown
+  const handleCitationClick = (citationNumber: number) => {
+    const citation = citations.find(c => c.citation_number === citationNumber);
+    if (citation && onCitationClick) {
+      onCitationClick(citation);
+    }
+  };
+
+  // Get alert icon based on category and timing
+  const getAlertIcon = (category: string, timing: string) => {
+    // Color based on timing: now=red, pause=orange, info=green
+    const getColor = () => {
+      switch (timing?.toLowerCase()) {
+        case 'now': return '#dc2626'; // Red
+        case 'pause': return '#d97706'; // Orange
+        case 'info': return '#059669'; // Green
+        default: return '#6b7280'; // Gray
+      }
+    };
+
+    const iconColor = getColor();
+    const iconSize = 36; // Match Guidance tab size
+
+    switch (category) {
+      case 'safety':
+        return <Shield sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'technique':
+        return <Build sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'pathway_change':
+        return <SwapHoriz sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'engagement':
+        return <Lightbulb sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'process':
+        return <Assessment sx={{ fontSize: iconSize, color: iconColor }} />;
+      default:
+        return <Psychology sx={{ fontSize: iconSize, color: iconColor }} />;
+    }
+  };
+
+  // Show comprehensive results if available and job IDs match
+  const hasAlternatives = alternativePathways && 
+    alternativePathways.length > 0 && 
+    displayedComprehensiveJobId === displayedRealtimeJobId;
+
+  // Show loading state when waiting for comprehensive results
+  const isWaitingForComprehensive = waitingForComprehensiveJobId !== null;
+
   return (
     <Box sx={{ 
       display: 'flex',
@@ -9,183 +96,151 @@ const AlternativesTab: React.FC = () => {
       gap: 6,
       pb: 4,
     }}>
-      {/* Safety Planning Section */}
-      <Box sx={{ display: 'flex', gap: 4 }}>
-        {/* Left Content */}
-        <Box sx={{ flex: 1 }}>
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              fontSize: '20px',
-              fontWeight: 500,
-              lineHeight: '28px',
+      {/* Alert Connection Header */}
+      {currentAlert && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {getAlertIcon(currentAlert.category, currentAlert.timing)}
+          <Typography
+            variant="h4"
+            sx={{
+              fontSize: '32px',
+              fontWeight: 600,
+              lineHeight: '40px',
               color: '#1f1f1f',
-              mb: 3,
             }}
           >
-            Safety Planning
-          </Typography>
-          <Typography 
-            variant="body1" 
-            sx={{ 
-              fontSize: '16px',
-              lineHeight: '24px',
-              color: '#444746',
-              whiteSpace: 'pre-line',
-            }}
-          >
-            Given the patient's difficulty managing overwhelming anxiety ('anxiety just takes over completely') and dissociative symptoms, integrating skills from Dialectical Behavior Therapy (DBT) such as distress tolerance (e.g., TIPP skills, self-soothing) and emotion regulation would be highly beneficial. These skills provide concrete tools for managing intense emotional states that cognitive work alone cannot address.
+            {currentAlert.title}
           </Typography>
         </Box>
+      )}
 
-        {/* Right Content */}
-        <Box sx={{ flex: 1 }}>
-          <Box sx={{ mb: 4 }}>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontSize: '14px',
-                fontWeight: 500,
-                color: '#444746',
-                mb: 1,
-              }}
-            >
-              TIPP skills (Temperature, Intense exercise, Paced breathing, Paired muscle relaxation)
-            </Typography>
-          </Box>
-          
-          <Box sx={{ mb: 3 }}>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontSize: '14px',
-                fontWeight: 500,
-                color: '#444746',
-                mb: 1,
-              }}
-            >
-              Self-soothing with the five senses
-            </Typography>
-          </Box>
+      {hasAlternatives ? (
+        // Dynamic content from comprehensive analysis with matching job IDs
+        <>
+          {alternativePathways.map((pathway, index) => (
+            <Box key={index} sx={{ display: 'flex', gap: 4 }}>
+              {/* Left Content */}
+              <Box sx={{ flex: 1 }}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontSize: '22px',
+                    fontWeight: 500,
+                    lineHeight: '30px',
+                    color: '#1f1f1f',
+                    mb: 3,
+                  }}
+                >
+                  {pathway.approach}
+                </Typography>
+                <Box sx={{ mb: 3 }}>
+                  <div style={{
+                    fontSize: '18px',
+                    lineHeight: '26px',
+                    color: '#444746',
+                  }}>
+                    {renderTextWithCitations(pathway.reason, {
+                      citations,
+                      onCitationClick: onCitationClick || (() => {}),
+                      markdown: true
+                    })}
+                  </div>
+                </Box>
+              </Box>
 
-          <Box sx={{ mb: 3 }}>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontSize: '14px',
-                fontWeight: 500,
-                color: '#444746',
-                mb: 1,
-              }}
-            >
-              Pros and Cons of tolerating distress
-            </Typography>
-          </Box>
-
-          <Box>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontSize: '14px',
-                fontWeight: 500,
-                color: '#444746',
-                mb: 1,
-              }}
-            >
-              Mindfulness of current emotion
-            </Typography>
-          </Box>
-        </Box>
-      </Box>
-
-      {/* Systematic Graded Exposure Section */}
-      <Box sx={{ display: 'flex', gap: 4 }}>
-        {/* Left Content */}
-        <Box sx={{ flex: 1 }}>
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              fontSize: '20px',
-              fontWeight: 500,
-              lineHeight: '28px',
-              color: '#1f1f1f',
-              mb: 3,
-            }}
-          >
-            Systematic Graded Exposure with Skills Integration
+              {/* Right Content - Techniques */}
+              <Box sx={{ flex: 1 }}>
+                {pathway.techniques.slice(0, 4).map((technique, techIndex) => (
+                  <Box key={techIndex} sx={{ mb: techIndex === Math.min(pathway.techniques.length, 4) - 1 ? 0 : 3 }}>
+                    <div style={{
+                      fontSize: '16px',
+                      fontWeight: 500,
+                      color: '#444746',
+                      marginBottom: '4px',
+                    }}>
+                      {renderTextWithCitations(technique, {
+                        citations,
+                        onCitationClick: onCitationClick || (() => {}),
+                        markdown: true
+                      })}
+                    </div>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          ))}
+        </>
+      ) : isWaitingForComprehensive ? (
+        // Loading state when waiting for comprehensive results
+        <div style={{
+          fontSize: '28px',
+          fontWeight: 400,
+          lineHeight: '36px',
+          color: '#1f1f1f',
+          whiteSpace: 'pre-line',
+        }}>
+          Creating alternative therapeutic pathway guidance...
+        </div>
+      ) : (
+        // Default content when no analysis data available
+        <div style={{
+          fontSize: '28px',
+          fontWeight: 400,
+          lineHeight: '36px',
+          color: '#1f1f1f',
+          whiteSpace: 'pre-line',
+        }}>
+          Start a session to receive alternative therapeutic pathway guidance.
+        </div>
+      )}
+      
+      {/* Citations section */}
+      {hasReceivedComprehensiveAnalysis && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="body2" sx={{ 
+            fontSize: '16px', 
+            fontWeight: 600, 
+            color: '#444746',
+            mb: 2,
+            letterSpacing: '0.5px',
+          }}>
+            CITATIONS
           </Typography>
-          <Typography 
-            variant="body1" 
-            sx={{ 
-              fontSize: '16px',
-              lineHeight: '24px',
-              color: '#444746',
-              whiteSpace: 'pre-line',
-            }}
-          >
-            Exposure therapy is the most effective treatment for anxiety disorders, especially social anxiety. However, for this patient, it needs to be introduced gradually and explicitly linked with distress tolerance skills to ensure they can manage the anxiety experienced during exposure, rather than becoming overwhelmed or dissociating.
-          </Typography>
+          {citations.length > 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {citations.map((citation, index) => (
+                <Typography 
+                  key={index}
+                  variant="body2" 
+                  onClick={() => onCitationClick && onCitationClick(citation)}
+                  sx={{ 
+                    fontSize: '16px',
+                    color: '#0b57d0',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      textDecoration: 'none',
+                    },
+                  }}
+                >
+                  {citation.citation_number}. {citation.source?.title || 'Unknown Source'}
+                </Typography>
+              ))}
+            </Box>
+          ) : (
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontSize: '16px',
+                color: '#6b7280',
+                fontStyle: 'italic',
+              }}
+            >
+              No citations available yet
+            </Typography>
+          )}
         </Box>
-
-        {/* Right Content */}
-        <Box sx={{ flex: 1 }}>
-          <Box sx={{ mb: 4 }}>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontSize: '14px',
-                fontWeight: 500,
-                color: '#444746',
-                mb: 1,
-              }}
-            >
-              Hierarchy development
-            </Typography>
-          </Box>
-          
-          <Box sx={{ mb: 3 }}>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontSize: '14px',
-                fontWeight: 500,
-                color: '#444746',
-                mb: 1,
-              }}
-            >
-              In-vivo or imaginal exposure (graduated)
-            </Typography>
-          </Box>
-
-          <Box sx={{ mb: 3 }}>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontSize: '14px',
-                fontWeight: 500,
-                color: '#444746',
-                mb: 1,
-              }}
-            >
-              Interoceptive exposure (if panic is a significant component)
-            </Typography>
-          </Box>
-
-          <Box>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontSize: '14px',
-                fontWeight: 500,
-                color: '#444746',
-                mb: 1,
-              }}
-            >
-              Systematic desensitization
-            </Typography>
-          </Box>
-        </Box>
-      </Box>
+      )}
     </Box>
   );
 };

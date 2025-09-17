@@ -239,7 +239,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
           };
 
           setAlerts(prev => {
-            const result = processNewAlert(newAlert, prev, { debugMode: false });
+            const result = processNewAlert(newAlert, prev);
 
             if (result.shouldAdd) {
               const updatedAlerts = [newAlert, ...prev].slice(0, 8);
@@ -253,7 +253,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
               
               return updatedAlerts;
             } else {
-              const reason = result.debugInfo?.reason || 'deduplication rules';
+              const reason = result.reason || 'deduplication rules';
               
               // Create unique log identifier for this specific filter event
               const filterLogId = `filter-alert-${Date.now()}-${analysis.alert?.title || 'unknown'}`;

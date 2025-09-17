@@ -59,7 +59,7 @@ const SessionMetrics: React.FC<SessionMetricsProps> = ({ metrics }) => {
                 Engagement Level
               </Typography>
               <Typography variant="body2" fontWeight={600}>
-                {Math.round(metrics.engagement_level * 100)}%
+                {metrics.engagement_level === 0 ? 'Unknown' : `${Math.round(metrics.engagement_level * 100)}%`}
               </Typography>
             </Box>
             <LinearProgress
