@@ -35,8 +35,8 @@ AUTHORIZED_EMAILS = [
 
 def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
     """
-    Robust JSON extraction from text that may contain extra content.
-    Tries multiple strategies to find and parse valid JSON.
+    Simplified JSON extraction from text that may contain extra content.
+    Uses only basic strategies for efficient parsing.
     """
     if not text or not text.strip():
         logging.warning("Empty text provided for JSON extraction")
@@ -48,18 +48,12 @@ def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
     except json.JSONDecodeError:
         logging.debug("Failed to parse entire text as JSON, trying regex extraction")
     
-    # Strategy 2: Look for JSON objects using more sophisticated regex patterns
+    # Strategy 2: Look for JSON objects using basic regex patterns
     json_patterns = [
         # Find JSON that starts with { and ends with } (greedy)
         r'\{.*\}',
         # Find JSON in code blocks
-        r'```(?:json)?\s*(\{.*\})\s*```',
-        # Find JSON starting after common prefixes
-        r'(?:json|response|result):\s*(\{.*\})',
-        # Look for complete JSON objects (most common)
-        r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}',
-        # Look for JSON arrays that might be present
-        r'\[.*\]',
+        r'```(?:json)?\s*(\{.*\})\s*```'
     ]
     
     for i, pattern in enumerate(json_patterns):
@@ -80,86 +74,8 @@ def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
             logging.debug(f"Error with pattern {i+1}: {e}")
             continue
     
-    # Strategy 3: Try to find and fix common JSON issues
-    try:
-        # Look for JSON-like structures and attempt basic repairs
-        cleaned_text = text.strip()
-        
-        # Remove markdown code block markers
-        cleaned_text = re.sub(r'```(?:json)?\s*', '', cleaned_text, flags=re.IGNORECASE)
-        cleaned_text = re.sub(r'\s*```\s*$', '', cleaned_text)
-        
-        # Remove common prefixes
-        prefixes_to_remove = [
-            r'^.*?(?:response|result|output|json):\s*',
-            r'^.*?Here\'s.*?:\s*',
-            r'^.*?```\s*',
-        ]
-        
-        for prefix_pattern in prefixes_to_remove:
-            cleaned_text = re.sub(prefix_pattern, '', cleaned_text, flags=re.IGNORECASE)
-        
-        # Try to find the first { and last } to extract JSON boundaries
-        first_brace = cleaned_text.find('{')
-        last_brace = cleaned_text.rfind('}')
-        
-        if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
-            potential_json = cleaned_text[first_brace:last_brace + 1]
-            try:
-                parsed = json.loads(potential_json)
-                logging.info("Successfully extracted JSON using boundary detection")
-                return parsed
-            except json.JSONDecodeError:
-                logging.debug("Boundary detection found text but JSON parsing failed")
-        
-        # Try to fix common JSON issues (trailing commas, single quotes, etc.)
-        if 'potential_json' in locals():
-            potential_fixes = [
-                # Remove trailing commas
-                lambda s: re.sub(r',(\s*[}\]])', r'\1', s),
-                # Replace single quotes with double quotes (basic attempt)
-                lambda s: re.sub(r"'([^']*)':", r'"\1":', s),
-            ]
-            
-            for fix_func in potential_fixes:
-                try:
-                    fixed_text = fix_func(potential_json)
-                    if fixed_text.strip().startswith('{'):
-                        parsed = json.loads(fixed_text)
-                        logging.info("Successfully extracted JSON after applying fixes")
-                        return parsed
-                except (json.JSONDecodeError, Exception):
-                    continue
-                
-    except Exception as e:
-        logging.debug(f"Error in JSON repair attempts: {e}")
-    
-    # Strategy 4: Last resort - look for key-value patterns and construct basic JSON
-    try:
-        # This is a very basic fallback - look for obvious key-value patterns
-        lines = text.split('\n')
-        json_like_lines = []
-        
-        for line in lines:
-            line = line.strip()
-            # Look for lines that might be JSON properties
-            if ':' in line and not line.startswith('//') and not line.startswith('#'):
-                json_like_lines.append(line)
-        
-        if json_like_lines:
-            # Try to construct a basic JSON structure
-            constructed_json = '{\n' + ',\n'.join(json_like_lines) + '\n}'
-            try:
-                parsed = json.loads(constructed_json)
-                logging.info("Successfully constructed JSON from key-value patterns")
-                return parsed
-            except json.JSONDecodeError:
-                logging.debug("Failed to construct valid JSON from patterns")
-                
-    except Exception as e:
-        logging.debug(f"Error in JSON construction attempt: {e}")
-    
-    logging.error(f"All JSON extraction strategies failed for text: {text[:200]}...")
+    logging.error("JSON extraction failed for text:")
+    logging.info(text)
     return None
 
 def is_email_authorized(email: str) -> bool:

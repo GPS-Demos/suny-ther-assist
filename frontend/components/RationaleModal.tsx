@@ -38,112 +38,138 @@ const RationaleModal: React.FC<RationaleModalProps> = ({ open, onClose, rational
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: 600,
+          width: 900,
           bgcolor: 'rgba(255, 255, 255, 0.9)', // Less opaque background
           backdropFilter: 'blur(5px)', // Blur the background
           boxShadow: 24,
-          p: 4,
           borderRadius: 2,
           maxHeight: '90vh',
-          overflowY: 'auto',
+          overflow: 'hidden', // Hide overflow to prevent scrollbar from overrunning rounded edges
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        <IconButton
-          aria-label="close"
-          onClick={onClose}
-          sx={{
-            position: 'absolute',
-            right: 8,
-            top: 8,
-            color: (theme) => theme.palette.grey[500],
-          }}
-        >
-          <Close />
-        </IconButton>
-        <Typography id="rationale-modal-title" variant="h6" component="h2" sx={{ color: 'var(--primary)', fontWeight: 600, mb: 2 }}>
-          Rationale Details
-        </Typography>
+        {/* Header with close button and title - fixed at top */}
+        <Box sx={{ position: 'relative', p: 4, pb: 2, flex: '0 0 auto' }}>
+          <IconButton
+            aria-label="close"
+            onClick={onClose}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <Close />
+          </IconButton>
+          <Typography id="rationale-modal-title" variant="h6" component="h2" sx={{ color: 'var(--primary)', fontWeight: 600, mb: 2 }}>
+            Rationale Details
+          </Typography>
+        </Box>
         
-        <Box>
-          {rationale && (
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                <Info sx={{ fontSize: 16, color: 'text.secondary' }} />
-                <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                  RATIONALE
-                </Typography>
+        {/* Scrollable content area */}
+        <Box sx={{ 
+          px: 4, 
+          pb: 4, 
+          flex: '1 1 auto', 
+          overflowY: 'auto',
+          // Custom scrollbar styling to match rounded container
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: 'rgba(0,0,0,0.2)',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            background: 'rgba(0,0,0,0.3)',
+          },
+        }}>
+          <Box>
+            {rationale && (
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                  <Info sx={{ fontSize: 16, color: 'text.secondary' }} />
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    RATIONALE
+                  </Typography>
+                </Box>
+                <Paper
+                  sx={{
+                    p: 2,
+                    border: '1px solid rgba(0, 0, 0, 0.12)',
+                    boxShadow: 'none',
+                  }}
+                >
+                  <Typography component="div">
+                    {renderTextWithCitations(rationale, {
+                      citations,
+                      onCitationClick: onCitationClick,
+                      markdown: true
+                    })}
+                  </Typography>
+                </Paper>
               </Box>
-              <Paper
-                sx={{
-                  p: 2,
-                  border: '1px solid rgba(0, 0, 0, 0.12)',
-                  boxShadow: 'none',
-                }}
-              >
-                <Typography component="div">
-                  {renderTextWithCitations(rationale, {
-                    citations,
-                    onCitationClick: onCitationClick,
-                    markdown: true
-                  })}
-                </Typography>
-              </Paper>
-            </Box>
-          )}
+            )}
 
-          {immediateActions && immediateActions.length > 0 && (
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                <PlayCircle sx={{ fontSize: 16, color: 'success.main' }} />
-                <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                  IMMEDIATE ACTIONS
-                </Typography>
+            {immediateActions && immediateActions.length > 0 && (
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                  <PlayCircle sx={{ fontSize: 16, color: 'success.main' }} />
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    IMMEDIATE ACTIONS
+                  </Typography>
+                </Box>
+                <List dense sx={{ p: 0 }}>
+                  {immediateActions.map((action, idx) => (
+                    <ListItem key={idx} sx={{ px: 0, py: 0.5 }}>
+                      <ListItemIcon sx={{ minWidth: 24 }}>
+                        <CheckCircle sx={{ fontSize: 14, color: 'success.main' }} />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={<Typography component="div">{renderTextWithCitations(action, {
+                          citations,
+                          onCitationClick: onCitationClick,
+                          markdown: true
+                        })}</Typography>}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
               </Box>
-              <List dense sx={{ p: 0 }}>
-                {immediateActions.map((action, idx) => (
-                  <ListItem key={idx} sx={{ px: 0, py: 0.5 }}>
-                    <ListItemIcon sx={{ minWidth: 24 }}>
-                      <CheckCircle sx={{ fontSize: 14, color: 'success.main' }} />
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary={<Typography component="div">{renderTextWithCitations(action, {
-                        citations,
-                        onCitationClick: onCitationClick,
-                        markdown: true
-                      })}</Typography>}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
-          )}
+            )}
 
-          {contraindications && contraindications.length > 0 && (
-            <Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                <ErrorOutline sx={{ fontSize: 16, color: 'error.main' }} />
-                <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                  CONTRAINDICATIONS
-                </Typography>
+            {contraindications && contraindications.length > 0 && (
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                  <ErrorOutline sx={{ fontSize: 16, color: 'error.main' }} />
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    CONTRAINDICATIONS
+                  </Typography>
+                </Box>
+                <List dense sx={{ p: 0 }}>
+                  {contraindications.map((contraindication, idx) => (
+                    <ListItem key={idx} sx={{ px: 0, py: 0.5 }}>
+                      <ListItemIcon sx={{ minWidth: 24 }}>
+                        <Warning sx={{ fontSize: 14, color: 'error.main' }} />
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={<Typography component="div">{renderTextWithCitations(contraindication, {
+                          citations,
+                          onCitationClick: onCitationClick,
+                          markdown: true
+                        })}</Typography>}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
               </Box>
-              <List dense sx={{ p: 0 }}>
-                {contraindications.map((contraindication, idx) => (
-                  <ListItem key={idx} sx={{ px: 0, py: 0.5 }}>
-                    <ListItemIcon sx={{ minWidth: 24 }}>
-                      <Warning sx={{ fontSize: 14, color: 'error.main' }} />
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary={<Typography component="div">{renderTextWithCitations(contraindication, {
-                        citations,
-                        onCitationClick: onCitationClick,
-                        markdown: true
-                      })}</Typography>}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
-          )}
+            )}
+          </Box>
         </Box>
       </Box>
     </Modal>

@@ -36,6 +36,7 @@ import {
   Lightbulb,
   Assessment,
 } from '@mui/icons-material';
+import { CircularProgress } from '@mui/material';
 import TranscriptDisplay from './TranscriptDisplay';
 import AlertDisplay from './AlertDisplay';
 import SessionMetrics from './SessionMetrics';
@@ -137,6 +138,9 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
   // Test mode state
   const [isTestMode, setIsTestMode] = useState(false);
   const testIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Track if a session has been completed to keep test buttons hidden
+  const [hasCompletedSession, setHasCompletedSession] = useState(false);
 
   // Audio streaming hook with WebSocket for both microphone and file
   const { 
@@ -465,6 +469,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     setIsRecording(false);
     setIsPaused(false);
     setSessionType(null);
+    setHasCompletedSession(true); // Mark that a session has been completed
     await stopStreaming();
     if (isTestMode) {
       stopTestMode();
@@ -781,13 +786,8 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
                   variant="contained"
                   startIcon={<Mic />}
                   onClick={handleStartSession}
-                  sx={{ 
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    color: 'white',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-                    },
-                  }}
+                  disabled={hasCompletedSession}
+                  color="success"
                 >
                   Start Session
                 </Button>
@@ -959,25 +959,6 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
                 </Typography>
               </Box>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="body2" color="text.secondary">Techniques</Typography>
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    fontWeight: 600,
-                    color: (isRecording && !hasReceivedComprehensiveAnalysis) || !hasReceivedComprehensiveAnalysis
-                      ? 'text.secondary'
-                      : 'inherit'
-                  }}
-                >
-                  {isRecording && !hasReceivedComprehensiveAnalysis
-                    ? 'Listening...'
-                    : !hasReceivedComprehensiveAnalysis
-                    ? 'Unknown'
-                    : sessionMetrics.techniques_detected.length
-                  }
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="body2" color="text.secondary">Effectiveness</Typography>
                 <Typography
                   variant="h6"
@@ -993,6 +974,25 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
                     : !hasReceivedComprehensiveAnalysis
                     ? 'Unknown'
                     : pathwayIndicators.current_approach_effectiveness
+                  }
+                </Typography>
+              </Box>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary">Techniques</Typography>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 600,
+                    color: (isRecording && !hasReceivedComprehensiveAnalysis) || !hasReceivedComprehensiveAnalysis
+                      ? 'text.secondary'
+                      : 'inherit'
+                  }}
+                >
+                  {isRecording && !hasReceivedComprehensiveAnalysis
+                    ? 'Listening...'
+                    : !hasReceivedComprehensiveAnalysis
+                    ? 'Unknown'
+                    : sessionMetrics.techniques_detected.length
                   }
                 </Typography>
               </Box>
@@ -1172,7 +1172,13 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
             color="secondary"
             variant="extended"
             aria-label="reopen session summary"
-            onClick={() => setShowSessionSummary(true)}
+            onClick={() => {
+              if (sessionSummary) {
+                setShowSessionSummary(true);
+              } else {
+                requestSummary();
+              }
+            }}
             sx={{
               background: 'linear-gradient(135deg, #673ab7 0%, #512da8 100%)',
               color: 'white',
@@ -1184,8 +1190,12 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
               boxShadow: '0 8px 20px -4px rgba(103, 58, 183, 0.35)',
             }}
           >
-            <Article sx={{ mr: 1 }} />
-            Summary
+            {summaryLoading ? (
+              <CircularProgress size={20} sx={{ mr: 1, color: 'white' }} />
+            ) : (
+              <Article sx={{ mr: 1 }} />
+            )}
+            {summaryLoading ? 'Generating...' : 'Summary'}
           </Fab>
         )}
 
@@ -1216,7 +1226,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
       </Box>
 
       {/* Test Buttons */}
-      {!isRecording && !isTestMode && (
+      {!isRecording && !isTestMode && !hasCompletedSession && (
         <Box sx={{ 
           position: 'fixed', 
           bottom: 24, 

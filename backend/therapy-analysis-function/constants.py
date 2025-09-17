@@ -8,7 +8,7 @@ THERAPY_PHASES = {
 }
 
 # Prompts
-REALTIME_ANALYSIS_PROMPT = """Analyze this therapy segment for real-time guidance.
+REALTIME_ANALYSIS_PROMPT = """Analyze this therapy segment for CRITICAL guidance only using a Cognitive Behavioral Therapy approach.
 
 TRANSCRIPT (last few sentences):
 {transcript_text}
@@ -37,15 +37,15 @@ IMPORTANT DEDUPLICATION REQUIREMENTS:
 If no guidance is needed, then simply return an empty JSON. Format:
 {{}}
 
-If an guidance is needed, prioritize actionable guidance and return only the MOST RELEVANT single piece of guidance. Format:
+If an guidance is needed, prioritize actionable guidance and return only the MOST RELEVANT single piece of guidance. Format response as a valid JSON object:
 {{
     "alert": {{
         "timing": "now|pause|info",
         "category": "safety|technique|pathway_change|engagement",
         "title": "Brief descriptive title",
         "message": "Specific action or observation (1-3 sentences max)",
-        "evidence": ["relevant quote if applicable"],
-        "recommendation": "Action(s) to take if applicable. IMPORTANT: format each recommendation as a markdown bullet point using '- ' prefix (e.g., '- First action\n- Second action')"
+        "evidence": ["direct quote showing the critical moment"],
+        "recommendation": "Action(s) to take if applicable. IMPORTANT: format each recommendation as a markdown bullet point using '- ' prefix (e.g., '- First action\n- Second action') but DO NOT break the json object with actual newlines"
     }}
 }}
 
