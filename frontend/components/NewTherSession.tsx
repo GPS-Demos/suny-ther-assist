@@ -891,32 +891,41 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
           }}>
             {/* Title Section */}
             <Box>
-              <Typography variant="h6" sx={{ 
-                fontSize: '24px', 
-                fontWeight: 600, 
-                color: '#1f1f1f',
-                mb: 1,
-              }}>
-                {getPatientName()}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                {onNavigateBack && (
+                  <Button
+                    startIcon={<ArrowBack />}
+                    onClick={onNavigateBack}
+                    sx={{
+                      color: '#0b57d0',
+                      textTransform: 'none',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      minWidth: 'auto',
+                      px: 1,
+                      py: 0.5,
+                      '&:hover': {
+                        backgroundColor: 'rgba(11, 87, 208, 0.04)',
+                      },
+                    }}
+                  >
+                  </Button>
+                )}
+                <Typography variant="h6" sx={{ 
+                  fontSize: '28px', 
+                  fontWeight: 600, 
+                  color: '#1f1f1f',
+                }}>
+                  {getPatientName()}
+                </Typography>
+              </Box>
               <Typography variant="body2" sx={{ 
-                fontSize: '14px', 
+                fontSize: '16px', 
                 color: '#444746',
                 mb: 2,
               }}>
                 {getCurrentDate()}
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Psychology sx={{ fontSize: 24, color: '#c05a01' }} />
-                <Typography variant="h5" sx={{ 
-                  fontSize: '22px', 
-                  fontWeight: 500, 
-                  lineHeight: '28px',
-                  color: '#444746',
-                }}>
-                  {getCurrentGuidance().title}
-                </Typography>
-              </Box>
             </Box>
 
             {/* Navigation Menu */}
@@ -946,7 +955,7 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
                   <Box sx={{ mr: 1.5, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {activeTab === item.key ? item.icon : null}
                   </Box>
-                  <Typography variant="body1" sx={{ fontSize: '16px', color: '#1f1f1f' }}>
+                  <Typography variant="body1" sx={{ fontSize: '18px', color: '#1f1f1f' }}>
                     {item.label}
                   </Typography>
                 </Box>
@@ -1119,34 +1128,15 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
             display: 'flex',
             '& > *': { flex: 1 },
           }}>
-            {/* Back Button and Session ID */}
+            {/* Session ID */}
             <Box sx={{ 
               display: 'flex',
               alignItems: 'center',
-              gap: 3,
+              justifyContent: 'center',
               px: 2, 
               py: 2, 
               borderRight: '1px solid #f0f4f9',
             }}>
-              {onNavigateBack && (
-                <Button
-                  startIcon={<ArrowBack />}
-                  onClick={onNavigateBack}
-                  sx={{
-                    color: '#0b57d0',
-                    textTransform: 'none',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    minWidth: 'auto',
-                    px: 2,
-                    py: 1,
-                    '&:hover': {
-                      backgroundColor: 'rgba(11, 87, 208, 0.04)',
-                    },
-                  }}
-                >
-                </Button>
-              )}
               <Typography variant="h6" sx={{ fontWeight: 500, fontSize: '24px', color: '#1e1e1e' }}>
                 {sessionId}
               </Typography>

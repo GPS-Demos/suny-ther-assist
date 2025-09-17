@@ -57,8 +57,8 @@ const QuoteCard = ({ text }: { text: string }) => (
   >
     <Typography variant="body1" sx={{
       fontWeight: 400,
-      fontSize: '16px',
-      lineHeight: '24px',
+      fontSize: '18px',
+      lineHeight: '26px',
       color: '#1f1f1f',
       fontStyle: 'italic',
     }}>
@@ -97,7 +97,7 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
     };
 
     const iconColor = getColor();
-    const iconSize = 32;
+    const iconSize = 36;
 
     switch (category) {
       case 'safety':
@@ -251,9 +251,9 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
                 <Typography
                   variant="h4"
                   sx={{
-                    fontSize: '28px',
+                    fontSize: '32px',
                     fontWeight: 600,
-                    lineHeight: '36px',
+                    lineHeight: '40px',
                     color: '#1f1f1f',
                   }}
                 >
@@ -294,7 +294,7 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
         {/* Evidence Section */}
         <Box sx={{ flex: 1 }}>
           <Typography variant="body2" sx={{ 
-            fontSize: '14px', 
+            fontSize: '16px', 
             fontWeight: 600, 
             color: '#444746',
             mb: 2,
@@ -312,8 +312,8 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
           }}>
             <Typography variant="body1" sx={{
               fontWeight: 400,
-              fontSize: '16px',
-              lineHeight: '24px',
+              fontSize: '18px',
+              lineHeight: '26px',
               color: '#1f1f1f',
             }}>
               {getEvidenceContent()}
@@ -324,7 +324,7 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
         {/* Direct Quotes Section */}
         <Box sx={{ flex: 1 }}>
           <Typography variant="body2" sx={{ 
-            fontSize: '14px', 
+            fontSize: '16px', 
             fontWeight: 600, 
             color: '#444746',
             mb: 2,

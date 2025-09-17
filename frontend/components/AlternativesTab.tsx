@@ -49,9 +49,9 @@ const AlternativesTab: React.FC<AlternativesTabProps> = ({
                 <Typography 
                   variant="h6" 
                   sx={{ 
-                    fontSize: '20px',
+                    fontSize: '22px',
                     fontWeight: 500,
-                    lineHeight: '28px',
+                    lineHeight: '30px',
                     color: '#1f1f1f',
                     mb: 3,
                   }}
@@ -60,8 +60,8 @@ const AlternativesTab: React.FC<AlternativesTabProps> = ({
                 </Typography>
                 <Box sx={{ mb: 3 }}>
                   <div style={{
-                    fontSize: '16px',
-                    lineHeight: '24px',
+                    fontSize: '18px',
+                    lineHeight: '26px',
                     color: '#444746',
                   }}>
                     {renderTextWithCitations(pathway.reason, {
@@ -75,10 +75,10 @@ const AlternativesTab: React.FC<AlternativesTabProps> = ({
 
               {/* Right Content - Techniques */}
               <Box sx={{ flex: 1 }}>
-                {pathway.techniques.map((technique, techIndex) => (
-                  <Box key={techIndex} sx={{ mb: techIndex === pathway.techniques.length - 1 ? 0 : 3 }}>
+                {pathway.techniques.slice(0, 4).map((technique, techIndex) => (
+                  <Box key={techIndex} sx={{ mb: techIndex === Math.min(pathway.techniques.length, 4) - 1 ? 0 : 3 }}>
                     <div style={{
-                      fontSize: '14px',
+                      fontSize: '16px',
                       fontWeight: 500,
                       color: '#444746',
                       marginBottom: '4px',
@@ -112,7 +112,7 @@ const AlternativesTab: React.FC<AlternativesTabProps> = ({
       {hasReceivedComprehensiveAnalysis && (
         <Box sx={{ mt: 4 }}>
           <Typography variant="body2" sx={{ 
-            fontSize: '14px', 
+            fontSize: '16px', 
             fontWeight: 600, 
             color: '#444746',
             mb: 2,
@@ -128,7 +128,7 @@ const AlternativesTab: React.FC<AlternativesTabProps> = ({
                   variant="body2" 
                   onClick={() => onCitationClick && onCitationClick(citation)}
                   sx={{ 
-                    fontSize: '14px',
+                    fontSize: '16px',
                     color: '#0b57d0',
                     textDecoration: 'underline',
                     cursor: 'pointer',
@@ -145,7 +145,7 @@ const AlternativesTab: React.FC<AlternativesTabProps> = ({
             <Typography 
               variant="body2" 
               sx={{ 
-                fontSize: '14px',
+                fontSize: '16px',
                 color: '#6b7280',
                 fontStyle: 'italic',
               }}

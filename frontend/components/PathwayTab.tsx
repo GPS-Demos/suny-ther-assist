@@ -99,9 +99,9 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
       </Box>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
         <div style={{ 
-          fontWeight: 600, 
-          fontSize: '16px', 
-          lineHeight: '24px',
+          fontWeight: 400, 
+          fontSize: '18px', 
+          lineHeight: '26px',
           color: '#1f1f1f',
         }}>
           {renderTextWithCitations(action.title, {
@@ -125,9 +125,9 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
       {/* Main pathway content - comprehensive analysis */}
       {currentGuidance && currentGuidance.content && (
         <div style={{
-          fontSize: '28px',
+          fontSize: '24px',
           fontWeight: 400,
-          lineHeight: '36px',
+          lineHeight: '32px',
           color: '#1f1f1f',
           whiteSpace: 'pre-line',
         }}>
@@ -144,7 +144,7 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
         {/* Immediate Actions */}
         <Box sx={{ flex: 1 }}>
           <Typography variant="body2" sx={{ 
-            fontSize: '14px', 
+            fontSize: '16px', 
             fontWeight: 600, 
             color: '#444746',
             mb: 2,
@@ -164,7 +164,7 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
             <Typography 
               variant="body2" 
               sx={{ 
-                fontSize: '14px',
+                fontSize: '16px',
                 color: '#6b7280',
                 fontStyle: 'italic',
               }}
@@ -177,7 +177,7 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
         {/* Contraindications */}
         <Box sx={{ flex: 1 }}>
           <Typography variant="body2" sx={{ 
-            fontSize: '14px', 
+            fontSize: '16px', 
             fontWeight: 600, 
             color: '#444746',
             mb: 2,
@@ -197,7 +197,7 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
             <Typography 
               variant="body2" 
               sx={{ 
-                fontSize: '14px',
+                fontSize: '16px',
                 color: '#6b7280',
                 fontStyle: 'italic',
               }}
@@ -213,7 +213,7 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
         {/* Citations */}
         <Box sx={{ flex: 1 }}>
           <Typography variant="body2" sx={{ 
-            fontSize: '14px', 
+            fontSize: '16px', 
             fontWeight: 600, 
             color: '#444746',
             mb: 2,
@@ -229,7 +229,7 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
                   variant="body2" 
                   onClick={() => onCitationClick && onCitationClick(citation)}
                   sx={{ 
-                    fontSize: '14px',
+                    fontSize: '16px',
                     color: '#0b57d0',
                     textDecoration: 'underline',
                     cursor: 'pointer',
@@ -246,7 +246,7 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
             <Typography 
               variant="body2" 
               sx={{ 
-                fontSize: '14px',
+                fontSize: '16px',
                 color: '#6b7280',
                 fontStyle: 'italic',
               }}
@@ -259,7 +259,7 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
         {/* Techniques Detected */}
         <Box sx={{ flex: 1 }}>
           <Typography variant="body2" sx={{ 
-            fontSize: '14px', 
+            fontSize: '16px', 
             fontWeight: 600, 
             color: '#444746',
             mb: 2,
@@ -279,7 +279,7 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
                     border: '1px solid #c4c7c5',
                     borderRadius: '20px',
                     '& .MuiChip-label': { 
-                      fontSize: '14px',
+                      fontSize: '16px',
                       fontWeight: 400,
                       color: '#1f1f1f',
                     },
@@ -291,7 +291,7 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
             <Typography 
               variant="body2" 
               sx={{ 
-                fontSize: '14px',
+                fontSize: '16px',
                 color: '#6b7280',
                 fontStyle: 'italic',
               }}
