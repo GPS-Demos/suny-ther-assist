@@ -244,7 +244,7 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
         
         if (mainContent.hasAlert && mainContent.alert) {
           return (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <>
               {/* Alert title with icon */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 {getAlertIcon(mainContent.alert.category, mainContent.alert.timing || 'info')}
@@ -271,7 +271,7 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
               }}>
                 {mainContent.content}
               </div>
-            </Box>
+            </>
           );
         }
         

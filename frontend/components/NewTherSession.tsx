@@ -178,6 +178,16 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
   // Analysis job ID tracking - counter to relate realtime and comprehensive results
   const analysisJobCounterRef = useRef(0);
   
+  // Track currently displayed job IDs to ensure realtime and comprehensive results match
+  const [displayedRealtimeJobId, setDisplayedRealtimeJobId] = useState<number | null>(null);
+  const [displayedComprehensiveJobId, setDisplayedComprehensiveJobId] = useState<number | null>(null);
+  const [waitingForComprehensiveJobId, setWaitingForComprehensiveJobId] = useState<number | null>(null);
+  
+  // Use refs to avoid closure issues in useTherapyAnalysis callback
+  const waitingForComprehensiveJobIdRef = useRef<number | null>(null);
+  const displayedRealtimeJobIdRef = useRef<number | null>(null);
+  const displayedComprehensiveJobIdRef = useRef<number | null>(null);
+  
   // Session summary state
   const [showSessionSummary, setShowSessionSummary] = useState(false);
   const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
@@ -272,6 +282,7 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
     onAnalysis: (analysis) => {
       const analysisType = (analysis as any).analysis_type;
       const isRealtime = analysisType === 'realtime';
+      const jobId = (analysis as any).job_id;
       
       // Create a unique identifier for this analysis to prevent duplicate logs
       const analysisId = `${analysisType}-${Date.now()}-${JSON.stringify(analysis).length}`;
@@ -288,36 +299,46 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
       }
       
       if (isRealtime) {
-        // Real-time analysis: Only update alerts
+        // Real-time analysis: Only update alerts and set up for comprehensive results
         if (analysis.alert) {
           const newAlert = {
             ...analysis.alert,
             sessionTime: sessionDuration,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            jobId: jobId // Store jobId with alert
           };
 
           setAlerts(prev => {
-            const result = processNewAlert(newAlert, prev, { debugMode: false });
+            const result = processNewAlert(newAlert, prev);
 
             if (result.shouldAdd) {
               const updatedAlerts = [newAlert, ...prev].slice(0, 8);
+              
+              // Update displayed realtime job ID and prepare for comprehensive results
+              setDisplayedRealtimeJobId(jobId);
+              setWaitingForComprehensiveJobId(jobId);
+              
+              // Clear previous comprehensive results since we have new realtime results
+              setDisplayedComprehensiveJobId(null);
+              setPathwayGuidance({});
+              setCitations([]);
               
               // Create unique log identifier for this specific alert
               const alertLogId = `new-alert-${newAlert.timestamp}-${newAlert.title}`;
               if (!lastLoggedAnalysisRef.current.has(alertLogId)) {
                 lastLoggedAnalysisRef.current.add(alertLogId);
-                console.log(`[Session] ⚠️ New ${newAlert.category} alert: "${newAlert.title}" (${newAlert.timing})`);
+                console.log(`[Session] ⚠️ New ${newAlert.category} alert: "${newAlert.title}" (${newAlert.timing}) - Job ID: ${jobId}`);
               }
               
               return updatedAlerts;
             } else {
-              const reason = result.debugInfo?.reason || 'deduplication rules';
+              const reason = result.reason || 'deduplication rules';
               
               // Create unique log identifier for this specific filter event
               const filterLogId = `filter-alert-${Date.now()}-${analysis.alert?.title || 'unknown'}`;
               if (!lastLoggedAnalysisRef.current.has(filterLogId)) {
                 lastLoggedAnalysisRef.current.add(filterLogId);
-                console.log(`[Session] 🚫 Alert filtered: ${reason}`, analysis.alert);
+                console.log(`[Session] 🚫 Realtime alert filtered: ${reason} - Job ID: ${jobId}`, analysis.alert);
               }
               
               return prev;
@@ -325,42 +346,51 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
           });
         }
       } else {
-        // Comprehensive RAG analysis: Update metrics, pathway, citations
-        setHasReceivedComprehensiveAnalysis(true);
-        
-        if (analysis.session_metrics) {
-          setSessionMetrics(prev => ({
-            ...prev,
-            ...analysis.session_metrics
-          }));
-        }
-        
-        if (analysis.pathway_indicators) {
-          const newIndicators = analysis.pathway_indicators;
+        // Comprehensive RAG analysis: Only update if jobId matches waiting comprehensive jobId
+        const currentWaitingJobId = waitingForComprehensiveJobIdRef.current;
+        if (jobId && jobId === currentWaitingJobId) {
+          setHasReceivedComprehensiveAnalysis(true);
+          setDisplayedComprehensiveJobId(jobId);
+          setWaitingForComprehensiveJobId(null);
           
-          // Check if there's a change in urgency or effectiveness to add to history
-          if (pathwayIndicators.change_urgency !== newIndicators.change_urgency ||
-              pathwayIndicators.current_approach_effectiveness !== newIndicators.current_approach_effectiveness) {
-            setPathwayHistory(prev => [...prev, {
-              timestamp: new Date().toISOString(),
-              effectiveness: newIndicators.current_approach_effectiveness || 'unknown',
-              change_urgency: newIndicators.change_urgency || 'none',
-              rationale: (analysis as any).pathway_guidance?.rationale
-            }].slice(-10));
+          console.log(`[Session] 📋 Comprehensive results matched and displayed - Job ID: ${jobId}`);
+          
+          if (analysis.session_metrics) {
+            setSessionMetrics(prev => ({
+              ...prev,
+              ...analysis.session_metrics
+            }));
           }
           
-          setPathwayIndicators(prev => ({
-            ...prev,
-            ...newIndicators
-          }));
-        }
-        
-        if ((analysis as any).pathway_guidance) {
-          setPathwayGuidance((analysis as any).pathway_guidance);
-        }
-        
-        if (analysis.citations) {
-          setCitations(analysis.citations);
+          if (analysis.pathway_indicators) {
+            const newIndicators = analysis.pathway_indicators;
+            
+            // Check if there's a change in urgency or effectiveness to add to history
+            if (pathwayIndicators.change_urgency !== newIndicators.change_urgency ||
+                pathwayIndicators.current_approach_effectiveness !== newIndicators.current_approach_effectiveness) {
+              setPathwayHistory(prev => [...prev, {
+                timestamp: new Date().toISOString(),
+                effectiveness: newIndicators.current_approach_effectiveness || 'unknown',
+                change_urgency: newIndicators.change_urgency || 'none',
+                rationale: (analysis as any).pathway_guidance?.rationale
+              }].slice(-10));
+            }
+            
+            setPathwayIndicators(prev => ({
+              ...prev,
+              ...newIndicators
+            }));
+          }
+          
+          if ((analysis as any).pathway_guidance) {
+            setPathwayGuidance((analysis as any).pathway_guidance);
+          }
+          
+          if (analysis.citations) {
+            setCitations(analysis.citations);
+          }
+        } else {
+          console.log(`[Session] 🚫 Comprehensive results ignored - Job ID: ${jobId} (waiting for: ${currentWaitingJobId})`);
         }
       }
     },
@@ -413,6 +443,19 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
   useEffect(() => {
     sessionDurationRef.current = sessionDuration;
   }, [sessionDuration]);
+  
+  // Update job tracking refs when state changes
+  useEffect(() => {
+    waitingForComprehensiveJobIdRef.current = waitingForComprehensiveJobId;
+  }, [waitingForComprehensiveJobId]);
+  
+  useEffect(() => {
+    displayedRealtimeJobIdRef.current = displayedRealtimeJobId;
+  }, [displayedRealtimeJobId]);
+  
+  useEffect(() => {
+    displayedComprehensiveJobIdRef.current = displayedComprehensiveJobId;
+  }, [displayedComprehensiveJobId]);
 
   // Helper function to trigger both realtime and comprehensive analysis with shared ID
   const triggerPairedAnalysis = useCallback((transcriptSegment: any[], triggerSource: string) => {
@@ -515,6 +558,19 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
     }
   };
 
+  // Get current alert for tab display
+  const getCurrentAlert = () => {
+    if (alerts.length > 0 && displayedRealtimeJobId !== null) {
+      const recentAlert = alerts[0];
+      return {
+        title: recentAlert.title || "Current Alert",
+        category: recentAlert.category || "general",
+        timing: recentAlert.timing || "info"
+      };
+    }
+    return null;
+  };
+
   // Get current guidance for Guidance tab (realtime analysis only)
   const getCurrentGuidance = () => {
     // Show real-time alerts for Guidance tab
@@ -551,7 +607,8 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
 
   // Get pathway guidance for Pathway tab (comprehensive analysis only)
   const getPathwayGuidance = () => {
-    if (pathwayGuidance.rationale) {
+    // Show comprehensive results if available and job IDs match
+    if (pathwayGuidance.rationale && displayedComprehensiveJobId === displayedRealtimeJobId) {
       return {
         title: "Current Clinical Guidance",
         time: formatDuration(sessionDuration),
@@ -566,20 +623,36 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
           description: contra,
           icon: 'cognitive' as const
         })) || [],
-        isLive: true
+        isLive: true,
+        jobId: displayedComprehensiveJobId
       };
     }
     
-    // Default when no comprehensive analysis available yet
+    // Show loading state when waiting for comprehensive results
+    if (waitingForComprehensiveJobId !== null) {
+      return {
+        title: "Creating comprehensive therapeutic guidance...",
+        time: formatDuration(sessionDuration),
+        content: "Creating comprehensive therapeutic guidance...",
+        immediateActions: [],
+        contraindications: [],
+        isLive: false,
+        isLoading: true,
+        jobId: waitingForComprehensiveJobId
+      };
+    }
+    
+    // Default when no analysis available yet
     return {
-      title: hasReceivedComprehensiveAnalysis ? "No pathway guidance available" : "Waiting for comprehensive analysis...",
+      title: hasReceivedComprehensiveAnalysis ? "No pathway guidance available" : "Waiting for analysis...",
       time: formatDuration(sessionDuration),
       content: hasReceivedComprehensiveAnalysis 
-        ? "Thinking..."
+        ? "Start a session to receive comprehensive therapeutic guidance."
         : "Start a session to receive comprehensive therapeutic guidance.",
       immediateActions: [],
       contraindications: [],
-      isLive: false
+      isLive: false,
+      jobId: null
     };
   };
 
@@ -596,6 +669,14 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
     setHasReceivedComprehensiveAnalysis(false);
     setTranscript([]);
     setAlerts([]);
+    
+    // Reset job tracking state
+    setDisplayedRealtimeJobId(null);
+    setDisplayedComprehensiveJobId(null);
+    setWaitingForComprehensiveJobId(null);
+    setPathwayGuidance({});
+    setCitations([]);
+    
     await startMicrophoneRecording();
   };
 
@@ -686,6 +767,15 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
     setPausedTime(0);
     setIsPaused(false);
     setHasReceivedComprehensiveAnalysis(false);
+    
+    // Reset job tracking state
+    setDisplayedRealtimeJobId(null);
+    setDisplayedComprehensiveJobId(null);
+    setWaitingForComprehensiveJobId(null);
+    setPathwayGuidance({});
+    setCitations([]);
+    
+    // Set test pathway guidance (will be overridden by real analysis)
     setPathwayGuidance({
       rationale: "This is a test rationale for the loaded transcript. The pathway is being monitored based on the current interaction.",
       immediate_actions: ["Test Action: Build more rapport with the client.", "Test Action: Validate the client's feelings about the situation."],
@@ -781,6 +871,13 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
     setPausedTime(0);
     setIsPaused(false);
     setHasReceivedComprehensiveAnalysis(false);
+    
+    // Reset job tracking state
+    setDisplayedRealtimeJobId(null);
+    setDisplayedComprehensiveJobId(null);
+    setWaitingForComprehensiveJobId(null);
+    setPathwayGuidance({});
+    setCitations([]);
     
     // Start streaming the example audio file
     await startAudioFileStreaming('/audio/suny-good-audio.mp3');
@@ -1009,6 +1106,7 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
                 currentGuidance={getPathwayGuidance()}
                 citations={citations}
                 techniques={sessionMetrics.techniques_detected}
+                currentAlert={getCurrentAlert()}
               />
             )}
             {activeTab === 'alternatives' && (
@@ -1017,6 +1115,10 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
                 citations={citations}
                 onCitationClick={handleCitationClick}
                 hasReceivedComprehensiveAnalysis={hasReceivedComprehensiveAnalysis}
+                waitingForComprehensiveJobId={waitingForComprehensiveJobId}
+                displayedComprehensiveJobId={displayedComprehensiveJobId}
+                displayedRealtimeJobId={displayedRealtimeJobId}
+                currentAlert={getCurrentAlert()}
               />
             )}
           </Box>

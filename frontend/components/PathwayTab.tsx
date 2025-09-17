@@ -1,6 +1,17 @@
 import React from 'react';
 import { Box, Typography, Chip, Paper } from '@mui/material';
-import { HealthAndSafety, NaturePeople, Category, Exposure } from '@mui/icons-material';
+import { 
+  HealthAndSafety, 
+  NaturePeople, 
+  Category, 
+  Exposure,
+  Shield,
+  Psychology,
+  SwapHoriz,
+  Build,
+  Lightbulb,
+  Assessment
+} from '@mui/icons-material';
 import { renderTextWithCitations } from '../utils/textRendering';
 
 interface PathwayTabProps {
@@ -35,6 +46,11 @@ interface PathwayTabProps {
     };
   }>;
   techniques?: string[];
+  currentAlert?: {
+    title: string;
+    category: string;
+    timing: string;
+  } | null;
 }
 
 const PathwayTab: React.FC<PathwayTabProps> = ({ 
@@ -42,7 +58,8 @@ const PathwayTab: React.FC<PathwayTabProps> = ({
   onActionClick,
   currentGuidance,
   citations = [],
-  techniques = []
+  techniques = [],
+  currentAlert
 }) => {
   const handleCitationClick = () => {
     const citationData = {
@@ -71,6 +88,37 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
       case 'cognitive': return <Category sx={{ fontSize: 24, color: '#b3261e' }} />;
       case 'exposure': return <Exposure sx={{ fontSize: 24, color: '#b3261e' }} />;
       default: return <HealthAndSafety sx={{ fontSize: 24, color: '#128937' }} />;
+    }
+  };
+
+  // Get alert icon based on category and timing
+  const getAlertIcon = (category: string, timing: string) => {
+    // Color based on timing: now=red, pause=orange, info=green
+    const getColor = () => {
+      switch (timing?.toLowerCase()) {
+        case 'now': return '#dc2626'; // Red
+        case 'pause': return '#d97706'; // Orange
+        case 'info': return '#059669'; // Green
+        default: return '#6b7280'; // Gray
+      }
+    };
+
+    const iconColor = getColor();
+    const iconSize = 36; // Match Guidance tab size
+
+    switch (category) {
+      case 'safety':
+        return <Shield sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'technique':
+        return <Build sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'pathway_change':
+        return <SwapHoriz sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'engagement':
+        return <Lightbulb sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'process':
+        return <Assessment sx={{ fontSize: iconSize, color: iconColor }} />;
+      default:
+        return <Psychology sx={{ fontSize: iconSize, color: iconColor }} />;
     }
   };
 
@@ -123,6 +171,24 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
       pb: 4,
       position: 'relative',
     }}>
+      {/* Alert Connection Header */}
+      {currentAlert && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {getAlertIcon(currentAlert.category, currentAlert.timing)}
+          <Typography
+            variant="h4"
+            sx={{
+              fontSize: '32px',
+              fontWeight: 600,
+              lineHeight: '40px',
+              color: '#1f1f1f',
+            }}
+          >
+            {currentAlert.title}
+          </Typography>
+        </Box>
+      )}
+
       {/* Main pathway content - comprehensive analysis */}
       {currentGuidance && currentGuidance.isLive ? (
         <div style={{

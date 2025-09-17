@@ -1,5 +1,13 @@
 import React from 'react';
 import { Box, Typography, Button } from '@mui/material';
+import { 
+  Shield,
+  Psychology,
+  SwapHoriz,
+  Build,
+  Lightbulb,
+  Assessment
+} from '@mui/icons-material';
 import { Citation } from '../types/types';
 import { renderTextWithCitations } from '../utils/textRendering';
 
@@ -14,13 +22,25 @@ interface AlternativesTabProps {
   citations?: Citation[];
   onCitationClick?: (citation: Citation) => void;
   hasReceivedComprehensiveAnalysis?: boolean;
+  waitingForComprehensiveJobId?: number | null;
+  displayedComprehensiveJobId?: number | null;
+  displayedRealtimeJobId?: number | null;
+  currentAlert?: {
+    title: string;
+    category: string;
+    timing: string;
+  } | null;
 }
 
 const AlternativesTab: React.FC<AlternativesTabProps> = ({ 
   alternativePathways = [], 
   citations = [], 
   onCitationClick,
-  hasReceivedComprehensiveAnalysis = false
+  hasReceivedComprehensiveAnalysis = false,
+  waitingForComprehensiveJobId,
+  displayedComprehensiveJobId,
+  displayedRealtimeJobId,
+  currentAlert
 }) => {
   // Helper function to handle citation clicks in rendered markdown
   const handleCitationClick = (citationNumber: number) => {
@@ -30,8 +50,45 @@ const AlternativesTab: React.FC<AlternativesTabProps> = ({
     }
   };
 
-  // Show dynamic content if available, otherwise show static content
-  const hasAlternatives = alternativePathways && alternativePathways.length > 0;
+  // Get alert icon based on category and timing
+  const getAlertIcon = (category: string, timing: string) => {
+    // Color based on timing: now=red, pause=orange, info=green
+    const getColor = () => {
+      switch (timing?.toLowerCase()) {
+        case 'now': return '#dc2626'; // Red
+        case 'pause': return '#d97706'; // Orange
+        case 'info': return '#059669'; // Green
+        default: return '#6b7280'; // Gray
+      }
+    };
+
+    const iconColor = getColor();
+    const iconSize = 36; // Match Guidance tab size
+
+    switch (category) {
+      case 'safety':
+        return <Shield sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'technique':
+        return <Build sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'pathway_change':
+        return <SwapHoriz sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'engagement':
+        return <Lightbulb sx={{ fontSize: iconSize, color: iconColor }} />;
+      case 'process':
+        return <Assessment sx={{ fontSize: iconSize, color: iconColor }} />;
+      default:
+        return <Psychology sx={{ fontSize: iconSize, color: iconColor }} />;
+    }
+  };
+
+  // Show comprehensive results if available and job IDs match
+  const hasAlternatives = alternativePathways && 
+    alternativePathways.length > 0 && 
+    displayedComprehensiveJobId === displayedRealtimeJobId;
+
+  // Show loading state when waiting for comprehensive results
+  const isWaitingForComprehensive = waitingForComprehensiveJobId !== null;
+
   return (
     <Box sx={{ 
       display: 'flex',
@@ -39,8 +96,26 @@ const AlternativesTab: React.FC<AlternativesTabProps> = ({
       gap: 6,
       pb: 4,
     }}>
+      {/* Alert Connection Header */}
+      {currentAlert && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {getAlertIcon(currentAlert.category, currentAlert.timing)}
+          <Typography
+            variant="h4"
+            sx={{
+              fontSize: '32px',
+              fontWeight: 600,
+              lineHeight: '40px',
+              color: '#1f1f1f',
+            }}
+          >
+            {currentAlert.title}
+          </Typography>
+        </Box>
+      )}
+
       {hasAlternatives ? (
-        // Dynamic content from comprehensive analysis
+        // Dynamic content from comprehensive analysis with matching job IDs
         <>
           {alternativePathways.map((pathway, index) => (
             <Box key={index} sx={{ display: 'flex', gap: 4 }}>
@@ -95,6 +170,17 @@ const AlternativesTab: React.FC<AlternativesTabProps> = ({
             </Box>
           ))}
         </>
+      ) : isWaitingForComprehensive ? (
+        // Loading state when waiting for comprehensive results
+        <div style={{
+          fontSize: '28px',
+          fontWeight: 400,
+          lineHeight: '36px',
+          color: '#1f1f1f',
+          whiteSpace: 'pre-line',
+        }}>
+          Creating alternative therapeutic pathway guidance...
+        </div>
       ) : (
         // Default content when no analysis data available
         <div style={{

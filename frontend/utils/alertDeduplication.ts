@@ -207,46 +207,27 @@ export function processNewAlert(
   existingAlerts: Alert[],
   options: {
     config?: DeduplicationConfig;
-    debugMode?: boolean;
   } = {}
 ): { 
   shouldAdd: boolean; 
-  debugInfo?: any 
+  reason?: string;
+  similarAlert?: Alert;
 } {
-  const { config = DEFAULT_CONFIG, debugMode = false } = options;
+  const { config = DEFAULT_CONFIG } = options;
   
   const blockResult = shouldBlockAlert(newAlert, existingAlerts, config);
-  
-  const debugInfo = debugMode ? {
-    blockCheck: blockResult,
-    newAlert: {
-      title: newAlert.title,
-      category: newAlert.category,
-      timing: newAlert.timing,
-    },
-    alertCounts: {
-      total: existingAlerts.length,
-      safety: existingAlerts.filter(a => a.category === 'safety').length,
-      technique: existingAlerts.filter(a => a.category === 'technique').length,
-      pathway_change: existingAlerts.filter(a => a.category === 'pathway_change').length,
-    }
-  } : undefined;
   
   if (blockResult.shouldBlock) {
     return {
       shouldAdd: false,
-      debugInfo: debugMode ? { 
-        ...debugInfo, 
-        action: 'blocked', 
-        reason: blockResult.reason,
-        similarAlertTitle: blockResult.similarAlert?.title 
-      } : undefined
+      reason: blockResult.reason,
+      similarAlert: blockResult.similarAlert
     };
   }
   
   return {
     shouldAdd: true,
-    debugInfo: debugMode ? { ...debugInfo, action: 'added', reason: 'No duplicates found' } : undefined
+    reason: 'No duplicates found'
   };
 }
 
