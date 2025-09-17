@@ -44,7 +44,7 @@ interface GuidanceTabProps {
   onActionClick: (action: any, isContraindication: boolean) => void;
 }
 
-const QuoteCard = ({ time, text }: { time: string, text: string }) => (
+const QuoteCard = ({ text }: { text: string }) => (
   <Paper
     sx={{
       p: 3,
@@ -60,6 +60,7 @@ const QuoteCard = ({ time, text }: { time: string, text: string }) => (
       fontSize: '16px',
       lineHeight: '24px',
       color: '#1f1f1f',
+      fontStyle: 'italic',
     }}>
       {text}
     </Typography>
@@ -114,71 +115,33 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
     }
   };
 
-  // Extract relevant quotes from recent alerts or transcript
+  // Extract relevant quotes from recent alerts
   const getRelevantQuotes = () => {
-    const quotes: Array<{ time: string; text: string }> = [];
+    const quotes: string[] = [];
     
-    // First, try to get quotes from recent safety alerts
-    const safetyAlerts = alerts.filter(alert => 
-      alert.category === 'safety' && 
+    // Get evidence from any alert that has evidence
+    const alertsWithEvidence = alerts.filter(alert => 
       alert.evidence && 
-      Array.isArray(alert.evidence)
+      Array.isArray(alert.evidence) && 
+      alert.evidence.length > 0
     );
     
-    safetyAlerts.slice(0, 1).forEach(alert => {
-      if (alert.evidence && alert.evidence.length > 0) {
-        const evidence = alert.evidence[0]; // This is a string
-        if (evidence.includes('"')) {
-          // Extract quoted text
-          const quoteMatch = evidence.match(/"([^"]+)"/);
-          if (quoteMatch) {
-            quotes.push({
-              time: alert.timing || 'Recent',
-              text: `"${quoteMatch[1]}"`
-            });
-          }
-        } else if (evidence.length > 50) {
-          // Use the evidence text directly if it's substantial
-          quotes.push({
-            time: alert.timing || 'Recent',
-            text: `"${evidence.length > 100 ? evidence.substring(0, 100) + '...' : evidence}"`
-          });
+    if (alertsWithEvidence.length > 0) {
+      const recentAlert = alertsWithEvidence[0];
+      // Add all evidence from the most recent alert
+      recentAlert.evidence?.forEach(evidence => {
+        if (typeof evidence === 'string' && evidence.trim().length > 0) {
+          quotes.push(`"${evidence.trim()}"`);
         }
-      }
-    });
-    
-    // If we don't have enough quotes from alerts, extract from recent transcript
-    if (quotes.length < 1) {
-      const recentTranscript = transcript
-        .filter(entry => !entry.is_interim && entry.text.length > 20)
-        .slice(-10); // Last 10 entries
-      
-      for (const entry of recentTranscript) {
-        if (quotes.length >= 1) break;
-        
-        // Look for concerning keywords
-        const concerningKeywords = ['anxiety', 'stress', 'worried', 'scared', 'overwhelmed', 'difficult', 'hard'];
-        if (concerningKeywords.some(keyword => entry.text.toLowerCase().includes(keyword))) {
-          const timestamp = entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent';
-          quotes.push({
-            time: timestamp,
-            text: `"${entry.text.length > 100 ? entry.text.substring(0, 100) + '...' : entry.text}"`
-          });
-        }
-      }
+      });
     }
     
-    // Default quote if no dynamic content available
+    // Default if no evidence available
     if (quotes.length === 0) {
-      return [
-        {
-          time: "",
-          text: "Direct quotes will appear here."
-        }
-      ];
+      quotes.push("Direct quotes will appear here.");
     }
     
-    return quotes.slice(0, 1); // Return max 1 quote
+    return quotes;
   };
 
   // Get dynamic evidence from alerts
@@ -377,8 +340,7 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({
             {getRelevantQuotes().map((quote, index) => (
               <QuoteCard 
                 key={index}
-                time={quote.time} 
-                text={quote.text} 
+                text={quote} 
               />
             ))}
           </Box>

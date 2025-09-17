@@ -110,17 +110,6 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
             markdown: true
           })}
         </div>
-        <div style={{ 
-          fontSize: '14px', 
-          lineHeight: '20px',
-          color: '#444746',
-        }}>
-          {renderTextWithCitations(action.description, {
-            citations,
-            onCitationClick: onCitationClick || (() => {}),
-            markdown: true
-          })}
-        </div>
       </Box>
     </Paper>
   );
@@ -151,53 +140,73 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
       )}
 
       {/* Action Cards */}
-      {currentGuidance && (currentGuidance.immediateActions?.length > 0 || currentGuidance.contraindications?.length > 0) && (
-        <Box sx={{ display: 'flex', gap: 4 }}>
-          {/* Immediate Actions */}
-          {currentGuidance.immediateActions?.length > 0 && (
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="body2" sx={{ 
-                fontSize: '14px', 
-                fontWeight: 600, 
-                color: '#444746',
-                mb: 2,
-                letterSpacing: '0.5px',
-              }}>
-                IMMEDIATE ACTIONS
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                {currentGuidance.immediateActions.slice(0, 2).map((action, index) => (
-                  <Box key={index} sx={{ flex: 1 }}>
-                    <ActionCard action={action} />
-                  </Box>
-                ))}
-              </Box>
+      <Box sx={{ display: 'flex', gap: 4 }}>
+        {/* Immediate Actions */}
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="body2" sx={{ 
+            fontSize: '14px', 
+            fontWeight: 600, 
+            color: '#444746',
+            mb: 2,
+            letterSpacing: '0.5px',
+          }}>
+            IMMEDIATE ACTIONS
+          </Typography>
+          {currentGuidance && currentGuidance.immediateActions?.length > 0 ? (
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              {currentGuidance.immediateActions.slice(0, 2).map((action, index) => (
+                <Box key={index} sx={{ flex: 1 }}>
+                  <ActionCard action={action} />
+                </Box>
+              ))}
             </Box>
-          )}
-
-          {/* Contraindications */}
-          {currentGuidance.contraindications?.length > 0 && (
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="body2" sx={{ 
-                fontSize: '14px', 
-                fontWeight: 600, 
-                color: '#444746',
-                mb: 2,
-                letterSpacing: '0.5px',
-              }}>
-                CONTRAINDICATIONS
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                {currentGuidance.contraindications.slice(0, 2).map((action, index) => (
-                  <Box key={index} sx={{ flex: 1 }}>
-                    <ActionCard action={action} isContraindication />
-                  </Box>
-                ))}
-              </Box>
-            </Box>
+          ) : (
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontSize: '14px',
+                color: '#6b7280',
+                fontStyle: 'italic',
+              }}
+            >
+              No immediate actions identified yet
+            </Typography>
           )}
         </Box>
-      )}
+
+        {/* Contraindications */}
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="body2" sx={{ 
+            fontSize: '14px', 
+            fontWeight: 600, 
+            color: '#444746',
+            mb: 2,
+            letterSpacing: '0.5px',
+          }}>
+            CONTRAINDICATIONS
+          </Typography>
+          {currentGuidance && currentGuidance.contraindications?.length > 0 ? (
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              {currentGuidance.contraindications.slice(0, 2).map((action, index) => (
+                <Box key={index} sx={{ flex: 1 }}>
+                  <ActionCard action={action} isContraindication />
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontSize: '14px',
+                color: '#6b7280',
+                fontStyle: 'italic',
+              }}
+            >
+              No contraindications identified yet
+            </Typography>
+          )}
+        </Box>
+      </Box>
 
       {/* Citations and Techniques Row */}
       <Box sx={{ display: 'flex', gap: 6, mt: 2 }}>
