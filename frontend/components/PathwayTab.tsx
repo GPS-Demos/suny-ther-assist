@@ -20,6 +20,7 @@ interface PathwayTabProps {
       description: string;
       icon: 'cognitive' | 'exposure';
     }>;
+    isLive: boolean;
   };
   citations?: Array<{
     citation_number: number;
@@ -123,7 +124,7 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
       position: 'relative',
     }}>
       {/* Main pathway content - comprehensive analysis */}
-      {currentGuidance && currentGuidance.content && (
+      {currentGuidance && currentGuidance.isLive ? (
         <div style={{
           fontSize: '24px',
           fontWeight: 400,
@@ -136,6 +137,17 @@ Abramowitz, J. S., Deacon, B. J., & Whiteside, S. P. H. (2019). Exposure therapy
             onCitationClick: onCitationClick || (() => {}),
             markdown: true
           })}
+        </div>
+      ) : (
+        // Default content when no analysis data available
+        <div style={{
+          fontSize: '28px',
+          fontWeight: 400,
+          lineHeight: '36px',
+          color: '#1f1f1f',
+          whiteSpace: 'pre-line',
+        }}>
+          {currentGuidance?.content}
         </div>
       )}
 

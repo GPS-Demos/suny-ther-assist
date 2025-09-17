@@ -287,8 +287,9 @@ def handle_segment_analysis(request_json, headers):
         session_duration = request_json.get('session_duration_minutes', 0)
         is_realtime = request_json.get('is_realtime', False)  # Flag for fast real-time analysis
         previous_alert = request_json.get('previous_alert', None)  # Previous alert for deduplication
+        job_id = request_json.get('job_id', None)  # Analysis job ID to relate realtime and comprehensive results
         
-        logging.info(f"Segment analysis request - duration: {session_duration} minutes, segments: {len(transcript_segment)}, realtime: {is_realtime}, has_previous_alert: {previous_alert is not None}")
+        logging.info(f"Segment analysis request - duration: {session_duration} minutes, segments: {len(transcript_segment)}, realtime: {is_realtime}, has_previous_alert: {previous_alert is not None}, job_id: {job_id}")
         logging.info(f"Transcript segment: {transcript_segment}")
         
         if not transcript_segment:
@@ -477,6 +478,10 @@ Timing: {previous_alert.get('timing', 'N/A')}
                     parsed['timestamp'] = datetime.now().isoformat()
                     parsed['session_phase'] = phase
                     parsed['analysis_type'] = 'realtime' if is_realtime else 'comprehensive'
+                    
+                    # Add job_id to relate realtime and comprehensive results
+                    if job_id is not None:
+                        parsed['job_id'] = job_id
                     
                     # Add grounding citations if available
                     if grounding_chunks:

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -174,6 +174,9 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
   // Analysis tracking
   const [wordsSinceLastAnalysis, setWordsSinceLastAnalysis] = useState(0);
   const [hasReceivedComprehensiveAnalysis, setHasReceivedComprehensiveAnalysis] = useState(false);
+  
+  // Analysis job ID tracking - counter to relate realtime and comprehensive results
+  const analysisJobCounterRef = useRef(0);
   
   // Session summary state
   const [showSessionSummary, setShowSessionSummary] = useState(false);
@@ -411,6 +414,37 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
     sessionDurationRef.current = sessionDuration;
   }, [sessionDuration]);
 
+  // Helper function to trigger both realtime and comprehensive analysis with shared ID
+  const triggerPairedAnalysis = useCallback((transcriptSegment: any[], triggerSource: string) => {
+    if (transcriptSegment.length === 0) return;
+    
+    // Increment job counter and get shared ID for both analyses
+    analysisJobCounterRef.current += 1;
+    const sharedJobId = analysisJobCounterRef.current;
+    
+    console.log(`[Session] 🔄 ${triggerSource} triggered - Job ID: ${sharedJobId}`);
+    
+    // Get the most recent alert for backend deduplication (realtime only)
+    const recentAlert = alertsRef.current.length > 0 ? alertsRef.current[0] : null;
+    
+    // Trigger both analyses with the same job ID
+    analyzeSegmentRef.current(
+      transcriptSegment,
+      { ...sessionContextRef.current, is_realtime: true },
+      Math.floor(sessionDurationRef.current / 60),
+      recentAlert,
+      sharedJobId
+    );
+    
+    analyzeSegmentRef.current(
+      transcriptSegment,
+      { ...sessionContextRef.current, is_realtime: false },
+      Math.floor(sessionDurationRef.current / 60),
+      undefined, // no previous alert for comprehensive
+      sharedJobId
+    );
+  }, []);
+
   // Word-based real-time analysis trigger (simplified)
   useEffect(() => {
     if (!isRecording || transcript.length === 0) return;
@@ -424,13 +458,11 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
     setWordsSinceLastAnalysis(prev => {
       const updatedWordCount = prev + newWords;
       
-      // Trigger analysis every 10 words
+      // Trigger analysis every 10 words minimum
       const WORDS_PER_ANALYSIS = 10;
       const TRANSCRIPT_WINDOW_MINUTES = 5;
       
       if (updatedWordCount >= WORDS_PER_ANALYSIS) {
-        console.log(`[Session] 🔄 Auto-analysis triggered (${updatedWordCount} words)`);
-        
         // Get last 5 minutes of transcript
         const fiveMinutesAgo = new Date(Date.now() - TRANSCRIPT_WINDOW_MINUTES * 60 * 1000);
         const recentTranscript = transcript
@@ -442,22 +474,7 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
           }));
         
         if (recentTranscript.length > 0) {
-          // Get the most recent alert for backend deduplication
-          const recentAlert = alertsRef.current.length > 0 ? alertsRef.current[0] : null;
-          
-          // Trigger both real-time and comprehensive analysis
-          analyzeSegmentRef.current(
-            recentTranscript,
-            { ...sessionContextRef.current, is_realtime: true },
-            Math.floor(sessionDurationRef.current / 60),
-            recentAlert
-          );
-          
-          analyzeSegmentRef.current(
-            recentTranscript,
-            { ...sessionContextRef.current, is_realtime: false },
-            Math.floor(sessionDurationRef.current / 60)
-          );
+          triggerPairedAnalysis(recentTranscript, `Auto-analysis (${updatedWordCount} words)`);
         }
         
         // Reset word count
@@ -466,7 +483,7 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
       
       return updatedWordCount;
     });
-  }, [transcript, isRecording]);
+  }, [transcript, isRecording, triggerPairedAnalysis]);
 
   // Generate current date in the format "Month Day, Year"
   const getCurrentDate = () => {
@@ -548,7 +565,8 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
           title: contra,
           description: contra,
           icon: 'cognitive' as const
-        })) || []
+        })) || [],
+        isLive: true
       };
     }
     
@@ -560,7 +578,8 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
         ? "Thinking..."
         : "Start a session to receive comprehensive therapeutic guidance.",
       immediateActions: [],
-      contraindications: []
+      contraindications: [],
+      isLive: false
     };
   };
 
@@ -1503,56 +1522,6 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
             <Close />
           </IconButton>
         </Box>
-        
-        {(isRecording || isTestMode) && transcript.length > 0 && (
-          <Box sx={{ mb: 2 }}>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() => {
-                console.log('[Manual Analysis] Triggering both real-time and comprehensive analyses');
-                const recentTranscript = transcript.slice(-10);
-                if (recentTranscript.length > 0) {
-                  const formattedTranscript = recentTranscript
-                    .filter(t => !t.is_interim)
-                    .map(t => ({
-                      speaker: 'conversation',
-                      text: t.text,
-                      timestamp: t.timestamp
-                    }));
-                  
-                  if (formattedTranscript.length > 0) {
-                    // Trigger both analyses like the automatic word trigger does
-                    analyzeSegment(
-                      formattedTranscript, 
-                      { ...sessionContext, is_realtime: true }, 
-                      Math.floor(sessionDuration / 60)
-                    );
-                    analyzeSegment(
-                      formattedTranscript, 
-                      { ...sessionContext, is_realtime: false }, 
-                      Math.floor(sessionDuration / 60)
-                    );
-                  }
-                }
-              }}
-              sx={{ 
-                borderColor: '#10b981',
-                color: '#10b981',
-                '&:hover': {
-                  borderColor: '#059669',
-                  backgroundColor: 'rgba(16, 185, 129, 0.04)',
-                },
-                fontWeight: 600,
-                borderRadius: '16px',
-                px: 2,
-                py: 0.5,
-              }}
-            >
-              Analyze Now
-            </Button>
-          </Box>
-        )}
         
         <Box sx={{ flex: 1, overflow: 'auto' }}>
           <TranscriptDisplay transcript={transcript} />

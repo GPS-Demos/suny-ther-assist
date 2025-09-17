@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import axios from 'axios';
 import { AnalysisResponse, SessionContext } from '../types/types';
-import { request } from 'node_modules/axios/index.d.cts';
 
 interface UseTherapyAnalysisProps {
   onAnalysis: (analysis: AnalysisResponse) => void;
@@ -22,7 +21,8 @@ export const useTherapyAnalysis = ({
     transcriptSegment: Array<{ speaker: string; text: string; timestamp: string }>,
     sessionContext: SessionContext | { is_realtime?: boolean } & SessionContext,
     sessionDurationMinutes: number,
-    previousAlert?: any
+    previousAlert?: any,
+    jobId?: number
   ) => {
     // Extract is_realtime flag if present
     const { is_realtime, ...cleanContext } = sessionContext as any;
@@ -35,6 +35,7 @@ export const useTherapyAnalysis = ({
       session_duration_minutes: sessionDurationMinutes,
       is_realtime: is_realtime || false,
       previous_alert: previousAlert || null,
+      job_id: jobId || null,
     };
     
     console.log(`[Analysis] 📤 ${analysisType.toUpperCase()} REQUEST:`, requestPayload);
