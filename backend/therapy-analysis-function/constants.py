@@ -45,7 +45,80 @@ If an guidance is needed, prioritize actionable guidance and return only the MOS
         "title": "Brief descriptive title",
         "message": "Specific action or observation (1-3 sentences max)",
         "evidence": ["direct quote showing the critical moment"],
-        "recommendation": "Action(s) to take if applicable. IMPORTANT: format each recommendation as a markdown bullet point using '- ' prefix (e.g., '- First action\n- Second action') but DO NOT break the json object with actual newlines"
+        "recommendation": "Action(s) to take if applicable. IMPORTANT: format each recommendation as a markdown bullet point using '- ' prefix (e.g., '- First action\n- Second action') but BE SURE not to break the json object"
+    }}
+}}
+
+IMPORTANT NOTE:
+Always refer to the patient as 'patient'"""
+
+REALTIME_ANALYSIS_PROMPT_STRICT = """Analyze this therapy segment for CRITICAL guidance only using a Cognitive Behavioral Therapy approach.
+
+TRANSCRIPT (last few sentences):
+{transcript_text}
+
+PREVIOUS GUIDANCE:
+{previous_alert_context}
+
+**DEFAULT RESPONSE: EMPTY JSON {{}}**
+
+Only provide guidance if ALL of the following conditions are met:
+1. A CRITICAL therapeutic moment is occurring that requires immediate intervention
+2. The situation represents a significant risk, breakthrough, or therapeutic emergency
+3. No similar guidance has been provided recently (see PREVIOUS GUIDANCE above)
+4. The guidance would materially change the therapist's immediate actions
+
+CRITICAL MOMENTS REQUIRING GUIDANCE:
+
+**IMMEDIATE (timing: "now") - Only for genuine emergencies:**
+- Catastrophization of situations
+- Patient is "falling apart" or feeling "physically sick"
+- Active suicidal ideation with plan/intent
+- Self-harm behavior or urges being expressed
+- Severe dissociation (patient disconnected from reality)
+- Medical emergency or physical distress
+
+**PAUSE (timing: "pause") - Only for significant therapeutic opportunities:**
+- Major breakthrough moment that requires specific follow-up
+- Critical resistance that's blocking all progress
+- Window for exposure that may not reoccur
+- Therapeutic alliance rupture requiring immediate repair
+
+**INFO (timing: "info") - Used only for:**
+- Important timing for re-engagement with an exposure plan
+- Significant pattern recognition that changes treatment direction
+
+STRICT DEDUPLICATION:
+- If PREVIOUS GUIDANCE exists with same category, return empty JSON {{}}
+- If PREVIOUS GUIDANCE addresses similar issue, return empty JSON {{}}
+- If therapist is handling situation appropriately, return empty JSON {{}}
+- Only SAFETY alerts can override this rule
+
+CONFIDENCE THRESHOLD:
+- Only provide guidance if you are highly confident (90%+) it's needed
+- When in doubt, return empty JSON {{}}
+- Normal therapeutic conversation does NOT require guidance
+
+Categories (use sparingly):
+- SAFETY: Only for genuine risk/crisis situations
+- PATHWAY_CHANGE: Only when current approach is clearly failing
+- ENGAGEMENT: Only for significant alliance issues
+- TECHNIQUE: Only for critical missed opportunities
+
+**MOST SESSIONS SHOULD RECEIVE NO GUIDANCE**
+
+Empty JSON format (use this most of the time):
+{{}}
+
+If an guidance is needed, prioritize actionable guidance and return only the MOST RELEVANT single piece of guidance. Format response as a valid JSON object:
+{{
+    "alert": {{
+        "timing": "now|pause|info",
+        "category": "safety|technique|pathway_change|engagement",
+        "title": "Brief descriptive title",
+        "message": "Specific action or observation (1-3 sentences max)",
+        "evidence": ["direct quote showing the critical moment"],
+        "recommendation": "Action(s) to take if applicable. IMPORTANT: format each recommendation as a markdown bullet point using '- ' prefix (e.g., '- First action\n- Second action') but BE SURE not to break the json object"
     }}
 }}
 
