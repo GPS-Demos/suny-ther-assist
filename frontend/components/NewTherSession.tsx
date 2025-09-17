@@ -1247,20 +1247,130 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
           {/* Session Metrics Row */}
           <Box sx={{ 
             display: 'flex',
-            '& > *': { flex: 1 },
+            '& > *:not(:first-of-type)': { flex: 1 },
           }}>
-            {/* Session ID */}
+            {/* Session ID / Transcript Button / Test Buttons */}
             <Box sx={{ 
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              px: 2, 
+              px: 1, 
               py: 2, 
               borderRight: '1px solid #f0f4f9',
+              minWidth: isRecording ? 100 : 200,
+              flexShrink: 0,
             }}>
-              <Typography variant="h6" sx={{ fontWeight: 500, fontSize: '24px', color: '#1e1e1e' }}>
-                {sessionId}
-              </Typography>
+              {isRecording ? (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<Chat sx={{ fontSize: 16 }} />}
+                  onClick={() => {
+                    setTranscriptOpen(!transcriptOpen);
+                    if (!transcriptOpen) {
+                      setNewTranscriptCount(0);
+                    }
+                  }}
+                  sx={{
+                    borderColor: '#0b57d0',
+                    color: '#0b57d0',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    borderRadius: '4px',
+                    px: 1,
+                    py: 0.25,
+                    minWidth: 'auto',
+                    position: 'relative',
+                    '& .MuiButton-startIcon': {
+                      marginRight: 0.5,
+                      marginLeft: 0,
+                    },
+                    '&:hover': {
+                      borderColor: '#00639b',
+                      backgroundColor: 'rgba(11, 87, 208, 0.04)',
+                    },
+                  }}
+                >
+                  Transcript
+                  {newTranscriptCount > 0 && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: -4,
+                        right: -4,
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        borderRadius: '50%',
+                        minWidth: 14,
+                        height: 14,
+                        fontSize: '9px',
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        px: 0.5,
+                      }}
+                    >
+                      {newTranscriptCount > 99 ? '99+' : newTranscriptCount}
+                    </Box>
+                  )}
+                </Button>
+              ) : !isTestMode ? (
+                <Box sx={{ 
+                  display: 'flex',
+                  gap: 1,
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<VolumeUp />}
+                    onClick={loadExampleAudio}
+                    sx={{ 
+                      borderColor: '#6366f1',
+                      color: '#6366f1',
+                      '&:hover': {
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(99, 102, 241, 0.04)',
+                      },
+                      fontWeight: 600,
+                      borderRadius: '16px',
+                      px: 2,
+                      py: 0.5,
+                      fontSize: '12px',
+                      minWidth: 'auto',
+                    }}
+                  >
+                    Load Example Audio
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={loadTestTranscript}
+                    sx={{ 
+                      borderColor: '#0b57d0',
+                      color: '#0b57d0',
+                      '&:hover': {
+                        borderColor: '#00639b',
+                        backgroundColor: 'rgba(11, 87, 208, 0.04)',
+                      },
+                      fontWeight: 600,
+                      borderRadius: '16px',
+                      px: 2,
+                      py: 0.5,
+                      fontSize: '12px',
+                      minWidth: 'auto',
+                    }}
+                  >
+                    Load Test Transcript
+                  </Button>
+                </Box>
+              ) : (
+                <Typography variant="h6" sx={{ fontWeight: 500, fontSize: '24px', color: '#1e1e1e' }}>
+                  {sessionId}
+                </Typography>
+              )}
             </Box>
 
             {/* Emotional State */}
@@ -1318,7 +1428,7 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
                   Engagement Level
                 </Typography>
                 <Typography variant="body1" sx={{ fontWeight: 600, color: '#1f1f1f' }}>
-                  {sessionMetrics.engagement_level}%
+                  {sessionMetrics.engagement_level === 0 ? 'Unknown' : `${Math.round(sessionMetrics.engagement_level * 100)}%`}
                 </Typography>
               </Box>
             </Box>
@@ -1390,21 +1500,6 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
               <Typography variant="h6" sx={{ fontWeight: 400, fontSize: '28px', color: '#444746' }}>
                 {formatDuration(sessionDuration)}
               </Typography>
-              <Box sx={{ 
-                position: 'relative',
-                width: 40,
-                height: 40,
-              }}>
-                {/* Progress circle would go here */}
-                <Box sx={{
-                  width: '100%',
-                  height: '100%',
-                  borderRadius: '50%',
-                  border: '3px solid #e0e0e0',
-                  borderTop: '3px solid #0b57d0',
-                  transform: 'rotate(45deg)',
-                }} />
-              </Box>
               {!isRecording ? (
                 <Button
                   variant="contained"
@@ -1485,89 +1580,12 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
             Summary
           </Fab>
         )}
-
-        {/* Floating Transcript Toggle Button */}
-        <Fab
-          color="primary"
-          aria-label="transcript"
-          onClick={() => {
-            setTranscriptOpen(!transcriptOpen);
-            if (!transcriptOpen) {
-              setNewTranscriptCount(0);
-            }
-          }}
-          sx={{
-            background: 'linear-gradient(135deg, #0b57d0 0%, #00639b 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #00639b 0%, #0b57d0 100%)',
-              transform: 'scale(1.1)',
-            },
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: '0 8px 20px -4px rgba(11, 87, 208, 0.35)',
-          }}
-        >
-          <Badge badgeContent={newTranscriptCount} color="error">
-            <Chat />
-          </Badge>
-        </Fab>
       </Box>
 
-      {/* Test Buttons */}
-      {!isRecording && !isTestMode && (
-        <Box sx={{ 
-          position: 'fixed', 
-          bottom: 24, 
-          left: 24,
-          zIndex: 1201,
-          display: 'flex',
-          gap: 1,
-          flexDirection: 'column',
-        }}>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<VolumeUp />}
-            onClick={loadExampleAudio}
-            sx={{ 
-              borderColor: '#6366f1',
-              color: '#6366f1',
-              '&:hover': {
-                borderColor: '#4f46e5',
-                backgroundColor: 'rgba(99, 102, 241, 0.04)',
-              },
-              fontWeight: 600,
-              borderRadius: '16px',
-              px: 2,
-              py: 0.5,
-            }}
-          >
-            Load Example Audio
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={loadTestTranscript}
-            sx={{ 
-              borderColor: '#0b57d0',
-              color: '#0b57d0',
-              '&:hover': {
-                borderColor: '#00639b',
-                backgroundColor: 'rgba(11, 87, 208, 0.04)',
-              },
-              fontWeight: 600,
-              borderRadius: '16px',
-              px: 2,
-              py: 0.5,
-            }}
-          >
-            Load Test Transcript
-          </Button>
-        </Box>
-      )}
 
-      {/* Right Sidebar - Transcript */}
+      {/* Left Sidebar - Transcript */}
       <Drawer
-        anchor="right"
+        anchor="left"
         open={transcriptOpen}
         onClose={() => setTranscriptOpen(false)}
         sx={{
@@ -1578,8 +1596,8 @@ const NewTherSession: React.FC<NewTherSessionProps> = ({
             background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(248, 250, 252, 0.85) 100%)',
             backdropFilter: 'blur(24px) saturate(180%)',
             WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-            boxShadow: '-8px 0 32px -4px rgba(0, 0, 0, 0.12)',
-            borderLeft: '1px solid rgba(255, 255, 255, 0.5)',
+            boxShadow: '8px 0 32px -4px rgba(0, 0, 0, 0.12)',
+            borderRight: '1px solid rgba(255, 255, 255, 0.5)',
             '&::before': {
               content: '""',
               position: 'absolute',
