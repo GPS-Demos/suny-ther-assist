@@ -187,16 +187,18 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
                   </Typography>
                 </Box>
                 <Box>
-                  <Typography variant="caption" color="text.secondary">Risk Level</Typography>
-                  <Chip
-                    label={summary.risk_assessment.level.toUpperCase()}
-                    size="small"
-                    sx={{
-                      bgcolor: getRiskColor(summary.risk_assessment.level),
-                      color: 'white',
-                      fontWeight: 600,
-                    }}
-                  />
+                  <Typography variant="caption" color="text.secondary">Patient Risk Level</Typography>
+                  <Box sx={{ mt: 0.5 }}>
+                    <Chip
+                      label={summary.risk_assessment.level.toUpperCase()}
+                      size="small"
+                      sx={{
+                        bgcolor: getRiskColor(summary.risk_assessment.level),
+                        color: 'white',
+                        fontWeight: 600,
+                      }}
+                    />
+                  </Box>
                 </Box>
               </Box>
             </Paper>

@@ -9,8 +9,10 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  Chip,
+  Grid,
 } from '@mui/material';
-import { Close, PlayCircle, CheckCircle, ErrorOutline, Warning, Info } from '@mui/icons-material';
+import { Close, PlayCircle, CheckCircle, ErrorOutline, Warning, Info, Psychology, Lightbulb } from '@mui/icons-material';
 import { renderTextWithCitations } from '../utils/textRendering';
 import { Citation } from '../types/types';
 
@@ -22,9 +24,25 @@ interface RationaleModalProps {
   contraindications?: string[];
   citations?: Citation[];
   onCitationClick: (citation: Citation) => void;
+  detectedTechniques?: string[];
+  alternativePathways?: Array<{
+    approach: string;
+    reason: string;
+    techniques: string[];
+  }>;
 }
 
-const RationaleModal: React.FC<RationaleModalProps> = ({ open, onClose, rationale, immediateActions, contraindications, citations = [], onCitationClick }) => {
+const RationaleModal: React.FC<RationaleModalProps> = ({ 
+  open, 
+  onClose, 
+  rationale, 
+  immediateActions, 
+  contraindications, 
+  citations = [], 
+  onCitationClick,
+  detectedTechniques = [],
+  alternativePathways = []
+}) => {
   return (
     <Modal
       open={open}
@@ -63,7 +81,7 @@ const RationaleModal: React.FC<RationaleModalProps> = ({ open, onClose, rational
           >
             <Close />
           </IconButton>
-          <Typography id="rationale-modal-title" variant="h6" component="h2" sx={{ color: 'var(--primary)', fontWeight: 600, mb: 2 }}>
+          <Typography id="rationale-modal-title" variant="h6" component="h2" sx={{ color: 'var(--primary)', fontWeight: 600, mb: 2, fontSize: '1.5rem' }}>
             Rationale Details
           </Typography>
         </Box>
@@ -105,7 +123,7 @@ const RationaleModal: React.FC<RationaleModalProps> = ({ open, onClose, rational
                     boxShadow: 'none',
                   }}
                 >
-                  <Typography component="div">
+                  <Typography component="div" sx={{ fontSize: '1.1rem', lineHeight: 1.6 }}>
                     {renderTextWithCitations(rationale, {
                       citations,
                       onCitationClick: onCitationClick,
@@ -131,7 +149,7 @@ const RationaleModal: React.FC<RationaleModalProps> = ({ open, onClose, rational
                         <CheckCircle sx={{ fontSize: 14, color: 'success.main' }} />
                       </ListItemIcon>
                       <ListItemText 
-                        primary={<Typography component="div">{renderTextWithCitations(action, {
+                        primary={<Typography component="div" sx={{ fontSize: '1.05rem', lineHeight: 1.5 }}>{renderTextWithCitations(action, {
                           citations,
                           onCitationClick: onCitationClick,
                           markdown: true
@@ -144,7 +162,7 @@ const RationaleModal: React.FC<RationaleModalProps> = ({ open, onClose, rational
             )}
 
             {contraindications && contraindications.length > 0 && (
-              <Box>
+              <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
                   <ErrorOutline sx={{ fontSize: 16, color: 'error.main' }} />
                   <Typography variant="caption" color="text.secondary" fontWeight={600}>
@@ -158,7 +176,7 @@ const RationaleModal: React.FC<RationaleModalProps> = ({ open, onClose, rational
                         <Warning sx={{ fontSize: 14, color: 'error.main' }} />
                       </ListItemIcon>
                       <ListItemText 
-                        primary={<Typography component="div">{renderTextWithCitations(contraindication, {
+                        primary={<Typography component="div" sx={{ fontSize: '1.05rem', lineHeight: 1.5 }}>{renderTextWithCitations(contraindication, {
                           citations,
                           onCitationClick: onCitationClick,
                           markdown: true
@@ -167,6 +185,47 @@ const RationaleModal: React.FC<RationaleModalProps> = ({ open, onClose, rational
                     </ListItem>
                   ))}
                 </List>
+              </Box>
+            )}
+
+            {/* Technique Tiles Section */}
+            {detectedTechniques.length > 0 && (
+              <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 2 }}>
+                  <Psychology sx={{ fontSize: 16, color: 'var(--primary)' }} />
+                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                    DETECTED TECHNIQUES
+                  </Typography>
+                </Box>
+
+                {/* Detected Techniques */}
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
+                    Currently Detected:
+                  </Typography>
+                  <Grid container spacing={1}>
+                    {detectedTechniques.map((technique, idx) => (
+                      <Grid item key={idx}>
+                        <Chip
+                          label={technique}
+                          size="small"
+                          icon={<CheckCircle sx={{ fontSize: 14 }} />}
+                          sx={{
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            color: '#059669',
+                            border: '1px solid rgba(16, 185, 129, 0.3)',
+                            '& .MuiChip-icon': {
+                              color: '#059669',
+                            },
+                            '&:hover': {
+                              backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                            },
+                          }}
+                        />
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
               </Box>
             )}
           </Box>

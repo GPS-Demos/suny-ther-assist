@@ -236,7 +236,7 @@ Timing: {previous_alert.get('timing', 'N/A')}
         # Choose analysis mode based on is_realtime flag
         if is_realtime:
             # FAST PATH: Real-time guidance - both safety and helpful suggestions
-            analysis_prompt = constants.REALTIME_ANALYSIS_PROMPT.format(
+            analysis_prompt = constants.REALTIME_ANALYSIS_PROMPT_STRICT.format(
                 transcript_text=transcript_text,
                 previous_alert_context=previous_alert_context
             )

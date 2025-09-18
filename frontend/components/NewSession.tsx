@@ -1412,6 +1412,8 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
         contraindications={pathwayGuidance.contraindications}
         citations={citations}
         onCitationClick={handleCitationClick}
+        detectedTechniques={sessionMetrics.techniques_detected}
+        alternativePathways={pathwayGuidance.alternative_pathways}
       />
 
       <CitationModal
