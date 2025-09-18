@@ -10,7 +10,7 @@ export interface Alert {
   title: string;
   message: string;
   evidence?: string[];
-  recommendation?: string | string[]; // Allow both string and array formats
+  recommendation?: string[]; // Array of recommendation strings
   immediateActions?: string[];
   contraindications?: string[];
   manual_reference?: {

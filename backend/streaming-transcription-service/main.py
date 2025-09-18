@@ -94,7 +94,7 @@ class StreamingTranscriptionSession:
                 enable_voice_activity_events=True,
                 voice_activity_timeout=types.StreamingRecognitionFeatures.VoiceActivityTimeout(
                     speech_start_timeout={"seconds": 30},  # Wait longer for initial speech
-                    speech_end_timeout={"seconds": 3},      # Natural pause between segments
+                    speech_end_timeout={"seconds": 6},      # Natural pause between segments
                 ),
             ),
         )

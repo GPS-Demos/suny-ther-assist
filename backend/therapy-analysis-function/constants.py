@@ -1,5 +1,13 @@
 MODEL_NAME = "gemini-2.5-flash"
 
+# Phrases that trigger non-strict analysis
+TRIGGER_PHRASES = [
+    "something else came up",
+    "scared but I want to do it",
+    "very brave",
+    "I might fall apart"
+]
+
 # Therapy phase definitions
 THERAPY_PHASES = {
     "beginning": {"duration_minutes": 10, "focus": "rapport building, agenda setting"},
@@ -8,7 +16,7 @@ THERAPY_PHASES = {
 }
 
 # Prompts
-REALTIME_ANALYSIS_PROMPT = """Analyze this therapy segment for real-time guidance.
+REALTIME_ANALYSIS_PROMPT = """Analyze this therapy segment for real-time guidance using a Cognitive Behavioral Therapy approach.
 
 TRANSCRIPT (last few sentences):
 {transcript_text}
@@ -17,14 +25,14 @@ PREVIOUS GUIDANCE:
 {previous_alert_context}
 
 Provide guidance based on timing priority:
-1. NOW (immediate intervention needed): physically sick, catastrophic thoughts, falling apart, dissociation, panic, suicidal ideation, self-harm, severe distress
+1. NOW (immediate intervention needed): catastrophic thoughts, physically sick, falling apart, dissociation, panic, suicidal ideation, self-harm, severe distress
 2. PAUSE (wait for natural pause): exposure plan, therapeutic opportunities, technique suggestions, process observations
-3. INFO (continue with curent path): re-enforcement of current theraputic path, helpful observations
+3. INFO (continue with current path): reinforcement of current therapeutic path, helpful observations
 
 Categories available:
-- SAFETY: Addressing risk concerns, crisis situations, patient wellbeing, catastrophic thoughts
+- SAFETY: Catastrophic thoughts, addressing risk concerns, crisis situations, patient wellbeing
 - PATHWAY_CHANGE: Recommendations to consider switching therapeutic approaches
-- ENGAGEMENT: Continuation of therapeutic approach, theraputic alliance, patient support, 
+- ENGAGEMENT: Continuation of therapeutic approach, therapeutic alliance, patient support
 - TECHNIQUE: Specific therapeutic interventions, skill suggestions
 
 IMPORTANT DEDUPLICATION REQUIREMENTS:
@@ -32,26 +40,96 @@ IMPORTANT DEDUPLICATION REQUIREMENTS:
 - Do not generate duplicate, or even similar guidance as the PREVIOUS GUIDANCE. Only generate genuinely NEW or DIFFERENT guidance.
 - Do not generate new guidance with the same alert.category as PREVIOUS GUIDANCE. Select a different category.
 - Safety guidance (timing: "now") are exempt from this rule and should always be generated if needed
-- IMPORTANT: Most of the time, no new guidance will be needed. Do not provide guidance if not needed.
 
 If no guidance is needed, then simply return an empty JSON. Format:
 {{}}
 
-If an guidance is needed, prioritize actionable guidance and return only the MOST RELEVANT single piece of guidance. Format:
+If guidance is needed, prioritize actionable guidance and return only the MOST RELEVANT single piece of guidance. Format:
 {{
     "alert": {{
         "timing": "now|pause|info",
         "category": "safety|technique|pathway_change|engagement",
         "title": "Brief descriptive title",
         "message": "Specific action or observation (1-3 sentences max)",
-        "evidence": ["relevant quote if applicable"],
-        "recommendation": "Action(s) to take if applicable. IMPORTANT: format each recommendation as a markdown bullet point using '- ' prefix (e.g., '- First action\n- Second action')"
+        "evidence": ["relevant quote(s) from the patient"],
+        "recommendation": ["Action 1 to take if applicable", "Action 2 to take if applicable", "Action 3 to take if applicable (max 3 items)"]
     }}
 }}
 
 IMPORTANT NOTE:
 Always refer to the patient as 'patient'"""
 
+REALTIME_ANALYSIS_PROMPT_STRICT = """Analyze this therapy segment for CRITICAL guidance only using a Cognitive Behavioral Therapy approach.
+
+TRANSCRIPT (last few sentences):
+{transcript_text}
+
+PREVIOUS GUIDANCE:
+{previous_alert_context}
+
+**DEFAULT RESPONSE: EMPTY JSON {{}}**
+
+Only provide guidance if ALL of the following conditions are met:
+1. A critical therapeutic moment is occurring that requires intervention or exploration
+2. The situation represents a significant risk, breakthrough, or therapeutic opportunity
+3. No similar guidance has been provided recently (see PREVIOUS GUIDANCE above)
+
+STRICT DEDUPLICATION:
+- If PREVIOUS GUIDANCE exists with same category, return empty JSON {{}}
+- If PREVIOUS GUIDANCE addresses similar issue, return empty JSON {{}}
+- If therapist is handling situation appropriately, return empty JSON {{}}
+- Only SAFETY alerts can override this rule
+
+CONFIDENCE THRESHOLD:
+- Only provide guidance if you are highly confident (80%+) it's needed
+- When in doubt, return empty JSON {{}}
+- Normal therapeutic conversation does NOT require guidance
+
+CRITICAL MOMENTS REQUIRING GUIDANCE:
+
+**IMMEDIATE (timing: "now") - Only for genuine emergencies:**
+- Catastrophic cognitions or catastrophization
+- Patient is "falling apart" or feeling "physically sick"
+- Active suicidal ideation with plan/intent
+- Self-harm behavior or urges being expressed
+- Severe dissociation (patient disconnected from reality)
+- Medical emergency or physical distress
+
+**PAUSE (timing: "pause") - Only for significant therapeutic opportunities:**
+- Major breakthrough moment that requires specific follow-up
+- Critical resistance that's blocking all progress
+- Window for exposure that may not reoccur
+- Therapeutic alliance rupture requiring immediate repair
+
+**INFO (timing: "info") - Used only for:**
+- Engagement with an exposure plan
+- Significant pattern recognition that changes treatment direction
+
+Categories (prefer any category other than the category of PREVIOUS GUIDANCE):
+- SAFETY: Catastrophic thoughts, addressing risk concerns, crisis situations, patient wellbeing, 
+- PATHWAY_CHANGE: Recommendations to consider switching therapeutic approaches
+- ENGAGEMENT: Continuation of therapeutic approach, theraputic alliance, patient support, 
+- TECHNIQUE: Specific therapeutic interventions, skill suggestions
+
+Empty JSON format (use this most of the time):
+{{}}
+
+If an guidance is needed, prioritize actionable guidance and return only the MOST RELEVANT single piece of guidance. Format response as a valid JSON object:
+{{
+    "alert": {{
+        "timing": "now|pause|info",
+        "category": "safety|technique|pathway_change|engagement",
+        "title": "Brief descriptive title",
+        "message": "Specific action or observation (1-3 sentences max)",
+        "evidence": ["direct quote showing the critical moment"],
+        "recommendation": ["Action 1 to take if applicable", "Action 2 to take if applicable", "Action 3 to take if applicable (max 3 items)"]
+    }}
+}}
+
+IMPORTANT NOTE:
+Always refer to the patient as 'patient'"""
+
+## NOTE: Alternate pathways has been removed
 COMPREHENSIVE_ANALYSIS_PROMPT = """<thinking>
 Analyze this therapy session segment step by step:
 1. Check for any safety concerns (dissociation, panic, suicidal ideation)
@@ -101,13 +179,6 @@ Provide analysis with a JSON response only, no other text should exist besides t
         "rationale": "Explanation with citations [1], [2] embedded in text",
         "immediate_actions": ["action1 with citation [3]", "action2"],
         "contraindications": ["contraindication1 [4]", "contraindication2"],
-        "alternative_pathways": [
-            {{
-                "approach": "Approach name",
-                "reason": "Why this alternative with citations [5]",
-                "techniques": ["technique1", "technique2"]
-            }}
-        ]
     }}
 }}
 

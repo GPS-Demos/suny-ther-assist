@@ -30,6 +30,7 @@ import {
   Info,
 } from '@mui/icons-material';
 import { SessionSummary } from '../types/types';
+import { formatTimestamp } from '../utils/timeUtils';
 
 interface SessionSummaryModalProps {
   open: boolean;
@@ -122,7 +123,7 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Assignment sx={{ fontSize: 28 }} />
-          <Typography variant="h5" fontWeight={600}>
+          <Typography variant="h5" fontWeight={600} sx={{ fontSize: '1.75rem' }}>
             Session Summary
           </Typography>
           {sessionId && (
@@ -155,7 +156,7 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
             gap: 2,
           }}>
             <CircularProgress size={48} />
-            <Typography color="text.secondary">
+            <Typography color="text.secondary" sx={{ fontSize: '1.1rem' }}>
               Generating comprehensive session analysis...
             </Typography>
           </Box>
@@ -170,40 +171,43 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
               border: '1px solid rgba(255, 255, 255, 0.4)',
               boxShadow: '0 8px 20px -4px rgba(0, 0, 0, 0.08)',
             }}>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: '1.35rem' }}>
                 <TrendingUp /> Session Overview
               </Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2, mt: 2 }}>
                 <Box>
-                  <Typography variant="caption" color="text.secondary">Duration</Typography>
-                  <Typography variant="body1" fontWeight={600}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.85rem' }}>Duration</Typography>
+                  <Typography variant="body1" fontWeight={600} sx={{ fontSize: '1.1rem' }}>
                     {summary.duration_minutes} minutes
                   </Typography>
                 </Box>
                 <Box>
-                  <Typography variant="caption" color="text.secondary">Techniques Used</Typography>
-                  <Typography variant="body1" fontWeight={600}>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.85rem' }}>Techniques Used</Typography>
+                  <Typography variant="body1" fontWeight={600} sx={{ fontSize: '1.1rem' }}>
                     {summary.techniques_used.length} techniques
                   </Typography>
                 </Box>
                 <Box>
-                  <Typography variant="caption" color="text.secondary">Risk Level</Typography>
-                  <Chip
-                    label={summary.risk_assessment.level.toUpperCase()}
-                    size="small"
-                    sx={{
-                      bgcolor: getRiskColor(summary.risk_assessment.level),
-                      color: 'white',
-                      fontWeight: 600,
-                    }}
-                  />
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.85rem' }}>Patient Risk Level</Typography>
+                  <Box sx={{ mt: 0.5 }}>
+                    <Chip
+                      label={summary.risk_assessment.level.toUpperCase()}
+                      size="small"
+                      sx={{
+                        bgcolor: getRiskColor(summary.risk_assessment.level),
+                        color: 'white',
+                        fontWeight: 600,
+                        fontSize: '0.8rem',
+                      }}
+                    />
+                  </Box>
                 </Box>
               </Box>
             </Paper>
 
             {/* Key Moments */}
             <Box>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: '1.35rem' }}>
                 <Psychology /> Key Therapeutic Moments
               </Typography>
               <List>
@@ -214,12 +218,12 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
                     </ListItemIcon>
                     <ListItemText
                       primary={
-                        <Box>
-                          <Chip label={moment.time} size="small" sx={{ mr: 1 }} />
-                          {moment.description}
+                        <Box sx={{ fontSize: '1.05rem' }}>
+                          <Chip label={formatTimestamp(moment.time)} size="small" sx={{ mr: 1, fontSize: '0.8rem' }} />
+                          <span style={{ fontSize: '1.05rem' }}>{moment.description}</span>
                         </Box>
                       }
-                      secondary={moment.significance}
+                      secondary={<span style={{ fontSize: '0.95rem' }}>{moment.significance}</span>}
                     />
                   </ListItem>
                 ))}
@@ -231,7 +235,7 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
             {/* Progress & Areas for Improvement */}
             <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
               <Box>
-                <Typography variant="h6" gutterBottom>
+                <Typography variant="h6" gutterBottom sx={{ fontSize: '1.35rem' }}>
                   Progress Indicators
                 </Typography>
                 <List dense>
@@ -240,14 +244,14 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
                       <ListItemIcon sx={{ minWidth: 32 }}>
                         <CheckCircle fontSize="small" color="success" />
                       </ListItemIcon>
-                      <ListItemText primary={indicator} />
+                      <ListItemText primary={<span style={{ fontSize: '1.05rem' }}>{indicator}</span>} />
                     </ListItem>
                   ))}
                 </List>
               </Box>
               
               <Box>
-                <Typography variant="h6" gutterBottom>
+                <Typography variant="h6" gutterBottom sx={{ fontSize: '1.35rem' }}>
                   Areas for Improvement
                 </Typography>
                 <List dense>
@@ -256,7 +260,7 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
                       <ListItemIcon sx={{ minWidth: 32 }}>
                         <Warning fontSize="small" color="warning" />
                       </ListItemIcon>
-                      <ListItemText primary={area} />
+                      <ListItemText primary={<span style={{ fontSize: '1.05rem' }}>{area}</span>} />
                     </ListItem>
                   ))}
                 </List>
@@ -267,7 +271,7 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
 
             {/* Homework Assignments */}
             <Box>
-              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: '1.35rem' }}>
                 <Assignment /> Homework Assignments
               </Typography>
               {summary.homework_assignments.map((hw, idx) => (
@@ -279,16 +283,16 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
                   WebkitBackdropFilter: 'blur(8px)',
                   border: '1px solid rgba(16, 185, 129, 0.2)',
                 }}>
-                  <Typography variant="body1" fontWeight={600} gutterBottom>
+                  <Typography variant="body1" fontWeight={600} gutterBottom sx={{ fontSize: '1.1rem' }}>
                     {hw.task}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                  <Typography variant="body2" color="text.secondary" gutterBottom sx={{ fontSize: '1rem' }}>
                     Rationale: {hw.rationale}
                   </Typography>
                   {hw.manual_reference && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
                       <MenuBook fontSize="small" color="action" />
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
                         {hw.manual_reference}
                       </Typography>
                     </Box>
@@ -299,7 +303,7 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
 
             {/* Follow-up Recommendations */}
             <Box>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" gutterBottom sx={{ fontSize: '1.35rem' }}>
                 Follow-up Recommendations
               </Typography>
               <List dense>
@@ -308,7 +312,7 @@ const SessionSummaryModal: React.FC<SessionSummaryModalProps> = ({
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       <Info fontSize="small" color="info" />
                     </ListItemIcon>
-                    <ListItemText primary={rec} />
+                    <ListItemText primary={<span style={{ fontSize: '1.05rem' }}>{rec}</span>} />
                   </ListItem>
                 ))}
               </List>

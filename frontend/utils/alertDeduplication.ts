@@ -211,6 +211,8 @@ export function processNewAlert(
   } = {}
 ): { 
   shouldAdd: boolean; 
+  blockReason?: string;
+  similarAlert?: Alert;
   debugInfo?: any 
 } {
   const { config = DEFAULT_CONFIG, debugMode = false } = options;
@@ -235,6 +237,8 @@ export function processNewAlert(
   if (blockResult.shouldBlock) {
     return {
       shouldAdd: false,
+      blockReason: blockResult.reason,
+      similarAlert: blockResult.similarAlert,
       debugInfo: debugMode ? { 
         ...debugInfo, 
         action: 'blocked', 
@@ -246,6 +250,8 @@ export function processNewAlert(
   
   return {
     shouldAdd: true,
+    blockReason: undefined,
+    similarAlert: undefined,
     debugInfo: debugMode ? { ...debugInfo, action: 'added', reason: 'No duplicates found' } : undefined
   };
 }

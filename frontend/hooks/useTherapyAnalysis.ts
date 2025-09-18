@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import axios from 'axios';
 import { AnalysisResponse, SessionContext } from '../types/types';
-import { request } from 'node_modules/axios/index.d.cts';
 
 interface UseTherapyAnalysisProps {
   onAnalysis: (analysis: AnalysisResponse) => void;

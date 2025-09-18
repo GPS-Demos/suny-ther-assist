@@ -35,7 +35,9 @@ import {
   Build,
   Lightbulb,
   Assessment,
+  Explore,
 } from '@mui/icons-material';
+import { CircularProgress } from '@mui/material';
 import TranscriptDisplay from './TranscriptDisplay';
 import AlertDisplay from './AlertDisplay';
 import SessionMetrics from './SessionMetrics';
@@ -137,6 +139,9 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
   // Test mode state
   const [isTestMode, setIsTestMode] = useState(false);
   const testIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Track if a session has been completed to keep test buttons hidden
+  const [hasCompletedSession, setHasCompletedSession] = useState(false);
 
   // Audio streaming hook with WebSocket for both microphone and file
   const { 
@@ -253,13 +258,19 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
               
               return updatedAlerts;
             } else {
-              const reason = result.debugInfo?.reason || 'deduplication rules';
+              const reason = result.blockReason || 'deduplication rules';
+              const similarAlertInfo = result.similarAlert 
+                ? ` (similar to: "${result.similarAlert.title}")` 
+                : '';
               
               // Create unique log identifier for this specific filter event
               const filterLogId = `filter-alert-${Date.now()}-${analysis.alert?.title || 'unknown'}`;
               if (!lastLoggedAnalysisRef.current.has(filterLogId)) {
                 lastLoggedAnalysisRef.current.add(filterLogId);
-                console.log(`[Session] 🚫 Alert filtered: ${reason}`, analysis.alert);
+                console.log(`[Session] 🚫 Alert filtered: ${reason}${similarAlertInfo}`, {
+                  filteredAlert: analysis.alert,
+                  similarAlert: result.similarAlert
+                });
               }
               
               return prev;
@@ -465,6 +476,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     setIsRecording(false);
     setIsPaused(false);
     setSessionType(null);
+    setHasCompletedSession(true); // Mark that a session has been completed
     await stopStreaming();
     if (isTestMode) {
       stopTestMode();
@@ -679,29 +691,18 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     return 'New Session';
   };
 
-  // Helper function to ensure recommendations are formatted as bullet points
-  const normalizeRecommendationFormat = (recommendation: string): string => {
-    if (!recommendation) return recommendation;
-    
-    // If it already contains markdown bullet points, return as-is
-    if (recommendation.includes('- ') || recommendation.includes('* ')) {
-      return recommendation;
+  // Get next session number for the patient
+  const getNextSessionNumber = () => {
+    if (patientId) {
+      const patient = mockPatients.find(p => p.id === patientId);
+      if (patient && patient.sessionHistory) {
+        return patient.sessionHistory.length + 1;
+      }
+      return 1; // First session if no history exists
     }
-    
-    // Split by periods or newlines to create separate bullet points
-    const lines = recommendation
-      .split(/[.\n]/)
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
-    
-    // If we only have one line, return as-is (might be a single sentence)
-    if (lines.length <= 1) {
-      return recommendation;
-    }
-    
-    // Convert to markdown bullet points
-    return lines.map(line => `- ${line}`).join('\n');
+    return 1; // Default for new session without patient context
   };
+
 
   return (
     <Box sx={{ 
@@ -775,19 +776,14 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
             
             {/* Session Info and Start/Stop/Pause Buttons */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body1">Session #1</Typography>
+              <Typography variant="body1">Session #{getNextSessionNumber()}</Typography>
               {!isRecording ? (
                 <Button
                   variant="contained"
                   startIcon={<Mic />}
                   onClick={handleStartSession}
-                  sx={{ 
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    color: 'white',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-                    },
-                  }}
+                  disabled={hasCompletedSession}
+                  color="success"
                 >
                   Start Session
                 </Button>
@@ -959,25 +955,6 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
                 </Typography>
               </Box>
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="body2" color="text.secondary">Techniques</Typography>
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    fontWeight: 600,
-                    color: (isRecording && !hasReceivedComprehensiveAnalysis) || !hasReceivedComprehensiveAnalysis
-                      ? 'text.secondary'
-                      : 'inherit'
-                  }}
-                >
-                  {isRecording && !hasReceivedComprehensiveAnalysis
-                    ? 'Listening...'
-                    : !hasReceivedComprehensiveAnalysis
-                    ? 'Unknown'
-                    : sessionMetrics.techniques_detected.length
-                  }
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="body2" color="text.secondary">Effectiveness</Typography>
                 <Typography
                   variant="h6"
@@ -1033,35 +1010,24 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
                     fontWeight: 600,
                   }}
                 >
-                  <Psychology sx={{ 
+                  <Explore sx={{ 
                     fontSize: 28,
                     color: 'rgba(11, 87, 208, 0.6)',
                     opacity: 0.8,
                   }} /> 
                   Recommendation
                 </Typography>
-                {selectedAlert && selectedAlert.recommendation ? (
+                {selectedAlert && selectedAlert.recommendation && selectedAlert.recommendation.length > 0 ? (
                   <Box sx={{ color: 'text.secondary' }}>
-                    {Array.isArray(selectedAlert.recommendation) ? (
-                      <Box component="ul" sx={{ margin: 0, paddingLeft: '1.5em' }}>
-                        {selectedAlert.recommendation.map((item, index) => (
-                          <Box component="li" key={index} sx={{ marginBottom: '0.25em' }}>
-                            <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
-                              {item}
-                            </Typography>
-                          </Box>
-                        ))}
-                      </Box>
-                    ) : (
-                      <Box sx={{ 
-                        '& > *': { 
-                          color: 'text.secondary !important',
-                          fontSize: '1.1rem !important'
-                        } 
-                      }}>
-                        {renderMarkdown(normalizeRecommendationFormat(selectedAlert.recommendation))}
-                      </Box>
-                    )}
+                    <Box component="ul" sx={{ margin: 0, paddingLeft: '1.5em' }}>
+                      {selectedAlert.recommendation.map((item, index) => (
+                        <Box component="li" key={index} sx={{ marginBottom: '0.25em' }}>
+                          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+                            {item}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
                   </Box>
                 ) : (
                   <Box sx={{
@@ -1172,7 +1138,13 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
             color="secondary"
             variant="extended"
             aria-label="reopen session summary"
-            onClick={() => setShowSessionSummary(true)}
+            onClick={() => {
+              if (sessionSummary) {
+                setShowSessionSummary(true);
+              } else {
+                requestSummary();
+              }
+            }}
             sx={{
               background: 'linear-gradient(135deg, #673ab7 0%, #512da8 100%)',
               color: 'white',
@@ -1184,8 +1156,12 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
               boxShadow: '0 8px 20px -4px rgba(103, 58, 183, 0.35)',
             }}
           >
-            <Article sx={{ mr: 1 }} />
-            Summary
+            {summaryLoading ? (
+              <CircularProgress size={20} sx={{ mr: 1, color: 'white' }} />
+            ) : (
+              <Article sx={{ mr: 1 }} />
+            )}
+            {summaryLoading ? 'Generating...' : 'Summary'}
           </Fab>
         )}
 
@@ -1216,7 +1192,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
       </Box>
 
       {/* Test Buttons */}
-      {!isRecording && !isTestMode && (
+      {!isRecording && !isTestMode && !hasCompletedSession && (
         <Box sx={{ 
           position: 'fixed', 
           bottom: 24, 
@@ -1402,6 +1378,8 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
         contraindications={pathwayGuidance.contraindications}
         citations={citations}
         onCitationClick={handleCitationClick}
+        detectedTechniques={sessionMetrics.techniques_detected}
+        alternativePathways={pathwayGuidance.alternative_pathways}
       />
 
       <CitationModal
