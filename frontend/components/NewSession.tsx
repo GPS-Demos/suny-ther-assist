@@ -973,25 +973,6 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
                   }
                 </Typography>
               </Box>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="body2" color="text.secondary">Techniques</Typography>
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    fontWeight: 600,
-                    color: (isRecording && !hasReceivedComprehensiveAnalysis) || !hasReceivedComprehensiveAnalysis
-                      ? 'text.secondary'
-                      : 'inherit'
-                  }}
-                >
-                  {isRecording && !hasReceivedComprehensiveAnalysis
-                    ? 'Listening...'
-                    : !hasReceivedComprehensiveAnalysis
-                    ? 'Unknown'
-                    : sessionMetrics.techniques_detected.length
-                  }
-                </Typography>
-              </Box>
               <Button 
                 variant="outlined" 
                 size="small" 
