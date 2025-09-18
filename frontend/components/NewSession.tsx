@@ -697,29 +697,6 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     return 1; // Default for new session without patient context
   };
 
-  // Helper function to ensure recommendations are formatted as bullet points
-  const normalizeRecommendationFormat = (recommendation: string): string => {
-    if (!recommendation) return recommendation;
-    
-    // If it already contains markdown bullet points, return as-is
-    if (recommendation.includes('- ') || recommendation.includes('* ')) {
-      return recommendation;
-    }
-    
-    // Split by periods or newlines to create separate bullet points
-    const lines = recommendation
-      .split(/[.\n]/)
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
-    
-    // If we only have one line, return as-is (might be a single sentence)
-    if (lines.length <= 1) {
-      return recommendation;
-    }
-    
-    // Convert to markdown bullet points
-    return lines.map(line => `- ${line}`).join('\n');
-  };
 
   return (
     <Box sx={{ 
@@ -1053,28 +1030,17 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
                   }} /> 
                   Recommendation
                 </Typography>
-                {selectedAlert && selectedAlert.recommendation ? (
+                {selectedAlert && selectedAlert.recommendation && selectedAlert.recommendation.length > 0 ? (
                   <Box sx={{ color: 'text.secondary' }}>
-                    {Array.isArray(selectedAlert.recommendation) ? (
-                      <Box component="ul" sx={{ margin: 0, paddingLeft: '1.5em' }}>
-                        {selectedAlert.recommendation.map((item, index) => (
-                          <Box component="li" key={index} sx={{ marginBottom: '0.25em' }}>
-                            <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
-                              {item}
-                            </Typography>
-                          </Box>
-                        ))}
-                      </Box>
-                    ) : (
-                      <Box sx={{ 
-                        '& > *': { 
-                          color: 'text.secondary !important',
-                          fontSize: '1.1rem !important'
-                        } 
-                      }}>
-                        {renderMarkdown(normalizeRecommendationFormat(selectedAlert.recommendation))}
-                      </Box>
-                    )}
+                    <Box component="ul" sx={{ margin: 0, paddingLeft: '1.5em' }}>
+                      {selectedAlert.recommendation.map((item, index) => (
+                        <Box component="li" key={index} sx={{ marginBottom: '0.25em' }}>
+                          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+                            {item}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
                   </Box>
                 ) : (
                   <Box sx={{

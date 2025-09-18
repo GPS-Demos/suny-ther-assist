@@ -17,12 +17,12 @@ PREVIOUS GUIDANCE:
 {previous_alert_context}
 
 Provide guidance based on timing priority:
-1. NOW (immediate intervention needed): physically sick, catastrophic thoughts, falling apart, dissociation, panic, suicidal ideation, self-harm, severe distress
+1. NOW (immediate intervention needed): catastrophic thoughts, physically sick, falling apart, dissociation, panic, suicidal ideation, self-harm, severe distress
 2. PAUSE (wait for natural pause): exposure plan, therapeutic opportunities, technique suggestions, process observations
 3. INFO (continue with current path): reinforcement of current therapeutic path, helpful observations
 
 Categories available:
-- SAFETY: Addressing risk concerns, crisis situations, patient wellbeing, catastrophic thoughts
+- SAFETY: Catastrophic thoughts, addressing risk concerns, crisis situations, patient wellbeing
 - PATHWAY_CHANGE: Recommendations to consider switching therapeutic approaches
 - ENGAGEMENT: Continuation of therapeutic approach, therapeutic alliance, patient support
 - TECHNIQUE: Specific therapeutic interventions, skill suggestions
@@ -44,7 +44,7 @@ If guidance is needed, prioritize actionable guidance and return only the MOST R
         "title": "Brief descriptive title",
         "message": "Specific action or observation (1-3 sentences max)",
         "evidence": ["relevant quote(s) from the patient"],
-        "recommendation": "Action(s) to take if applicable (1-3 max). IMPORTANT: format each recommendation as a markdown bullet point using '- ' prefix (e.g., '- First action\n- Second action') but BE SURE not to break the json object"
+        "recommendation": ["Action 1 to take if applicable", "Action 2 to take if applicable", "Action 3 to take if applicable (max 3 items)"]
     }}
 }}
 
@@ -80,7 +80,7 @@ CONFIDENCE THRESHOLD:
 CRITICAL MOMENTS REQUIRING GUIDANCE:
 
 **IMMEDIATE (timing: "now") - Only for genuine emergencies:**
-- Catastrophization of situations
+- Catastrophic cognitions or catastrophization
 - Patient is "falling apart" or feeling "physically sick"
 - Active suicidal ideation with plan/intent
 - Self-harm behavior or urges being expressed
@@ -97,8 +97,8 @@ CRITICAL MOMENTS REQUIRING GUIDANCE:
 - Engagement with an exposure plan
 - Significant pattern recognition that changes treatment direction
 
-Categories:
-- SAFETY: Addressing risk concerns, crisis situations, patient wellbeing, catastrophic thoughts
+Categories (prefer any category other than the category of PREVIOUS GUIDANCE):
+- SAFETY: Catastrophic thoughts, addressing risk concerns, crisis situations, patient wellbeing, 
 - PATHWAY_CHANGE: Recommendations to consider switching therapeutic approaches
 - ENGAGEMENT: Continuation of therapeutic approach, theraputic alliance, patient support, 
 - TECHNIQUE: Specific therapeutic interventions, skill suggestions
@@ -114,7 +114,7 @@ If an guidance is needed, prioritize actionable guidance and return only the MOS
         "title": "Brief descriptive title",
         "message": "Specific action or observation (1-3 sentences max)",
         "evidence": ["direct quote showing the critical moment"],
-        "recommendation": "Action(s) to take if applicable (1-3 max). IMPORTANT: format each recommendation as a markdown bullet point using '- ' prefix (e.g., '- First action\n- Second action') but BE SURE not to break the json object"
+        "recommendation": ["Action 1 to take if applicable", "Action 2 to take if applicable", "Action 3 to take if applicable (max 3 items)"]
     }}
 }}
 

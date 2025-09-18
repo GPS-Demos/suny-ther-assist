@@ -278,7 +278,7 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
             )}
 
             {/* Recommendation */}
-            {alert.recommendation && (
+            {alert.recommendation && alert.recommendation.length > 0 && (
               <Box
                 sx={{
                   mt: 2,
@@ -296,9 +296,15 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
                     color: alertColor,
                   }}
                 >
-                  {timing === 'now' ? '→ Action Required:' : '→ Recommendation:'}
+                  {timing === 'now' ? '→ Actions Required:' : '→ Recommendations:'}
                 </Typography>
-                <Typography variant="body2">{alert.recommendation}</Typography>
+                <Box component="ul" sx={{ margin: 0, paddingLeft: '1.5em' }}>
+                  {alert.recommendation.map((item, index) => (
+                    <Box component="li" key={index} sx={{ marginBottom: '0.25em' }}>
+                      <Typography variant="body2">{item}</Typography>
+                    </Box>
+                  ))}
+                </Box>
               </Box>
             )}
           </Box>
