@@ -137,8 +137,8 @@ const RationaleModal: React.FC<RationaleModalProps> = ({
             {immediateActions && immediateActions.length > 0 && (
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                  <PlayCircle sx={{ fontSize: 16, color: 'success.main' }} />
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  <PlayCircle sx={{ fontSize: 20, color: 'success.main' }} />
+                  <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ fontSize: '0.9rem' }}>
                     IMMEDIATE ACTIONS
                   </Typography>
                 </Box>
@@ -164,8 +164,8 @@ const RationaleModal: React.FC<RationaleModalProps> = ({
             {contraindications && contraindications.length > 0 && (
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                  <ErrorOutline sx={{ fontSize: 16, color: 'error.main' }} />
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  <ErrorOutline sx={{ fontSize: 20, color: 'error.main' }} />
+                  <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ fontSize: '0.9rem' }}>
                     CONTRAINDICATIONS
                   </Typography>
                 </Box>
@@ -192,28 +192,29 @@ const RationaleModal: React.FC<RationaleModalProps> = ({
             {detectedTechniques.length > 0 && (
               <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 2 }}>
-                  <Psychology sx={{ fontSize: 16, color: 'var(--primary)' }} />
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  <Psychology sx={{ fontSize: 20, color: 'var(--primary)' }} />
+                  <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ fontSize: '0.9rem' }}>
                     DETECTED TECHNIQUES
                   </Typography>
                 </Box>
 
                 {/* Detected Techniques */}
                 <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
-                    Currently Detected:
-                  </Typography>
                   <Grid container spacing={1}>
                     {detectedTechniques.map((technique, idx) => (
                       <Grid item key={idx}>
                         <Chip
                           label={technique}
-                          size="small"
                           icon={<CheckCircle sx={{ fontSize: 14 }} />}
                           sx={{
                             backgroundColor: 'rgba(16, 185, 129, 0.1)',
                             color: '#059669',
                             border: '1px solid rgba(16, 185, 129, 0.3)',
+                            fontSize: '0.9rem',
+                            height: 32,
+                            '& .MuiChip-label': {
+                              fontSize: '0.9rem',
+                            },
                             '& .MuiChip-icon': {
                               color: '#059669',
                             },
