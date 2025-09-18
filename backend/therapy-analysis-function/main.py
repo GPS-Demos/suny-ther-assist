@@ -205,7 +205,7 @@ def handle_segment_analysis(request_json, headers):
         previous_alert = request_json.get('previous_alert', None)  # Previous alert for deduplication
         
         logging.info(f"Segment analysis request - duration: {session_duration} minutes, segments: {len(transcript_segment)}, realtime: {is_realtime}, has_previous_alert: {previous_alert is not None}")
-        logging.info(f"Transcript segment: {transcript_segment}")
+        logging.info(f"Transcript segment: {transcript_segment[-1]}")
         
         if not transcript_segment:
             return (jsonify({'error': 'Missing transcript_segment'}), 400, headers)
@@ -235,10 +235,9 @@ Timing: {previous_alert.get('timing', 'N/A')}
 
         # Choose analysis mode based on is_realtime flag
         if is_realtime:
-            # FAST PATH: Real-time guidance - both safety and helpful suggestions
-            analysis_prompt = constants.REALTIME_ANALYSIS_PROMPT_STRICT.format(
-                transcript_text=transcript_text,
-                previous_alert_context=previous_alert_context
+            # For realtime analysis, we'll use a retry mechanism with two different prompts
+            return handle_realtime_analysis_with_retry(
+                transcript_text, previous_alert_context, phase, headers
             )
         else:
             # COMPREHENSIVE PATH: Full analysis with RAG
@@ -251,17 +250,29 @@ Timing: {previous_alert.get('timing', 'N/A')}
                 current_approach=session_context.get('current_approach', 'Not specified'),
                 transcript_text=transcript_text
             )
+            
+            return handle_comprehensive_analysis(analysis_prompt, phase, headers)
         
-        # Build content for analysis
-        contents = [types.Content(
-            role="user",
-            parts=[types.Part(text=analysis_prompt)]
-        )]
-        
-        logging.info(f"Analysis prompt prepared - length: {len(analysis_prompt)} characters")
-        
-        # Configure generation based on analysis mode
-        if is_realtime:
+    except Exception as e:
+        logging.exception(f"Error in handle_segment_analysis: {str(e)}")
+        return (jsonify({'error': f'Segment analysis failed: {str(e)}'}), 500, headers)
+
+def handle_realtime_analysis_with_retry(transcript_text, previous_alert_context, phase, headers):
+    """Handle realtime analysis with retry mechanism using different prompts"""
+    
+    def try_analysis_with_prompt(prompt_template, prompt_name):
+        """Helper function to try analysis with a specific prompt"""
+        try:
+            analysis_prompt = prompt_template.format(
+                transcript_text=transcript_text,
+                previous_alert_context=previous_alert_context
+            )
+            
+            contents = [types.Content(
+                role="user",
+                parts=[types.Part(text=analysis_prompt)]
+            )]
+            
             # FAST configuration for real-time guidance
             config = types.GenerateContentConfig(
                 temperature=0.0,  # Deterministic for speed
@@ -290,15 +301,112 @@ Timing: {previous_alert.get('timing', 'N/A')}
                     include_thoughts=False
                 ),
             )
-        else:
+            
+            logging.info(f"[TIMING] Trying realtime analysis with {prompt_name}")
+            
+            # Collect response text
+            accumulated_text = ""
+            for chunk in client.models.generate_content_stream(
+                model=constants.MODEL_NAME,
+                contents=contents,
+                config=config
+            ):
+                if chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
+                    for part in chunk.candidates[0].content.parts:
+                        if hasattr(part, 'text') and part.text:
+                            accumulated_text += part.text
+            
+            logging.info(f"Response received from {prompt_name} - length: {len(accumulated_text)} characters")
+            
+            # Try to parse the JSON response
+            parsed = extract_json_from_text(accumulated_text)
+            
+            if parsed is not None:
+                logging.info(f"Successfully parsed JSON from {prompt_name}")
+                return parsed, accumulated_text
+            else:
+                # Log first 200 characters of response on parsing failure
+                response_preview = accumulated_text[:200] if accumulated_text else "No response received"
+                logging.error(f"JSON parsing failed for {prompt_name}. First 200 characters of response: {response_preview} - {str(parsed)}")
+                logging.warning(f"Full response from {prompt_name}: {accumulated_text}")
+                return None, accumulated_text
+                
+        except Exception as e:
+            logging.error(f"Error during {prompt_name} analysis: {str(e)}")
+            return None, str(e)
+    
+    def generate():
+        """Generator function for streaming response with retry logic"""
+        try:
+            # First attempt: Use STRICT prompt
+            parsed_result, response_text = try_analysis_with_prompt(
+                constants.REALTIME_ANALYSIS_PROMPT_STRICT, 
+                "REALTIME_ANALYSIS_PROMPT_STRICT"
+            )
+            
+            if parsed_result is not None:
+                # Success with STRICT prompt
+                parsed_result['timestamp'] = datetime.now().isoformat()
+                parsed_result['session_phase'] = phase
+                parsed_result['analysis_type'] = 'realtime'
+                parsed_result['prompt_used'] = 'strict'
+                
+                yield json.dumps(parsed_result) + "\n"
+                return
+            
+            # First attempt failed, try with fallback prompt
+            logging.info("STRICT prompt failed, retrying with fallback REALTIME_ANALYSIS_PROMPT")
+            
+            parsed_result, response_text = try_analysis_with_prompt(
+                constants.REALTIME_ANALYSIS_PROMPT, 
+                "REALTIME_ANALYSIS_PROMPT"
+            )
+            
+            if parsed_result is not None:
+                # Success with fallback prompt
+                parsed_result['timestamp'] = datetime.now().isoformat()
+                parsed_result['session_phase'] = phase
+                parsed_result['analysis_type'] = 'realtime'
+                parsed_result['prompt_used'] = 'fallback'
+                
+                yield json.dumps(parsed_result) + "\n"
+                return
+            
+            # Both attempts failed
+            logging.error("Both STRICT and fallback prompts failed to produce valid JSON")
+            yield json.dumps({
+                'error': 'Failed to parse analysis response after retry - no valid JSON found',
+                'raw_response': response_text[:200] if response_text else 'No response received',
+                'attempts': ['REALTIME_ANALYSIS_PROMPT_STRICT', 'REALTIME_ANALYSIS_PROMPT']
+            }) + "\n"
+            
+        except Exception as e:
+            logging.exception(f"Error during realtime analysis with retry: {str(e)}")
+            yield json.dumps({'error': f'Realtime analysis failed: {str(e)}'}) + "\n"
+    
+    return Response(generate(), mimetype='text/plain', headers=headers)
+
+def handle_comprehensive_analysis(analysis_prompt, phase, headers):
+    """Handle comprehensive analysis (non-realtime)"""
+    
+    def generate():
+        """Generator function for comprehensive analysis streaming"""
+        chunk_index = 0
+        accumulated_text = ""
+        grounding_chunks = []
+        
+        try:
+            contents = [types.Content(
+                role="user",
+                parts=[types.Part(text=analysis_prompt)]
+            )]
+            
             # COMPREHENSIVE configuration for full analysis
             thinking_budget = 8192  # Moderate complexity for balanced analysis
             
             # Determine if we need more complex reasoning
-            if "suicide" in transcript_text.lower() or "self-harm" in transcript_text.lower():
+            if "suicide" in analysis_prompt.lower() or "self-harm" in analysis_prompt.lower():
                 thinking_budget = 24576  # Maximum for critical situations
-            elif session_duration < 5:
-                thinking_budget = 4096  # Fast for early session
             
             config = types.GenerateContentConfig(
                 temperature=0.3,
@@ -327,94 +435,81 @@ Timing: {previous_alert.get('timing', 'N/A')}
                     include_thoughts=False  # Don't include thoughts in response
                 ),
             )
-        
-        # Generate analysis with streaming
-        thinking_budget_log = 0 if is_realtime else config.thinking_config.thinking_budget if hasattr(config, 'thinking_config') else 0
-        logging.info(f"[TIMING] Calling Gemini model '{constants.MODEL_NAME}' - realtime: {is_realtime}, thinking_budget: {thinking_budget_log}")
-        
-        def generate():
-            """Generator function for streaming response"""
-            chunk_index = 0
-            accumulated_text = ""
-            grounding_chunks = []
             
-            try:
-                # Stream the response from the model
-                for chunk in client.models.generate_content_stream(
-                    model=constants.MODEL_NAME,
-                    contents=contents,
-                    config=config
-                ):
-                    chunk_index += 1
-                    
-                    # Extract text from chunk
-                    if chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
-                        for part in chunk.candidates[0].content.parts:
-                            if hasattr(part, 'text') and part.text:
-                                accumulated_text += part.text
-                    
-                    # Check for grounding metadata (usually only in final chunk)
-                    if chunk.candidates and hasattr(chunk.candidates[0], 'grounding_metadata'):
-                        metadata = chunk.candidates[0].grounding_metadata
-                        if hasattr(metadata, 'grounding_chunks') and metadata.grounding_chunks:
-                            logging.info(f"Found {len(metadata.grounding_chunks)} grounding chunks in chunk {chunk_index}")
+            logging.info(f"[TIMING] Calling Gemini model '{constants.MODEL_NAME}' for comprehensive analysis, thinking_budget: {thinking_budget}")
+            
+            # Stream the response from the model
+            for chunk in client.models.generate_content_stream(
+                model=constants.MODEL_NAME,
+                contents=contents,
+                config=config
+            ):
+                chunk_index += 1
+                
+                # Extract text from chunk
+                if chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
+                    for part in chunk.candidates[0].content.parts:
+                        if hasattr(part, 'text') and part.text:
+                            accumulated_text += part.text
+                
+                # Check for grounding metadata (usually only in final chunk)
+                if chunk.candidates and hasattr(chunk.candidates[0], 'grounding_metadata'):
+                    metadata = chunk.candidates[0].grounding_metadata
+                    if hasattr(metadata, 'grounding_chunks') and metadata.grounding_chunks:
+                        logging.info(f"Found {len(metadata.grounding_chunks)} grounding chunks in chunk {chunk_index}")
+                        
+                        for idx, g_chunk in enumerate(metadata.grounding_chunks):
+                            g_data = {
+                                "citation_number": idx + 1,  # Maps to [1], [2], etc in text
+                            }
                             
-                            for idx, g_chunk in enumerate(metadata.grounding_chunks):
-                                g_data = {
-                                    "citation_number": idx + 1,  # Maps to [1], [2], etc in text
+                            if g_chunk.retrieved_context:
+                                ctx = g_chunk.retrieved_context
+                                g_data["source"] = {
+                                    "title": ctx.title if hasattr(ctx, 'title') and ctx.title else "EBT Manual",
+                                    "uri": ctx.uri if hasattr(ctx, 'uri') and ctx.uri else None,
+                                    "excerpt": ctx.text if hasattr(ctx, 'text') and ctx.text else None
                                 }
                                 
-                                if g_chunk.retrieved_context:
-                                    ctx = g_chunk.retrieved_context
-                                    g_data["source"] = {
-                                        "title": ctx.title if hasattr(ctx, 'title') and ctx.title else "EBT Manual",
-                                        "uri": ctx.uri if hasattr(ctx, 'uri') and ctx.uri else None,
-                                        "excerpt": ctx.text if hasattr(ctx, 'text') and ctx.text else None
-                                    }
-                                    
-                                    # Include page information if available
-                                    if hasattr(ctx, 'rag_chunk') and ctx.rag_chunk:
-                                        if hasattr(ctx.rag_chunk, 'page_span') and ctx.rag_chunk.page_span:
-                                            g_data["source"]["pages"] = {
-                                                "first": ctx.rag_chunk.page_span.first_page,
-                                                "last": ctx.rag_chunk.page_span.last_page
-                                            }
-                                
-                                grounding_chunks.append(g_data)
+                                # Include page information if available
+                                if hasattr(ctx, 'rag_chunk') and ctx.rag_chunk:
+                                    if hasattr(ctx.rag_chunk, 'page_span') and ctx.rag_chunk.page_span:
+                                        g_data["source"]["pages"] = {
+                                            "first": ctx.rag_chunk.page_span.first_page,
+                                            "last": ctx.rag_chunk.page_span.last_page
+                                        }
+                            
+                            grounding_chunks.append(g_data)
+            
+            logging.info(f"Comprehensive analysis streaming complete - {chunk_index} chunks, {len(accumulated_text)} characters")
+            
+            # Parse the accumulated JSON response using robust extraction
+            parsed = extract_json_from_text(accumulated_text)
+            
+            if parsed is not None:
+                # Add metadata
+                parsed['timestamp'] = datetime.now().isoformat()
+                parsed['session_phase'] = phase
+                parsed['analysis_type'] = 'comprehensive'
                 
-                logging.info(f"Streaming complete - {chunk_index} chunks, {len(accumulated_text)} characters")
+                # Add grounding citations if available
+                if grounding_chunks:
+                    parsed['citations'] = grounding_chunks
+                    logging.info(f"Added {len(grounding_chunks)} citations to response")
                 
-                # Parse the accumulated JSON response using robust extraction
-                parsed = extract_json_from_text(accumulated_text)
+                yield json.dumps(parsed) + "\n"
+            else:
+                logging.error(f"Failed to extract JSON from comprehensive analysis response: {accumulated_text[:500]}...")
+                yield json.dumps({
+                    'error': 'Failed to parse analysis response - no valid JSON found',
+                    'raw_response': accumulated_text[:200] if accumulated_text else 'No response received'
+                }) + "\n"
                 
-                if parsed:
-                    # Add metadata
-                    parsed['timestamp'] = datetime.now().isoformat()
-                    parsed['session_phase'] = phase
-                    parsed['analysis_type'] = 'realtime' if is_realtime else 'comprehensive'
-                    
-                    # Add grounding citations if available
-                    if grounding_chunks:
-                        parsed['citations'] = grounding_chunks
-                        logging.info(f"Added {len(grounding_chunks)} citations to response")
-                    
-                    yield json.dumps(parsed) + "\n"
-                else:
-                    logging.error(f"Failed to extract JSON from response: {accumulated_text[:500]}...")
-                    yield json.dumps({
-                        'error': 'Failed to parse analysis response - no valid JSON found',
-                        'raw_response': accumulated_text[:200] if accumulated_text else 'No response received'
-                    }) + "\n"
-                    
-            except Exception as e:
-                logging.exception(f"Error during streaming: {str(e)}")
-                yield json.dumps({'error': f'Analysis failed: {str(e)}'}) + "\n"
-        
-        return Response(generate(), mimetype='text/plain', headers=headers)
-        
-    except Exception as e:
-        logging.exception(f"Error in handle_segment_analysis: {str(e)}")
-        return (jsonify({'error': f'Segment analysis failed: {str(e)}'}), 500, headers)
+        except Exception as e:
+            logging.exception(f"Error during comprehensive analysis streaming: {str(e)}")
+            yield json.dumps({'error': f'Analysis failed: {str(e)}'}) + "\n"
+    
+    return Response(generate(), mimetype='text/plain', headers=headers)
 
 def handle_pathway_guidance(request_json, headers):
     """Provide specific pathway guidance based on current session state"""
@@ -515,10 +610,13 @@ def handle_pathway_guidance(request_json, headers):
             
             return (jsonify(parsed_response), 200, headers)
         else:
+            # Log first 200 characters of response on parsing failure
+            response_preview = response_text[:200] if response_text else "No response received"
+            logging.error(f"JSON parsing failed for pathway guidance. First 200 characters of response: {response_preview}")
             logging.error(f"Failed to extract JSON from pathway guidance response: {response_text[:500]}...")
             return (jsonify({
                 'error': 'Failed to parse pathway guidance response - no valid JSON found',
-                'raw_response': response_text[:200] if response_text else 'No response received'
+                'raw_response': response_preview
             }), 500, headers)
         
     except Exception as e:
