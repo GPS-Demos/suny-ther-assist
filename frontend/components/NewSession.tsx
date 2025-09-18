@@ -35,6 +35,7 @@ import {
   Build,
   Lightbulb,
   Assessment,
+  Explore,
 } from '@mui/icons-material';
 import { CircularProgress } from '@mui/material';
 import TranscriptDisplay from './TranscriptDisplay';
@@ -684,6 +685,18 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     return 'New Session';
   };
 
+  // Get next session number for the patient
+  const getNextSessionNumber = () => {
+    if (patientId) {
+      const patient = mockPatients.find(p => p.id === patientId);
+      if (patient && patient.sessionHistory) {
+        return patient.sessionHistory.length + 1;
+      }
+      return 1; // First session if no history exists
+    }
+    return 1; // Default for new session without patient context
+  };
+
   // Helper function to ensure recommendations are formatted as bullet points
   const normalizeRecommendationFormat = (recommendation: string): string => {
     if (!recommendation) return recommendation;
@@ -780,7 +793,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
             
             {/* Session Info and Start/Stop/Pause Buttons */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="body1">Session #1</Typography>
+              <Typography variant="body1">Session #{getNextSessionNumber()}</Typography>
               {!isRecording ? (
                 <Button
                   variant="contained"
@@ -1033,7 +1046,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
                     fontWeight: 600,
                   }}
                 >
-                  <Psychology sx={{ 
+                  <Explore sx={{ 
                     fontSize: 28,
                     color: 'rgba(11, 87, 208, 0.6)',
                     opacity: 0.8,

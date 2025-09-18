@@ -32,7 +32,6 @@ IMPORTANT DEDUPLICATION REQUIREMENTS:
 - Do not generate duplicate, or even similar guidance as the PREVIOUS GUIDANCE. Only generate genuinely NEW or DIFFERENT guidance.
 - Do not generate new guidance with the same alert.category as PREVIOUS GUIDANCE. Select a different category.
 - Safety guidance (timing: "now") are exempt from this rule and should always be generated if needed
-- IMPORTANT: Most of the time, no new guidance will be needed. Do not provide guidance if not needed.
 
 If no guidance is needed, then simply return an empty JSON. Format:
 {{}}
@@ -45,7 +44,7 @@ If guidance is needed, prioritize actionable guidance and return only the MOST R
         "title": "Brief descriptive title",
         "message": "Specific action or observation (1-3 sentences max)",
         "evidence": ["relevant quote(s) from the patient"],
-        "recommendation": "Action(s) to take if applicable. IMPORTANT: format each recommendation as a markdown bullet point using '- ' prefix (e.g., '- First action\n- Second action') but BE SURE not to break the json object"
+        "recommendation": "Action(s) to take if applicable (1-3 max). IMPORTANT: format each recommendation as a markdown bullet point using '- ' prefix (e.g., '- First action\n- Second action') but BE SURE not to break the json object"
     }}
 }}
 
@@ -115,13 +114,14 @@ If an guidance is needed, prioritize actionable guidance and return only the MOS
         "title": "Brief descriptive title",
         "message": "Specific action or observation (1-3 sentences max)",
         "evidence": ["direct quote showing the critical moment"],
-        "recommendation": "Action(s) to take if applicable. IMPORTANT: format each recommendation as a markdown bullet point using '- ' prefix (e.g., '- First action\n- Second action') but BE SURE not to break the json object"
+        "recommendation": "Action(s) to take if applicable (1-3 max). IMPORTANT: format each recommendation as a markdown bullet point using '- ' prefix (e.g., '- First action\n- Second action') but BE SURE not to break the json object"
     }}
 }}
 
 IMPORTANT NOTE:
 Always refer to the patient as 'patient'"""
 
+## NOTE: Alternate pathways has been removed
 COMPREHENSIVE_ANALYSIS_PROMPT = """<thinking>
 Analyze this therapy session segment step by step:
 1. Check for any safety concerns (dissociation, panic, suicidal ideation)
