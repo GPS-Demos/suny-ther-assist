@@ -1,5 +1,13 @@
 MODEL_NAME = "gemini-2.5-flash"
 
+# Phrases that trigger non-strict analysis
+TRIGGER_PHRASES = [
+    "something else came up",
+    "scared but I want to do it",
+    "very brave",
+    "I might fall apart"
+]
+
 # Therapy phase definitions
 THERAPY_PHASES = {
     "beginning": {"duration_minutes": 10, "focus": "rapport building, agenda setting"},

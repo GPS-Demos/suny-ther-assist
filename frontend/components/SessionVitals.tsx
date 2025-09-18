@@ -56,13 +56,13 @@ const SessionVitals: React.FC<SessionVitalsProps> = ({ metrics, isListening = fa
         </Typography>
       </Box>
       <Box sx={{ textAlign: 'center' }}>
-        <Typography variant="body2" color="text.secondary">Emotional State</Typography>
+        <Typography variant="body2" color="text.secondary">Patient Emotional State</Typography>
         <Typography variant="h6" sx={{ fontWeight: 600, textTransform: 'capitalize', color: getStatusColor(emotional_state) }}>
           {getDisplayValue(emotional_state, isListening)}
         </Typography>
       </Box>
       <Box sx={{ textAlign: 'center' }}>
-        <Typography variant="body2" color="text.secondary">Engagement Level</Typography>
+        <Typography variant="body2" color="text.secondary">Patient Engagement Level</Typography>
         <Typography variant="h6" sx={{ fontWeight: 600, color: getStatusColor(engagementStatus) }}>
           {getEngagementDisplayValue(engagement_level, engagementStatus)}
         </Typography>

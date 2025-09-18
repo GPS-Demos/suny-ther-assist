@@ -237,7 +237,7 @@ Timing: {previous_alert.get('timing', 'N/A')}
         if is_realtime:
             # For realtime analysis, we'll use a retry mechanism with two different prompts
             return handle_realtime_analysis_with_retry(
-                transcript_text, previous_alert_context, phase, headers
+                transcript_segment, transcript_text, previous_alert_context, phase, headers
             )
         else:
             # COMPREHENSIVE PATH: Full analysis with RAG
@@ -257,7 +257,24 @@ Timing: {previous_alert.get('timing', 'N/A')}
         logging.exception(f"Error in handle_segment_analysis: {str(e)}")
         return (jsonify({'error': f'Segment analysis failed: {str(e)}'}), 500, headers)
 
-def handle_realtime_analysis_with_retry(transcript_text, previous_alert_context, phase, headers):
+def check_for_trigger_phrases(transcript_segment):
+    """Check if the most recent transcript item contains any trigger phrases"""
+    if not transcript_segment:
+        return False
+    
+    # Get the most recent item in the transcript
+    latest_item = transcript_segment[-1]
+    latest_text = latest_item.get('text', '').lower()
+    
+    # Check against all trigger phrases
+    for phrase in constants.TRIGGER_PHRASES:
+        if phrase.lower() in latest_text:
+            logging.info(f"Trigger phrase '{phrase}' found in latest transcript item")
+            return True
+    
+    return False
+
+def handle_realtime_analysis_with_retry(transcript_segment, transcript_text, previous_alert_context, phase, headers):
     """Handle realtime analysis with retry mechanism using different prompts"""
     
     def try_analysis_with_prompt(prompt_template, prompt_name):
@@ -338,28 +355,47 @@ def handle_realtime_analysis_with_retry(transcript_text, previous_alert_context,
     def generate():
         """Generator function for streaming response with retry logic"""
         try:
-            # First attempt: Use STRICT prompt
+            # Check for trigger phrases to determine prompt selection
+            has_trigger_phrase = check_for_trigger_phrases(transcript_segment)
+            
+            if has_trigger_phrase:
+                # Trigger phrase found - use non-strict prompt first
+                first_prompt = constants.REALTIME_ANALYSIS_PROMPT
+                first_prompt_name = "REALTIME_ANALYSIS_PROMPT"
+                fallback_prompt = constants.REALTIME_ANALYSIS_PROMPT_STRICT
+                fallback_prompt_name = "REALTIME_ANALYSIS_PROMPT_STRICT"
+                logging.info("Trigger phrase detected - using non-strict prompt first")
+            else:
+                # No trigger phrase - use strict prompt first (original behavior)
+                first_prompt = constants.REALTIME_ANALYSIS_PROMPT_STRICT
+                first_prompt_name = "REALTIME_ANALYSIS_PROMPT_STRICT"
+                fallback_prompt = constants.REALTIME_ANALYSIS_PROMPT
+                fallback_prompt_name = "REALTIME_ANALYSIS_PROMPT"
+                logging.info("No trigger phrase detected - using strict prompt first")
+            
+            # First attempt with selected prompt
             parsed_result, response_text = try_analysis_with_prompt(
-                constants.REALTIME_ANALYSIS_PROMPT_STRICT, 
-                "REALTIME_ANALYSIS_PROMPT_STRICT"
+                first_prompt, 
+                first_prompt_name
             )
             
             if parsed_result is not None:
-                # Success with STRICT prompt
+                # Success with first prompt
                 parsed_result['timestamp'] = datetime.now().isoformat()
                 parsed_result['session_phase'] = phase
                 parsed_result['analysis_type'] = 'realtime'
-                parsed_result['prompt_used'] = 'strict'
+                parsed_result['prompt_used'] = 'non-strict' if has_trigger_phrase else 'strict'
+                parsed_result['trigger_phrase_detected'] = has_trigger_phrase
                 
                 yield json.dumps(parsed_result) + "\n"
                 return
             
             # First attempt failed, try with fallback prompt
-            logging.info("STRICT prompt failed, retrying with fallback REALTIME_ANALYSIS_PROMPT")
+            logging.info(f"{first_prompt_name} failed, retrying with fallback {fallback_prompt_name}")
             
             parsed_result, response_text = try_analysis_with_prompt(
-                constants.REALTIME_ANALYSIS_PROMPT, 
-                "REALTIME_ANALYSIS_PROMPT"
+                fallback_prompt, 
+                fallback_prompt_name
             )
             
             if parsed_result is not None:
@@ -367,17 +403,20 @@ def handle_realtime_analysis_with_retry(transcript_text, previous_alert_context,
                 parsed_result['timestamp'] = datetime.now().isoformat()
                 parsed_result['session_phase'] = phase
                 parsed_result['analysis_type'] = 'realtime'
-                parsed_result['prompt_used'] = 'fallback'
+                parsed_result['prompt_used'] = 'strict' if has_trigger_phrase else 'non-strict'
+                parsed_result['trigger_phrase_detected'] = has_trigger_phrase
+                parsed_result['used_fallback'] = True
                 
                 yield json.dumps(parsed_result) + "\n"
                 return
             
             # Both attempts failed
-            logging.error("Both STRICT and fallback prompts failed to produce valid JSON")
+            logging.error("Both prompts failed to produce valid JSON")
             yield json.dumps({
                 'error': 'Failed to parse analysis response after retry - no valid JSON found',
                 'raw_response': response_text[:200] if response_text else 'No response received',
-                'attempts': ['REALTIME_ANALYSIS_PROMPT_STRICT', 'REALTIME_ANALYSIS_PROMPT']
+                'trigger_phrase_detected': has_trigger_phrase,
+                'attempts': [first_prompt_name, fallback_prompt_name]
             }) + "\n"
             
         except Exception as e:

@@ -258,13 +258,19 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
               
               return updatedAlerts;
             } else {
-              const reason = result.debugInfo?.reason || 'deduplication rules';
+              const reason = result.blockReason || 'deduplication rules';
+              const similarAlertInfo = result.similarAlert 
+                ? ` (similar to: "${result.similarAlert.title}")` 
+                : '';
               
               // Create unique log identifier for this specific filter event
               const filterLogId = `filter-alert-${Date.now()}-${analysis.alert?.title || 'unknown'}`;
               if (!lastLoggedAnalysisRef.current.has(filterLogId)) {
                 lastLoggedAnalysisRef.current.add(filterLogId);
-                console.log(`[Session] 🚫 Alert filtered: ${reason}`, analysis.alert);
+                console.log(`[Session] 🚫 Alert filtered: ${reason}${similarAlertInfo}`, {
+                  filteredAlert: analysis.alert,
+                  similarAlert: result.similarAlert
+                });
               }
               
               return prev;
