@@ -5,7 +5,7 @@ export const mockPatients: Patient[] = [
     id: '1',
     name: 'Sarah Johnson',
     age: 28,
-    nextVisit: '2025-09-24',
+    nextVisit: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Next week
     lastVisit: '2025-07-15',
     patientSince: '2023-10-20',
     focusTopics: 'Social Anxiety, Work Performance, Breathing Techniques',
@@ -45,7 +45,7 @@ export const mockPatients: Patient[] = [
     id: '2',
     name: 'Michael Chen',
     age: 35,
-    nextVisit: '2025-09-25',
+    nextVisit: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
     lastVisit: '2025-07-10',
     patientSince: '2023-06-15',
     focusTopics: 'PTSD, Nightmares, EMDR Therapy',
@@ -176,7 +176,7 @@ export const mockPatients: Patient[] = [
     id: '5',
     name: 'Jessica Wong',
     age: 29,
-    nextVisit: '2025-10-02',
+    nextVisit: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Next month
     lastVisit: '2025-07-20',
     patientSince: '2024-04-05',
     focusTopics: 'Panic Disorder, Grounding Techniques, Work Stress',
