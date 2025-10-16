@@ -17,6 +17,15 @@ Ther-Assist listens ambiently to therapy sessions and provides near real-time gu
 
 ## Architecture
 
+### Diagram
+![Architecture](./assets/architecture.png)
+
+### Frontend (React + Vite)
+- **Clinician-Optimized UI**: Large, readable alerts with visual priority system
+- **Live Transcript Display**: Real-time speaker-labeled conversation
+- **Alert System**: Critical (red), Suggestion (yellow), Info (green) alerts
+- **Session Metrics Dashboard**: Visual indicators for therapeutic progress
+
 ### Backend Services
 1. **Streaming Transcription Service** (`backend/streaming-transcription-service/`)
    - FastAPI WebSocket service deployed on Cloud Run
@@ -29,12 +38,6 @@ Ther-Assist listens ambiently to therapy sessions and provides near real-time gu
    - RAG integration with EBT corpus
    - Provides real-time therapeutic guidance
    - Generates session summaries
-
-### Frontend (React + Vite)
-- **Clinician-Optimized UI**: Large, readable alerts with visual priority system
-- **Live Transcript Display**: Real-time speaker-labeled conversation
-- **Alert System**: Critical (red), Suggestion (yellow), Info (green) alerts
-- **Session Metrics Dashboard**: Visual indicators for therapeutic progress
 
 ## Deployment Instructions
 
@@ -72,13 +75,6 @@ Deploy Cloud Functions:
 ```bash
 cd backend/streaming-transcription-service
 export PROJECT_ID="your-project-id"
-./deploy.sh
-```
-
-#### Deploy Storage Access Function
-First give your default compute engine SA the role for Cloud Build Builder, Vertex AI User, Discovery Engine User, and finally the Storage Object & Bucket Viewer roles. Then run the following commands:
-```bash
-cd backend/storage-access-function
 ./deploy.sh
 ```
 
@@ -146,7 +142,6 @@ firebase deploy
 ```bash
 # Backend API endpoints
 VITE_ANALYSIS_API=http://localhost:8080
-VITE_STORAGE_ACCESS_URL=http://localhost:8081
 VITE_TRANSCRIPTION_WS=ws://localhost:8082
 
 # Google Cloud settings
@@ -185,18 +180,6 @@ pip install -r requirements.txt
 ```bash
 export GOOGLE_CLOUD_PROJECT="your-project-id"
 python main.py
-```
-
-### Backend storage-acccess-function
-1. Navigate to the directory
-```bash
-cd backend/storage-access-function
-```
-2. Configure your venv & install dependencies
-3. Run the Cloud Run Function locally
-```bash
-export GOOGLE_CLOUD_PROJECT="your-project-id"
-functions-framework --target=storage_access --port=8081
 ```
 
 ## Usage
