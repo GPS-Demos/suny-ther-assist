@@ -236,13 +236,15 @@ Create a summary including:
 
 Reference specific EBT manual sections for homework and follow-up recommendations.
 
+IMPORTANT: For timestamps in key_moments, use the session time format HH:MM:SS (e.g., "00:15:30" for 15 minutes 30 seconds into the session). If you cannot determine the exact time, use approximate session time based on the transcript context.
+
 Format as structured JSON:
 {{
     "session_date": "ISO date",
     "duration_minutes": number,
     "key_moments": [
         {{
-            "time": "timestamp",
+            "time": "HH:MM:SS session time format (e.g., 00:15:30)",
             "description": "what happened",
             "significance": "why it matters"
         }}

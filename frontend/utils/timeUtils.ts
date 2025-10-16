@@ -16,7 +16,20 @@ export const formatDuration = (seconds: number): string => {
 };
 
 export const formatTimestamp = (timestamp: string): string => {
+  // Handle HH:MM:SS format (session time) by creating a valid date
+  if (timestamp && /^\d{2}:\d{2}:\d{2}$/.test(timestamp)) {
+    // It's already in HH:MM:SS format, return as-is
+    return timestamp;
+  }
+  
+  // Try to parse as a regular timestamp
   const date = new Date(timestamp);
+  
+  // Check if the date is valid
+  if (isNaN(date.getTime())) {
+    return '--:--:--';
+  }
+  
   return date.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
