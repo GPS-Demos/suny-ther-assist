@@ -18,7 +18,8 @@ import {
   MenuBook,
   Article,
 } from '@mui/icons-material';
-import { getStorageAccessUrl } from '../utils/storageUtils';
+import { openGcsFile } from '../utils/storageUtils';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Citation {
   citation_number: number;
@@ -40,6 +41,19 @@ interface CitationModalProps {
 }
 
 const CitationModal: React.FC<CitationModalProps> = ({ open, onClose, citation }) => {
+  const { currentUser } = useAuth();
+
+  const handleViewSource = async () => {
+    if (!citation?.source?.uri) return;
+    
+    try {
+      const authToken = await currentUser?.getIdToken();
+      await openGcsFile(citation.source.uri, authToken);
+    } catch (error) {
+      console.error('Error opening source file:', error);
+    }
+  };
+
   if (!citation) return null;
 
   return (
@@ -181,9 +195,7 @@ const CitationModal: React.FC<CitationModalProps> = ({ open, onClose, citation }
           <Button
             variant="outlined"
             startIcon={<Article />}
-            href={getStorageAccessUrl(citation.source.uri)}
-            target="_blank"
-            rel="noopener noreferrer"
+            onClick={handleViewSource}
             sx={{ mr: 'auto' }}
           >
             View Full Source

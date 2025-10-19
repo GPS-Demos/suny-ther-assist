@@ -69,16 +69,9 @@ Follow the instructions in the [RAG README.MD](./backend/rag/README)
 
 ### 3. Backend Deployment
 
-Deploy Cloud Functions:
+Deploy Cloud Run Functions:
 
-#### Deploy Streaming Transcription Service
-```bash
-cd backend/streaming-transcription-service
-export PROJECT_ID="your-project-id"
-./deploy.sh
-```
-
-#### Deploy analysis function
+#### Deploy Therapy Analysis Function
 ```bash
 cd ../therapy-analysis-function
 gcloud functions deploy therapy_analysis \
@@ -89,6 +82,23 @@ gcloud functions deploy therapy_analysis \
   --timeout 540s \
   --set-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID
 ```
+
+#### Deploy Storage Access Function
+```bash
+cd ../storage-access-function
+export PROJECT_ID="your-project-id"
+./deploy.sh
+```
+
+Deploy Cloud Run:
+
+#### Deploy Streaming Transcription Service
+```bash
+cd backend/streaming-transcription-service
+export PROJECT_ID="your-project-id"
+./deploy.sh
+```
+
 
 Note: Org policies may block your functions from deploying with public access enabled. You'll have to change that setting manually.
 
@@ -142,6 +152,7 @@ firebase deploy
 ```bash
 # Backend API endpoints
 VITE_ANALYSIS_API=http://localhost:8080
+VITE_STORAGE_ACCESS_API=http://localhost:8081
 VITE_TRANSCRIPTION_WS=ws://localhost:8082
 
 # Google Cloud settings
@@ -161,10 +172,32 @@ npm run dev
 cd backend/therapy-analysis-function
 ```
 2. Configure your venv & install dependencies
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 3. Run the Cloud Run Function locally
 ```bash
 export GOOGLE_CLOUD_PROJECT="your-project-id"
 functions-framework --target=therapy_analysis --port=8080
+```
+
+### Backend storage-access-function
+1. Navigate to the directory
+```bash
+cd backend/storage-access-function
+```
+2. Configure your venv & install dependencies
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+3. Run the Cloud Function locally
+```bash
+export GOOGLE_CLOUD_PROJECT="your-project-id"
+functions-framework --target=storage_access --port=8081
 ```
 
 ### Backend streaming-transcription-service
@@ -174,6 +207,8 @@ cd backend/streaming-transcription-service
 ```
 2. Configure your venv & install dependencies
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 3. Run the service locally

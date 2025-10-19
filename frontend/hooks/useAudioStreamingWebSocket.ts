@@ -66,7 +66,7 @@ export const useAudioStreamingWebSocket = ({
           sessionIdRef.current = `session-${Date.now()}`;
           ws.send(JSON.stringify({
             session_id: sessionIdRef.current,
-            auth_token: authToken,
+            token: authToken,
             config: {
               sample_rate: 48000,
               encoding: 'WEBM_OPUS'
