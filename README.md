@@ -54,32 +54,48 @@ Each service requires environment variables for authorization:
 
 **Frontend**: Copy `.env.example` to `.env` and `.env.development` and update all variables.
 
-### 1. Google Cloud Setup
+### GCP & Firebase Setup
 
+1. Enable APIs
 ```bash
 # Set your project ID
 export PROJECT_ID="your-project-id"
-gcloud config set project $PROJECT_ID
+gcloud init
+gcloud auth application-default login
 
 # Enable required APIs
 gcloud services enable speech.googleapis.com
 gcloud services enable aiplatform.googleapis.com
 gcloud services enable discoveryengine.googleapis.com
-gcloud services enable cloudfunctions.googleapis.com
+gcloud services enable generativelanguage.googleapis.com
+gcloud services enable artifactregistry.googleapis.com
 gcloud services enable cloudbuild.googleapis.com
-
-# Create Vertex AI Search datastore for EBT corpus
-# (Follow Google Cloud Console to create a datastore and upload PDF manuals)
+gcloud services enable run.googleapis.com
+gcloud services enable cloudfunctions.googleapis.com
+gcloud services enable compute.googleapis.com
+gcloud services enable storage.googleapis.com
 ```
 
-### 2. Create RAG Corpuses
-Follow the instructions in the [RAG README.MD](./backend/rag/README)
+2. Enable Firebase Authentication
+- Search for Firebase in your GCP project. Click into Firebase Authenticaiton, and click into the Firebase Portal
+- Enable Google Authentication within Firebase
+- Go to your project settings, enable a web application, and grab the Firebase config object. It should look like this:
+```javascript
+{
+  apiKey: "api-key",
+  authDomain: "your-gcp-project.firebaseapp.com",
+  projectId: "your-gcp-project",
+  storageBucket: "your-gcp-project.firebasestorage.app",
+  messagingSenderId: "message-sender-id",
+  appId: "1:app-id"
+}
+```
 
-### 3. Backend Deployment
+3. Create RAG Corpuses
+Follow the instructions in the [RAG README.MD](./setup_services/rag/README)
 
-Deploy Cloud Run Functions:
-
-#### Deploy Therapy Analysis Function
+3. Backend Deployments
+- Deploy Therapy Analysis Function
 ```bash
 cd ../therapy-analysis-function
 gcloud functions deploy therapy_analysis \
@@ -90,39 +106,29 @@ gcloud functions deploy therapy_analysis \
   --timeout 540s \
   --set-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID
 ```
-
-#### Deploy Storage Access Function
+- Deploy Storage Access Function
 ```bash
 cd ../storage-access-function
 export PROJECT_ID="your-project-id"
 ./deploy.sh
 ```
-
-Deploy Cloud Run:
-
-#### Deploy Streaming Transcription Service
+- Deploy Streaming Transcription Service
 ```bash
 cd backend/streaming-transcription-service
 export PROJECT_ID="your-project-id"
 ./deploy.sh
 ```
 
-
-Note: Org policies may block your functions from deploying with public access enabled. You'll have to change that setting manually.
-
-### 4. Frontend Setup
-
-1. Install dependencies
+4. Frontend Deployment
+- Install dependencies
 ```bash
 cd frontend
 
 # Copy environment variables and update with your own
 cp .env.example .env
 ```
-
-2. Update your .env file with your project's variables
-
-3. Enable Firebase in your project, enable Google authentication, register an app, get the Firebase config object, and use that object to create `frontend/firebase-config-object.ts`:
+- Update your .env file with your project's variables
+- Use your firebase config object to create `frontend/firebase-config-object.ts`:
 ```javascript
 export const firebaseConfig = {
   apiKey: "api-key",
@@ -133,8 +139,7 @@ export const firebaseConfig = {
   appId: "1:app-id"
 };
 ```
-
-4. Create the following file `frontend/firebaserc` with your own information:
+- Create the following file `frontend/firebaserc` with your own information:
 ```javascript
 {
   "projects": {
@@ -142,16 +147,15 @@ export const firebaseConfig = {
   }
 }
 ```
-
-5. Build your app
+- Build your app
 ```bash
 npm run build
 ```
-
-6. Deploy to Firebase
+- Deploy to Firebase
 ```bash
 firebase deploy
 ```
+- Go back to Firebase settings and allowlist authentication for every single domain in the backend and for your frontend domain
 
 ## Local Dev
 
