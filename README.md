@@ -46,6 +46,14 @@ Ther-Assist listens ambiently to therapy sessions and provides near real-time gu
 - Google Cloud Project with billing enabled
 - Google Cloud CLI (`gcloud`) installed and authenticated
 
+### Environment Configuration
+
+Each service requires environment variables for authorization:
+
+**Backend Services**: Copy `.env.example` to `.env` in each backend service directory and configure all variables
+
+**Frontend**: Copy `.env.example` to `.env` and `.env.development` and update all variables.
+
 ### 1. Google Cloud Setup
 
 ```bash
@@ -179,7 +187,6 @@ pip install -r requirements.txt
 ```
 3. Run the Cloud Run Function locally
 ```bash
-export GOOGLE_CLOUD_PROJECT="your-project-id"
 functions-framework --target=therapy_analysis --port=8080
 ```
 
@@ -196,7 +203,6 @@ pip install -r requirements.txt
 ```
 3. Run the Cloud Function locally
 ```bash
-export GOOGLE_CLOUD_PROJECT="your-project-id"
 functions-framework --target=storage_access --port=8081
 ```
 
@@ -213,7 +219,6 @@ pip install -r requirements.txt
 ```
 3. Run the service locally
 ```bash
-export GOOGLE_CLOUD_PROJECT="your-project-id"
 python main.py
 ```
 
@@ -252,19 +257,6 @@ For local development without Google Cloud:
 1. Use mock services in `frontend/services/mockServices.ts`
 2. Test with pre-recorded audio files
 3. Use sample transcripts for UI development
-
-### Testing
-
-TODO
-<!-- ```bash
-# Frontend tests
-cd frontend
-npm test
-
-# Backend function tests
-cd backend/therapy-analysis-function
-python -m pytest test_scripts/
-``` -->
 
 ## Contributing
 
