@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
-// https://vitejs.dev/config/
+// https://vitejs.dev/config
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -13,18 +13,6 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
-    proxy: {
-      '/api/transcribe': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/transcribe/, ''),
-      },
-      '/api/analyze': {
-        target: 'http://localhost:8081',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/analyze/, ''),
-      },
-    },
   },
   build: {
     outDir: 'dist',

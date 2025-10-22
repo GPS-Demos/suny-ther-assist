@@ -28,30 +28,19 @@ Ther-Assist uses two complementary RAG datastores:
 ## Setup Instructions
 
 ### Prerequisites
-
-1. Google Cloud Project with APIs enabled:
-   - Vertex AI API
-   - Discovery Engine API
-   - Cloud Storage API
-
-2. Authentication:
+- Complete all steps prior to this in the root README.md
+- Install dependencies
 ```bash
-gcloud auth application-default login
-```
-
-3. Set project:
-```bash
-export GOOGLE_CLOUD_PROJECT=your-gcp-project
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
 ### Setting Up EBT Manuals Datastore
 
 ```bash
-# Install dependencies
-pip install google-auth google-auth-httplib2 google-cloud-storage requests
-
 # Run setup script
-python backend/rag/setup_rag_datastore.py
+python setup_rag_datastore.py
 ```
 
 This will:
@@ -60,16 +49,10 @@ This will:
 - Import documents with 500-token chunking
 - Configure layout-aware parsing for PDFs
 
-NOTE: If your setup_rag_datastore.py job times out while creating (600+ seconds), create the RAG Corpus from the upload files in Storage
-
 ### Setting Up Transcript Patterns Datastore
 
 ```bash
-# Install dependencies (includes PyPDF2 for transcript processing)
-pip install google-auth google-auth-httplib2 google-cloud-storage requests PyPDF2
-
-# Run setup script
-python backend/rag/setup_transcript_datastore.py
+python setup_transcript_datastore.py
 ```
 
 This will:
@@ -79,7 +62,13 @@ This will:
 - Generate therapeutic pattern library
 - Upload to GCS with 300-token chunking
 
-NOTE: If you run into a 400 error about exceeding the maximum number of files then use the RAG Corpus
+**IMPORTANT NOTES:**
+- **Timeout Issues**: Import operations can take 10+ minutes and may timeout. If this happens:
+  1. Check the operation status in [Google Cloud Console](https://console.cloud.google.com/ai/search/datastores)
+  2. The operation may still be running in the background
+  3. Use the resumable version: `python setup_transcript_datastore_resumable.py`
+- **File Limit**: If you get a 400 error about exceeding maximum files, use the resumable script
+- **Wrong Datastore Error**: If you see references to `ebt-corpus` instead of `transcript-patterns`, make sure you're running the correct script
 
 ## Corpus Organization
 
@@ -165,6 +154,25 @@ gcloud config set project your-gcp-project-id
 ### Import Timeout
 The import operation can take 5-10 minutes. Check status in:
 - [Google Cloud Console](https://console.cloud.google.com/ai/search/datastores)
+
+**If you got a timeout error:**
+1. Your operation may still be running in the background
+2. Check the Google Cloud Console to see if documents are being imported
+3. Wait for the operation to complete before running the script again
+4. Use the resumable version to avoid re-uploading files: `python setup_transcript_datastore_resumable.py`
+
+### Operation Status Check
+To check if your import operation is still running:
+
+1. **Google Cloud Console** (recommended):
+   - Go to [Vertex AI Search](https://console.cloud.google.com/ai/search/datastores)
+   - Look for your `transcript-patterns` datastore
+   - Check the "Documents" tab to see if import is in progress
+   - Look for import status indicators
+
+2. **Check your operation ID**:
+   - If you have the operation ID from the script output (like `projects/1001561436755/locations/global/collections/default_collection/dataStores/ebt-corpus/branches/0/operations/import-documents-1777447049591343122`)
+   - You can check its status in the Google Cloud Console under Operations
 
 ### Missing Dependencies
 ```bash
