@@ -31,6 +31,10 @@ terraform {
       source  = "hashicorp/local"
       version = "~> 2.4"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.9"
+    }
   }
 }
 
@@ -76,6 +80,13 @@ resource "google_service_account" "storage_access_sa" {
 resource "google_project_iam_member" "storage_access_sa_binding" {
   project = var.project_id
   role    = "roles/storage.objectViewer"
+  member  = "serviceAccount:${google_service_account.storage_access_sa.email}"
+}
+
+# Grant Project Editor role to service account
+resource "google_project_iam_member" "storage_access_sa_editor" {
+  project = var.project_id
+  role    = "roles/editor"
   member  = "serviceAccount:${google_service_account.storage_access_sa.email}"
 }
 
@@ -190,7 +201,47 @@ resource "google_storage_bucket_object" "storage_access_source" {
   source = data.archive_file.storage_access_zip.output_path
 }
 
-# Build and deploy streaming transcription service to Cloud Run
+# Build Docker image for streaming transcription service
+# This needs to be built first before the Cloud Run service can reference it
+resource "null_resource" "build_streaming_service" {
+  triggers = {
+    # Trigger rebuild when any source file changes
+    source_hash = md5(join("", [
+      filebase64sha256("../backend/streaming-transcription-service/Dockerfile"),
+      filebase64sha256("../backend/streaming-transcription-service/main.py"),
+      filebase64sha256("../backend/streaming-transcription-service/requirements.txt")
+    ]))
+  }
+  
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Building Docker image for streaming transcription service..."
+      cd ../backend/streaming-transcription-service
+      
+      # Enable required APIs first
+      gcloud services enable cloudbuild.googleapis.com artifactregistry.googleapis.com --project=${var.project_id}
+      
+      # Build and push the Docker image
+      gcloud builds submit --tag gcr.io/${var.project_id}/therapy-streaming-transcription:latest --project=${var.project_id} --timeout=20m || {
+        echo "Failed to build Docker image. Please ensure Cloud Build API is enabled and you have the necessary permissions."
+        exit 1
+      }
+      
+      echo "Docker image built successfully: gcr.io/${var.project_id}/therapy-streaming-transcription:latest"
+    EOT
+  }
+  
+  depends_on = [google_project_service.apis]
+}
+
+# Add a delay to ensure the image is available in the registry
+resource "time_sleep" "wait_for_streaming_image" {
+  depends_on = [null_resource.build_streaming_service]
+  
+  create_duration = "30s"
+}
+
+# Deploy streaming transcription service to Cloud Run
 resource "google_cloud_run_v2_service" "streaming_transcription" {
   name     = "therapy-streaming-transcription"
   location = var.region
@@ -232,25 +283,8 @@ resource "google_cloud_run_v2_service" "streaming_transcription" {
 
   depends_on = [
     google_project_service.apis,
-    null_resource.build_streaming_service
+    time_sleep.wait_for_streaming_image
   ]
-}
-
-
-# Build Docker image for streaming transcription service
-resource "null_resource" "build_streaming_service" {
-  triggers = {
-    source_hash = filebase64sha256("../backend/streaming-transcription-service/Dockerfile")
-  }
-  
-  provisioner "local-exec" {
-    command = <<-EOT
-      cd ../backend/streaming-transcription-service
-      gcloud builds submit --tag gcr.io/${var.project_id}/therapy-streaming-transcription:latest --project=${var.project_id} --quiet
-    EOT
-  }
-  
-  depends_on = [google_project_service.apis]
 }
 
 # Deploy frontend to Cloud Run
@@ -282,7 +316,7 @@ resource "google_cloud_run_v2_service" "frontend" {
 
   depends_on = [
     google_project_service.apis,
-    null_resource.build_frontend
+    time_sleep.wait_for_frontend_image
   ]
 }
 
@@ -301,6 +335,7 @@ resource "null_resource" "build_frontend" {
   
   provisioner "local-exec" {
     command = <<-EOT
+      echo "Building Docker image for frontend..."
       cd ../frontend
       
       # Create production Dockerfile
@@ -353,7 +388,12 @@ http {
 EOF
 
       # Build and push Docker image
-      gcloud builds submit --tag gcr.io/${var.project_id}/ther-assist-frontend:latest --project=${var.project_id} --quiet
+      gcloud builds submit --tag gcr.io/${var.project_id}/ther-assist-frontend:latest --project=${var.project_id} --timeout=20m || {
+        echo "Failed to build frontend Docker image. Please ensure Cloud Build API is enabled and you have the necessary permissions."
+        exit 1
+      }
+      
+      echo "Frontend Docker image built successfully: gcr.io/${var.project_id}/ther-assist-frontend:latest"
     EOT
   }
   
@@ -364,6 +404,13 @@ EOF
     google_cloud_run_v2_service.streaming_transcription,
     local_file.frontend_env
   ]
+}
+
+# Add a delay to ensure the frontend image is available in the registry
+resource "time_sleep" "wait_for_frontend_image" {
+  depends_on = [null_resource.build_frontend]
+  
+  create_duration = "30s"
 }
 
 # Generate environment files for all services

@@ -40,6 +40,7 @@ pip install -r requirements.txt
 
 ```bash
 # Run setup script
+export GOOGLE_CLOUD_PROJECT="your-gcp-project"
 python setup_rag_datastore.py
 ```
 
@@ -48,6 +49,8 @@ This will:
 - Upload manuals to GCS
 - Import documents with 500-token chunking
 - Configure layout-aware parsing for PDFs
+
+Check your [AI Application Datastore]((https://console.cloud.google.com/ai/search/datastores)) if it times out, sometimes it correctly uploads documents but does not correctly alert the user
 
 ### Setting Up Transcript Patterns Datastore
 
@@ -67,7 +70,7 @@ This will:
   1. Check the operation status in [Google Cloud Console](https://console.cloud.google.com/ai/search/datastores)
   2. The operation may still be running in the background
   3. Use the resumable version: `python setup_transcript_datastore_resumable.py`
-- **File Limit**: If you get a 400 error about exceeding maximum files, use the resumable script
+- **File Limit**: If you get a 400 error about exceeding maximum files, go to the [Google Cloud Datastore page](https://console.cloud.google.com/ai/search/datastores) and manually upload your entire bucket as unstructured content
 - **Wrong Datastore Error**: If you see references to `ebt-corpus` instead of `transcript-patterns`, make sure you're running the correct script
 
 ## Corpus Organization

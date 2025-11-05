@@ -376,7 +376,7 @@ def main():
                     print("\n❌❌❌ IMPORT OPERATION FAILED OR TIMED OUT ❌❌❌")
                     print("⚠️  Troubleshooting steps:")
                     print("   1. Check the operation status in Google Cloud Console:")
-                    print(f"      https://console.cloud.google.com/ai/search/datastores/{DATASTORE_ID}/documents")
+                    print(f"      https://console.cloud.google.com/gen-app-builder/data-stores")
                     print("   2. Verify the GCS bucket has the files:")
                     print(f"      https://console.cloud.google.com/storage/browser/{bucket_name}")
                     print("   3. Check for API quotas or permissions issues")
