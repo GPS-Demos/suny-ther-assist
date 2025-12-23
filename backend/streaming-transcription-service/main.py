@@ -35,7 +35,7 @@ from firebase_admin import auth, credentials
 
 # Load environment variables
 # Load base .env file first
-load_dotenv('.env')
+load_dotenv()
 
 # Load development overrides if .env.development exists
 if os.path.exists('.env.development'):
@@ -66,6 +66,9 @@ ALLOWED_EMAILS = set(os.environ.get('AUTH_ALLOWED_EMAILS', '').split(',')) if os
 
 def is_email_authorized(email: str) -> bool:
     """Check if email is authorized based on domain or explicit allowlist"""
+    logging.info("is_email_authorized")
+    logging.info(ALLOWED_DOMAINS)
+    logging.info(ALLOWED_EMAILS)
     if not email:
         return False
     
@@ -75,6 +78,7 @@ def is_email_authorized(email: str) -> bool:
         
     # Check domain allowlist
     email_domain = email.split('@')[-1] if '@' in email else ''
+    logging.info(email_domain)
     return email_domain in ALLOWED_DOMAINS
 
 def verify_firebase_token(token: str) -> Optional[dict]:

@@ -7,8 +7,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy application code and environment file
 COPY main.py .
+COPY .env .
 
 # Set environment variables
 ENV PORT=8080

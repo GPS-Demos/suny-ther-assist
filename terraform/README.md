@@ -56,7 +56,7 @@ terraform apply
 ## What Gets Deployed
 
 ### Backend Services
-- **Therapy Analysis Function**: `https://us-central1-{project-id}.cloudfunctions.net/therapy-analysis`
+- **Therapy Analysis Function**: `https://us-central1-{project-id}.cloudfunctions.net/therapy_analysis`
 - **Storage Access Function**: `https://us-central1-{project-id}.cloudfunctions.net/storage-access`
 - **Streaming Transcription Service**: `https://therapy-streaming-transcription-xxxxx.us-central1.run.app`
 

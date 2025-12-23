@@ -55,7 +55,7 @@ export const useTherapyAnalysis = ({
     const startTime = performance.now();
     
     try {
-      const response = await axios.post(`${ANALYSIS_API}/therapy_analysis`, requestPayload, {
+      const response = await axios.post(ANALYSIS_API, requestPayload, {
         responseType: 'text',
         headers: {
           ...(authToken && { Authorization: `Bearer ${authToken}` })
@@ -108,7 +108,7 @@ export const useTherapyAnalysis = ({
     });
     
     try {
-      const response = await axios.post(`${ANALYSIS_API}/therapy_analysis`, {
+      const response = await axios.post(ANALYSIS_API, {
         action: 'pathway_guidance',
         current_approach: currentApproach,
         session_history: sessionHistory,
@@ -153,7 +153,7 @@ export const useTherapyAnalysis = ({
           session_metrics: sessionMetrics,
         }
       console.log(`[Summary] 📤 REQUEST:`, summaryReqBody);
-      const response = await axios.post(`${ANALYSIS_API}/therapy_analysis`, summaryReqBody, {
+      const response = await axios.post(ANALYSIS_API, summaryReqBody, {
         headers: {
           ...(authToken && { Authorization: `Bearer ${authToken}` })
         }

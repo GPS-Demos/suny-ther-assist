@@ -125,6 +125,41 @@ terraform apply
 
 4. Go to each deployed step and enable unauthorized access for each (manual step due to org policies)
 
+### Redeploy Services
+This section assumes that you have successfully completed the deployment steps
+
+**Backend Services:**
+1. Check your .env files at `backend/streaming-transcription-service/.env`, `backend/backend/storage-access-function/.env`, and `backend/thereapy-analysis-service/.env` and update values as needed (if needed)
+2. Deploy the Streaming Transcription Service
+```bash
+cd backend/streaming-transcription-service
+PROJECT_ID=your-project-id ./deploy.sh
+```
+3. Deploy the storage Caccess Function
+```bash
+cd backend/storage-access-function
+PROJECT_ID=your-project-id ./deploy.sh
+```
+4. Deploy the Therapy Analsis Function
+```bash
+export PROJECT_ID=your-project-id
+cd backend/therapy-analysis-function
+gcloud functions deploy therapy_analysis \
+  --runtime python312 \
+  --trigger-http \
+  --allow-unauthenticated \
+  --memory 1GB \
+  --timeout 540s \
+  --set-env-vars GOOGLE_CLOUD_PROJECT=$PROJECT_ID
+```
+
+**Frontend:**
+```bash
+cd frontend
+npm run build
+firebase deploy
+```
+
 ## Local Dev
 Note: if you haven't completed deployments then you'll need to update .env values manually
 

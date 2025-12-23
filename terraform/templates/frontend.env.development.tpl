@@ -1,7 +1,7 @@
 # Backend API endpoints
-VITE_ANALYSIS_API=http://localhost:8080
-VITE_STORAGE_ACCESS_URL=http://localhost:8081
-VITE_TRANSCRIPTION_WS=ws://localhost:8082
+VITE_ANALYSIS_API=http://localhost:8080/therapy_analysis
+VITE_STORAGE_ACCESS_URL=http://localhost:8081/storage-access
+VITE_TRANSCRIPTION_WS=http://localhost:8082
 
 # Google Cloud settings
 VITE_GOOGLE_CLOUD_PROJECT=${project_id}
