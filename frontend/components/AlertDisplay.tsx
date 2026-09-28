@@ -260,7 +260,7 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
             </Box>
 
             {/* Evidence */}
-            {alert.evidence && alert.evidence.length > 0 && (
+            {alert.evidence && (Array.isArray(alert.evidence) ? alert.evidence : [alert.evidence]).length > 0 && (
               <Box sx={{ mt: 2 }}>
                 <Typography 
                   variant="caption" 
@@ -273,7 +273,7 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
                 >
                   Evidence:
                 </Typography>
-                {alert.evidence.map((ev, idx) => (
+                {(Array.isArray(alert.evidence) ? alert.evidence : [alert.evidence]).map((ev, idx) => (
                   <Typography
                     key={idx}
                     variant="body2"
@@ -292,7 +292,7 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
             )}
 
             {/* Recommendation */}
-            {alert.recommendation && alert.recommendation.length > 0 && (
+            {alert.recommendation && (Array.isArray(alert.recommendation) ? alert.recommendation : [alert.recommendation]).length > 0 && (
               <Box
                 sx={{
                   mt: 2,
@@ -313,7 +313,7 @@ const AlertDisplay: React.FC<AlertDisplayProps> = ({ alert, onDismiss, citations
                   {timing === 'now' ? '→ Actions Required:' : '→ Recommendations:'}
                 </Typography>
                 <Box component="ul" sx={{ margin: 0, paddingLeft: '1.5em' }}>
-                  {alert.recommendation.map((item, index) => (
+                  {(Array.isArray(alert.recommendation) ? alert.recommendation : [alert.recommendation]).map((item, index) => (
                     <Box component="li" key={index} sx={{ marginBottom: '0.25em' }}>
                       <Typography variant="body2">{item}</Typography>
                     </Box>

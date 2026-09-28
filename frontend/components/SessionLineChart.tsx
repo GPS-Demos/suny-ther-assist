@@ -21,8 +21,12 @@ interface SessionLineChartProps {
   duration: number;
 }
 
+const MAX_DATA_POINTS = 120; // Cap at 120 data points (2 hours max) to prevent memory exhaustion
+
 const SessionLineChart: React.FC<SessionLineChartProps> = ({ duration }) => {
-  const data = Array.from({ length: Math.floor(duration / 60) + 1 }, (_, i) => {
+  const safeDuration = (!Number.isFinite(duration) || duration < 0) ? 0 : duration;
+  const numPoints = Math.min(Math.floor(safeDuration / 60) + 1, MAX_DATA_POINTS);
+  const data = Array.from({ length: numPoints }, (_, i) => {
     const time = i * 60;
     return {
       time: formatDuration(time),

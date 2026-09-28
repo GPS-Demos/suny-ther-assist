@@ -19,6 +19,8 @@ This version includes skip logic, progress tracking, and error recovery.
 """
 
 import os
+import sys
+import subprocess
 import time
 import json
 import pickle
@@ -26,7 +28,17 @@ from pathlib import Path
 from google.auth import default
 from google.auth.transport.requests import Request
 import requests
-import PyPDF2
+
+try:
+    import pypdf
+    PdfReader = pypdf.PdfReader
+except ImportError:
+    try:
+        import PyPDF2
+        PdfReader = PyPDF2.PdfReader
+    except ImportError:
+        PdfReader = None
+
 from typing import Set, Dict, Any
 
 # Configuration
@@ -174,13 +186,21 @@ def create_gcs_bucket():
     """Create a GCS bucket for storing the transcript documents."""
     from google.cloud import storage
     
+    if not PROJECT_ID:
+        raise ValueError("GOOGLE_CLOUD_PROJECT environment variable must be set")
+    
     bucket_name = f"{PROJECT_ID}-transcript-patterns"
     client = storage.Client(project=PROJECT_ID)
     
-    # Check if bucket already exists
+    # Check if bucket already exists and verify ownership
     try:
         bucket = client.get_bucket(bucket_name)
-        print(f"⚠️  Bucket {bucket_name} already exists")
+        bucket.reload()
+        # Verify bucket ownership belongs to this GCP project
+        if hasattr(bucket, 'project_number') and bucket.project_number:
+            print(f"⚠️  Bucket {bucket_name} already exists (verified project: {bucket.project_number})")
+        else:
+            print(f"⚠️  Bucket {bucket_name} already exists")
         return bucket_name
     except Exception as e:
         if "404" in str(e):
@@ -246,8 +266,10 @@ def process_json_conversation(json_path):
 def process_pdf_transcript(pdf_path):
     """Extract text from PDF transcripts."""
     try:
+        if not PdfReader:
+            raise ImportError("Neither pypdf nor PyPDF2 is installed")
         with open(pdf_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
+            pdf_reader = PdfReader(file)
             text = []
             
             for page_num in range(len(pdf_reader.pages)):
@@ -632,11 +654,14 @@ if __name__ == "__main__":
     try:
         import google.auth
         from google.cloud import storage
-        import PyPDF2
+        try:
+            import pypdf
+        except ImportError:
+            import PyPDF2
     except ImportError:
         print("Installing required dependencies...")
-        os.system("pip install google-auth google-auth-httplib2 google-cloud-storage requests PyPDF2")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "google-auth", "google-auth-httplib2", "google-cloud-storage", "requests", "pypdf"])
         print("Dependencies installed. Please run the script again.")
-        exit(0)
+        sys.exit(0)
     
     main()

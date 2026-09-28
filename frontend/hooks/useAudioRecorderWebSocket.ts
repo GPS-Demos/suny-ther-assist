@@ -52,7 +52,8 @@ export const useAudioRecorderWebSocket = ({ onTranscript, onError, authToken }: 
         setIsConnected(true);
         
         // Send session initialization with auth token
-        sessionIdRef.current = `session-${Date.now()}`;
+        const randomId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
+        sessionIdRef.current = `session-${randomId}`;
         ws.send(JSON.stringify({
           session_id: sessionIdRef.current,
           auth_token: authToken,
@@ -66,7 +67,6 @@ export const useAudioRecorderWebSocket = ({ onTranscript, onError, authToken }: 
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('WebSocket message:', data);
           
           if (data.type === 'ready') {
             console.log('Session ready:', data.session_id);

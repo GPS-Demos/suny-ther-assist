@@ -48,6 +48,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * Security Architecture Notice:
+   * 1. Email Verification Requirement: Firebase allows unverified email/password registrations.
+   *    Checking user.emailVerified prevents attackers from creating arbitrary accounts claiming
+   *    allowed domains (e.g. attacker@google.com).
+   * 2. Defense-in-Depth / Server-Side Enforcement:
+   *    Client-side checks (signOut, allowlists) are designed for frontend navigation gating only.
+   *    Authoritative access control is strictly enforced on the backend Cloud Functions:
+   *    - therapy-analysis-function verifies ID tokens, decoded_token.get('email_verified'), and caller authorization.
+   *    - storage-access-function validates token claims and restricts bucket access.
+   *    - streaming-transcription-service validates token claims before WebSocket streaming.
+   *    Sensitive email lists should not be exposed in frontend bundles; backend functions enforce authoritative policies.
+   */
+
   // Helper function to check if email is authorized
   const isEmailAuthorized = (email: string | null): boolean => {
     if (!email) return false;
@@ -56,17 +70,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const allowedDomainsStr = import.meta.env.VITE_AUTH_ALLOWED_DOMAINS || '';
     const allowedEmailsStr = import.meta.env.VITE_AUTH_ALLOWED_EMAILS || '';
     
-    const allowedDomains = allowedDomainsStr ? allowedDomainsStr.split(',').map((d: string) => d.trim()) : [];
-    const allowedEmails = allowedEmailsStr ? allowedEmailsStr.split(',').map((e: string) => e.trim()) : [];
+    const allowedDomains = allowedDomainsStr
+      ? allowedDomainsStr.split(',').map((d: string) => d.trim().toLowerCase()).filter(Boolean)
+      : [];
+    const allowedEmails = allowedEmailsStr
+      ? allowedEmailsStr.split(',').map((e: string) => e.trim().toLowerCase()).filter(Boolean)
+      : [];
     
+    // If no explicit frontend restrictions configured, allow through (backend verifies claims)
+    if (allowedDomains.length === 0 && allowedEmails.length === 0) {
+      return true;
+    }
+
+    const normalizedEmail = email.toLowerCase();
+
     // Check explicit email allowlist
-    if (allowedEmails.includes(email)) {
+    if (allowedEmails.includes(normalizedEmail)) {
       return true;
     }
     
     // Check domain allowlist
-    const emailDomain = email.split('@')[1];
+    const emailDomain = normalizedEmail.split('@')[1];
     return allowedDomains.includes(emailDomain);
+  };
+
+  // Helper function to check if user account is verified and authorized
+  const isUserAuthorized = (user: User | null): boolean => {
+    if (!user || !user.email) return false;
+
+    // Critical check: require email verification for accounts to prevent domain spoofing
+    // (users registering unverified accounts matching allowed domains)
+    if (!user.emailVerified) {
+      return false;
+    }
+
+    return isEmailAuthorized(user.email);
   };
 
   const signup = async (email: string, password: string, displayName?: string) => {
@@ -77,8 +115,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return result;
   };
 
-  const login = (email: string, password: string) => {
-    return signInWithEmailAndPassword(auth, email, password);
+  const login = async (email: string, password: string) => {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    if (!isUserAuthorized(result.user)) {
+      await signOut(auth);
+      if (result.user && !result.user.emailVerified) {
+        throw new Error('Please verify your email address before signing in.');
+      }
+      throw new Error('Access restricted to authorized domains and users.');
+    }
+    return result;
   };
 
   const logout = () => {
@@ -89,12 +135,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const provider = new GoogleAuthProvider();
     const result = await signInWithPopup(auth, provider);
     
-    // Check if the email is authorized
-    const email = result.user?.email;
-    if (!isEmailAuthorized(email)) {
-      // Sign out the user if they don't have an authorized email
+    // Check if the user is authorized and email is verified
+    if (!isUserAuthorized(result.user)) {
       await signOut(auth);
-      throw new Error('Access restricted to @google.com email addresses and authorized users only.');
+      if (result.user && !result.user.emailVerified) {
+        throw new Error('Please verify your email address before signing in.');
+      }
+      throw new Error('Access restricted to authorized domains and users.');
     }
     
     return result;
@@ -103,10 +150,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Check if the current user has an authorized email
-        const email = user.email;
-        if (!isEmailAuthorized(email)) {
-          // Sign out the user if they don't have an authorized email
+        // Enforce user authorization and email verification
+        if (!isUserAuthorized(user)) {
           await signOut(auth);
           setCurrentUser(null);
           setLoading(false);

@@ -76,8 +76,9 @@ export const useAudioStreamingWebSocket = ({
           console.log('WebSocket connected');
           setIsConnected(true);
           
-          // Send session initialization
-          sessionIdRef.current = `session-${Date.now()}`;
+          // Send session initialization with cryptographically secure session ID
+          const randomId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
+          sessionIdRef.current = `session-${randomId}`;
           ws.send(JSON.stringify({
             session_id: sessionIdRef.current,
             token: authToken,

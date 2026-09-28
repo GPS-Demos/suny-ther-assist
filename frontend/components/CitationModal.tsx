@@ -60,6 +60,12 @@ const CitationModal: React.FC<CitationModalProps> = ({ open, onClose, citation }
   const handleViewSource = async () => {
     if (!citation?.source?.uri) return;
     
+    // Strictly validate URI begins with gs:// before requesting auth token or opening file
+    if (!citation.source.uri.startsWith('gs://')) {
+      console.error('Invalid source URI scheme. Only gs:// URIs are supported.');
+      return;
+    }
+    
     try {
       const authToken = await currentUser?.getIdToken();
       await openGcsFile(citation.source.uri, authToken);

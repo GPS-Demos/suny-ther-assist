@@ -37,8 +37,7 @@ export function isGcsUri(uri: string | undefined | null): boolean {
  */
 export function getStorageAccessUrl(gcsUri: string): string {
   if (!isGcsUri(gcsUri)) {
-    // If it's not a GCS URI, return as-is (might be a regular HTTP URL)
-    return gcsUri;
+    throw new Error('Only gs:// URIs are supported for storage access');
   }
   
   // Encode the URI to handle special characters
@@ -54,6 +53,9 @@ export function getStorageAccessUrl(gcsUri: string): string {
  */
 export async function getFileMetadata(gcsUri: string, authToken?: string): Promise<any | null> {
   try {
+    if (!isGcsUri(gcsUri)) {
+      throw new Error('Only gs:// URIs are supported');
+    }
     const metadataUrl = `${STORAGE_ACCESS_URL}/metadata?uri=${encodeURIComponent(gcsUri)}`;
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -98,6 +100,10 @@ export async function openGcsFile(gcsUri: string, authToken?: string): Promise<v
     }
     
     const blob = await response.blob();
+    // Guard against Same-Origin XSS by blocking executable HTML / XML types
+    if (blob.type === 'text/html' || blob.type === 'application/xhtml+xml') {
+      throw new Error('Unsafe content type: HTML display in application origin is blocked');
+    }
     const blobUrl = window.URL.createObjectURL(blob);
     window.open(blobUrl, '_blank', 'noopener,noreferrer');
     

@@ -52,7 +52,7 @@ export const mockPatients: Patient[] = [
     ],
     contactInfo: {
       phone: '(555) 123-4567',
-      email: 'sarah.j@email.com'
+      email: 'sarah.j@example.com'
     }
   },
   {
@@ -98,7 +98,7 @@ export const mockPatients: Patient[] = [
     ],
     contactInfo: {
       phone: '(555) 234-5678',
-      email: 'mchen@email.com'
+      email: 'mchen@example.com'
     }
   },
   {
@@ -144,7 +144,7 @@ export const mockPatients: Patient[] = [
     ],
     contactInfo: {
       phone: '(555) 345-6789',
-      email: 'j.doe@email.com'
+      email: 'j.doe@example.com'
     }
   },
   {
@@ -229,7 +229,7 @@ export const mockPatients: Patient[] = [
     ],
     contactInfo: {
       phone: '(555) 567-8901',
-      email: 'jwong@email.com'
+      email: 'jwong@example.com'
     }
   },
   {
@@ -275,7 +275,7 @@ export const mockPatients: Patient[] = [
     ],
     contactInfo: {
       phone: '(555) 678-9012',
-      email: 'rmartinez@email.com'
+      email: 'rmartinez@example.com'
     }
   }
 ];

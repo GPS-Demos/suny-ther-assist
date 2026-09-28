@@ -42,6 +42,23 @@ except Exception as e:
 # --- Load Authorization Configuration from Environment ---
 ALLOWED_DOMAINS = set(os.environ.get('AUTH_ALLOWED_DOMAINS', '').split(',')) if os.environ.get('AUTH_ALLOWED_DOMAINS') else set()
 ALLOWED_EMAILS = set(os.environ.get('AUTH_ALLOWED_EMAILS', '').split(',')) if os.environ.get('AUTH_ALLOWED_EMAILS') else set()
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
+    ).split(",")
+    if origin.strip()
+]
+PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
+ALLOWED_BUCKETS = set(filter(None, [
+    os.environ.get('TARGET_BUCKET'),
+    os.environ.get('STORAGE_BUCKET'),
+    os.environ.get('CORPUS_BUCKET'),
+    f"{PROJECT_ID}-ebt-corpus" if PROJECT_ID else None,
+    f"{PROJECT_ID}-transcript-patterns" if PROJECT_ID else None,
+]))
+MAX_FILE_SIZE = int(os.environ.get('MAX_FILE_SIZE', 25 * 1024 * 1024))  # 25MB limit
 
 def is_email_authorized(email: str) -> bool:
     """Check if email is authorized based on domain or explicit allowlist"""
@@ -62,6 +79,11 @@ def verify_firebase_token(token: str):
         decoded_token = auth.verify_id_token(token)
         email = decoded_token.get('email')
         
+        # Enforce email_verified check before trusting email
+        if not decoded_token.get('email_verified', False):
+            logging.warning(f"Unverified email attempted access: {email}")
+            return None
+        
         if not is_email_authorized(email):
             logging.warning(f"Unauthorized email attempted access: {email}")
             return None
@@ -75,28 +97,40 @@ def verify_firebase_token(token: str):
 # Initialize Storage client
 storage_client = storage.Client()
 
+def _get_cors_headers(request):
+    origin = request.headers.get('Origin', '')
+    allowed_origin = origin if origin in ALLOWED_ORIGINS else (ALLOWED_ORIGINS[0] if ALLOWED_ORIGINS else '')
+    return {
+        'Access-Control-Allow-Origin': allowed_origin,
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Max-Age': '3600'
+    }
+
+def is_bucket_authorized(bucket_name: str) -> bool:
+    """Validate bucket name against authorized bucket allowlist"""
+    if not bucket_name:
+        return False
+    if ALLOWED_BUCKETS and bucket_name in ALLOWED_BUCKETS:
+        return True
+    if PROJECT_ID and bucket_name.startswith(f"{PROJECT_ID}-"):
+        return True
+    # If no explicit list configured, verify it doesn't contain path traversal
+    if re.match(r'^[a-z0-9][a-z0-9._\-]{1,61}[a-z0-9]$', bucket_name):
+        return True if not ALLOWED_BUCKETS else False
+    return False
+
 @functions_framework.http
 def storage_access(request):
     """
     HTTP Cloud Function to access Google Cloud Storage files.
     Provides secure access to citation documents stored in GCS.
     """
+    headers = _get_cors_headers(request)
     
     # CORS handling
     if request.method == 'OPTIONS':
-        headers = {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            'Access-Control-Max-Age': '3600'
-        }
         return ('', 204, headers)
-    
-    headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-    }
     
     # --- Authentication Check ---
     auth_header = request.headers.get('Authorization')
@@ -127,6 +161,11 @@ def storage_access(request):
         bucket_name = match.group(1)
         blob_path = match.group(2)
         
+        # Enforce bucket authorization to prevent arbitrary bucket reads
+        if not is_bucket_authorized(bucket_name):
+            logging.warning(f"Unauthorized bucket access attempt: {bucket_name}")
+            return (jsonify({'error': f'Unauthorized bucket: {bucket_name}'}), 403, headers)
+        
         logging.info(f"Accessing file: bucket={bucket_name}, path={blob_path}")
         
         # Get the bucket and blob
@@ -138,6 +177,12 @@ def storage_access(request):
             if not blob.exists():
                 logging.warning(f"File not found: {gcs_uri}")
                 return (jsonify({'error': 'File not found'}), 404, headers)
+            
+            # Enforce max file size check to prevent Out-Of-Memory (OOM) Denial of Service
+            blob.reload()
+            if blob.size and blob.size > MAX_FILE_SIZE:
+                logging.warning(f"File size {blob.size} exceeds maximum limit of {MAX_FILE_SIZE} bytes")
+                return (jsonify({'error': f'File too large ({blob.size} bytes). Maximum allowed is {MAX_FILE_SIZE} bytes.'}), 413, headers)
             
             # Download the file content
             file_content = blob.download_as_bytes()
@@ -188,21 +233,11 @@ def storage_access_metadata(request):
     Useful for checking file existence and getting file info.
     """
     
+    headers = _get_cors_headers(request)
+    
     # CORS handling
     if request.method == 'OPTIONS':
-        headers = {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            'Access-Control-Max-Age': '3600'
-        }
         return ('', 204, headers)
-    
-    headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-    }
     
     # --- Authentication Check ---
     auth_header = request.headers.get('Authorization')
@@ -228,6 +263,11 @@ def storage_access_metadata(request):
         
         bucket_name = match.group(1)
         blob_path = match.group(2)
+        
+        # Enforce bucket authorization to prevent arbitrary bucket reads
+        if not is_bucket_authorized(bucket_name):
+            logging.warning(f"Unauthorized bucket access attempt: {bucket_name}")
+            return (jsonify({'error': f'Unauthorized bucket: {bucket_name}'}), 403, headers)
         
         # Get the bucket and blob
         bucket = storage_client.bucket(bucket_name)

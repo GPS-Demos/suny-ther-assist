@@ -66,11 +66,12 @@ function extractKeyPhrases(text: string): Set<string> {
   // Common therapy/clinical phrases that indicate similar content
   const keyPhrases = new Set<string>();
   
-  // Safety-related phrases
-  if (normalizedText.includes('safety') || normalizedText.includes('risk') || 
-      normalizedText.includes('harm') || normalizedText.includes('suicide') ||
-      normalizedText.includes('self-harm')) {
-    keyPhrases.add('safety_concern');
+  // Safety-related phrases - distinguish between imminent self-harm/suicide and general risk
+  if (normalizedText.includes('suicide') || normalizedText.includes('self-harm')) {
+    keyPhrases.add('imminent_danger_suicide');
+  } else if (normalizedText.includes('safety') || normalizedText.includes('risk') || 
+             normalizedText.includes('harm')) {
+    keyPhrases.add('general_risk');
   }
   
   // Technique-related phrases
@@ -116,26 +117,42 @@ export function shouldBlockAlert(
   const now = new Date();
   const timeWindow = new Date(now.getTime() - config.timeWindowMinutes * 60 * 1000);
   
+  // Defensively clamp timestamps to current time to prevent future-dated alert injection
+  const getClampedAlertTime = (alert: Alert): Date => {
+    if (!alert.timestamp) return new Date(0);
+    const parsedTime = new Date(alert.timestamp).getTime();
+    if (isNaN(parsedTime)) return new Date(0);
+    // Clamp to 'now' so erratic forward dates cannot cause indefinite lockouts
+    return new Date(Math.min(parsedTime, now.getTime()));
+  };
+
   // Filter alerts within time window
   const recentAlerts = existingAlerts.filter(alert => {
-    const alertTime = alert.timestamp ? new Date(alert.timestamp) : new Date(0);
+    const alertTime = getClampedAlertTime(alert);
     return alertTime > timeWindow;
   });
   
   // 0. HARD CHECK: No alerts within the last 7 seconds (regardless of content/category)
-  const sevenSecondsAgo = new Date(now.getTime() - 7 * 1000);
-  const veryRecentAlert = existingAlerts.find(alert => {
-    const alertTime = alert.timestamp ? new Date(alert.timestamp) : new Date(0);
-    return alertTime > sevenSecondsAgo;
-  });
+  // Exception: Critical safety alerts (timing: 'now' and category: 'safety') MUST NEVER be blocked
+  // by the 7-second cooldown to ensure life-saving clinical alerts are delivered immediately.
+  const isCriticalSafetyAlert = newAlert.timing === 'now' && newAlert.category === 'safety';
   
-  if (veryRecentAlert) {
-    const timeSinceLastAlert = now.getTime() - new Date(veryRecentAlert.timestamp || 0).getTime();
-    return {
-      shouldBlock: true,
-      reason: `Hard 7-second block (last alert ${(timeSinceLastAlert / 1000).toFixed(1)}s ago)`,
-      similarAlert: veryRecentAlert
-    };
+  if (!isCriticalSafetyAlert) {
+    const sevenSecondsAgo = new Date(now.getTime() - 7 * 1000);
+    const veryRecentAlert = existingAlerts.find(alert => {
+      const alertTime = getClampedAlertTime(alert);
+      return alertTime > sevenSecondsAgo;
+    });
+    
+    if (veryRecentAlert) {
+      const alertTime = getClampedAlertTime(veryRecentAlert);
+      const timeSinceLastAlert = now.getTime() - alertTime.getTime();
+      return {
+        shouldBlock: true,
+        reason: `Hard 7-second block (last alert ${(timeSinceLastAlert / 1000).toFixed(1)}s ago)`,
+        similarAlert: veryRecentAlert
+      };
+    }
   }
   
   // 1. Exact title match
@@ -173,23 +190,25 @@ export function shouldBlockAlert(
     }
   }
   
-  // 3. Semantic key phrase overlap
-  const newAlertPhrases = extractKeyPhrases(newAlert.title + ' ' + (newAlert.message || ''));
-  for (const existingAlert of recentAlerts) {
-    const existingPhrases = extractKeyPhrases(
-      existingAlert.title + ' ' + (existingAlert.message || '')
-    );
-    
-    // Check for significant phrase overlap
-    const overlapCount = [...newAlertPhrases].filter(phrase => existingPhrases.has(phrase)).length;
-    const totalPhrases = Math.max(newAlertPhrases.size, existingPhrases.size);
-    
-    if (totalPhrases > 0 && overlapCount / totalPhrases >= 0.7) {
-      return {
-        shouldBlock: true,
-        reason: `High semantic similarity (${overlapCount}/${totalPhrases} key phrases match)`,
-        similarAlert: existingAlert
-      };
+  // 3. Semantic key phrase overlap (bypassed for critical safety alerts)
+  if (!isCriticalSafetyAlert) {
+    const newAlertPhrases = extractKeyPhrases(newAlert.title + ' ' + (newAlert.message || ''));
+    for (const existingAlert of recentAlerts) {
+      const existingPhrases = extractKeyPhrases(
+        existingAlert.title + ' ' + (existingAlert.message || '')
+      );
+      
+      // Check for significant phrase overlap
+      const overlapCount = [...newAlertPhrases].filter(phrase => existingPhrases.has(phrase)).length;
+      const totalPhrases = Math.max(newAlertPhrases.size, existingPhrases.size);
+      
+      if (totalPhrases > 0 && overlapCount / totalPhrases >= 0.7) {
+        return {
+          shouldBlock: true,
+          reason: `High semantic similarity (${overlapCount}/${totalPhrases} key phrases match)`,
+          similarAlert: existingAlert
+        };
+      }
     }
   }
   
@@ -198,7 +217,7 @@ export function shouldBlockAlert(
     const categoryThrottleWindow = new Date(now.getTime() - config.categoryThrottleMinutes * 60 * 1000);
     const recentCategoryAlerts = recentAlerts.filter(alert => 
       alert.category === newAlert.category &&
-      (alert.timestamp ? new Date(alert.timestamp) : new Date(0)) > categoryThrottleWindow
+      getClampedAlertTime(alert) > categoryThrottleWindow
     );
     
     if (recentCategoryAlerts.length >= config.maxAlertsPerCategory) {
@@ -278,10 +297,15 @@ export function cleanupOldAlerts(
   alerts: Alert[],
   maxAge: number = 10 // minutes
 ): Alert[] {
-  const cutoff = new Date(Date.now() - maxAge * 60 * 1000);
+  const now = Date.now();
+  const cutoff = new Date(now - maxAge * 60 * 1000);
   
   return alerts.filter(alert => {
-    const alertTime = alert.timestamp ? new Date(alert.timestamp) : new Date(0);
+    if (!alert.timestamp) return false;
+    const parsedTime = new Date(alert.timestamp).getTime();
+    if (isNaN(parsedTime)) return false;
+    // Defensively clamp to 'now' so future timestamps cannot bypass or break cleanup
+    const alertTime = new Date(Math.min(parsedTime, now));
     return alertTime > cutoff;
   });
 }

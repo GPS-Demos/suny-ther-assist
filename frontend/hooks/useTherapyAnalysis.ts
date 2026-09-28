@@ -50,8 +50,7 @@ export const useTherapyAnalysis = ({
       previous_alert: previousAlert || null,
     };
     
-    console.log(`[Analysis] 📤 ${analysisType.toUpperCase()} REQUEST:`, requestPayload);
-    
+    // Safe metadata logging only (avoid logging sensitive PHI / transcripts to console)
     const startTime = performance.now();
     
     try {
@@ -72,24 +71,18 @@ export const useTherapyAnalysis = ({
           try {
             const analysis = JSON.parse(line);
             
-            console.log(`[Analysis] 📥 ${analysisType.toUpperCase()} RESPONSE (${responseTime.toFixed(0)}ms):`, analysis);
-            
             // Always call onAnalysis if we have valid data
             if (analysis.alert || analysis.session_metrics || analysis.pathway_indicators) {
               onAnalysis(analysis as AnalysisResponse);
             }
           } catch (e) {
-            console.error('[Analysis] ❌ Parse error:', e, 'Line:', line.substring(0, 100));
+            console.error('[Analysis] Parse error occurred');
           }
         }
-      } else {
-        console.warn('[Analysis] ⚠️ Empty response from backend');
       }
     } catch (error: any) {
-      console.error('[Analysis] ❌ Request failed:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data
+      console.error('[Analysis] Request failed:', {
+        status: error.response?.status
       });
     }
   }, [onAnalysis, ANALYSIS_API, authToken]);
@@ -100,12 +93,6 @@ export const useTherapyAnalysis = ({
     presentingIssues: string[]
   ) => {
     const startTime = performance.now();
-    
-    console.log(`[Pathway] 📤 REQUEST:`, {
-      approach: currentApproach,
-      historyItems: sessionHistory.length,
-      issues: presentingIssues
-    });
     
     try {
       const response = await axios.post(ANALYSIS_API, {
@@ -119,22 +106,14 @@ export const useTherapyAnalysis = ({
         }
       });
 
-      const responseTime = performance.now() - startTime;
-      console.log(`[Pathway] 📥 RESPONSE (${responseTime.toFixed(0)}ms):`, {
-        hasGuidance: !!response.data,
-        keys: response.data ? Object.keys(response.data) : []
-      });
-      
       if (onPathwayGuidance && response.data) {
         onPathwayGuidance(response.data);
       }
       
       return response.data;
     } catch (error: any) {
-      console.error('[Pathway] ❌ Request failed:', {
-        message: error.message,
-        status: error.response?.status,
-        responseTime: `${(performance.now() - startTime).toFixed(0)}ms`
+      console.error('[Pathway] Request failed:', {
+        status: error.response?.status
       });
       throw error;
     }
@@ -151,27 +130,21 @@ export const useTherapyAnalysis = ({
           action: 'session_summary',
           full_transcript: fullTranscript,
           session_metrics: sessionMetrics,
-        }
-      console.log(`[Summary] 📤 REQUEST:`, summaryReqBody);
+        };
       const response = await axios.post(ANALYSIS_API, summaryReqBody, {
         headers: {
           ...(authToken && { Authorization: `Bearer ${authToken}` })
         }
       });
 
-      const responseTime = performance.now() - startTime;
-      console.log(`[Summary] 📥 RESPONSE (${responseTime.toFixed(0)}ms):`, response.data);
-      
       if (onSessionSummary && response.data) {
         onSessionSummary(response.data);
       }
       
       return response.data;
     } catch (error: any) {
-      console.error('[Summary] ❌ Request failed:', {
-        message: error.message,
-        status: error.response?.status,
-        responseTime: `${(performance.now() - startTime).toFixed(0)}ms`
+      console.error('[Summary] Request failed:', {
+        status: error.response?.status
       });
       throw error;
     }
