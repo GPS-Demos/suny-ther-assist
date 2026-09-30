@@ -42,8 +42,6 @@ cp terraform.tfvars.example terraform.tfvars
 ```hcl
 project_id = "your-gcp-project-id"
 region = "us-central1"
-auth_allowed_domains = "google.com,yourdomain.com"
-auth_allowed_emails = "user1@example.com,user2@example.com"
 ```
 
 3. **Initialize and deploy:**

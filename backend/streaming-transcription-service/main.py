@@ -60,38 +60,12 @@ try:
 except Exception as e:
     logger.error(f"Error initializing Firebase Admin SDK: {e}", exc_info=True)
 
-# --- Load Authorization Configuration from Environment ---
-ALLOWED_DOMAINS = set(os.environ.get('AUTH_ALLOWED_DOMAINS', '').split(',')) if os.environ.get('AUTH_ALLOWED_DOMAINS') else set()
-ALLOWED_EMAILS = set(os.environ.get('AUTH_ALLOWED_EMAILS', '').split(',')) if os.environ.get('AUTH_ALLOWED_EMAILS') else set()
-
-def is_email_authorized(email: str) -> bool:
-    """Check if email is authorized based on domain or explicit allowlist"""
-    logging.info("is_email_authorized")
-    logging.info(ALLOWED_DOMAINS)
-    logging.info(ALLOWED_EMAILS)
-    if not email:
-        return False
-    
-    # Check explicit email allowlist
-    if email in ALLOWED_EMAILS:
-        return True
-        
-    # Check domain allowlist
-    email_domain = email.split('@')[-1] if '@' in email else ''
-    logging.info(email_domain)
-    return email_domain in ALLOWED_DOMAINS
-
 def verify_firebase_token(token: str) -> Optional[dict]:
     """Verify Firebase ID token and return decoded claims"""
     try:
         decoded_token = auth.verify_id_token(token)
         email = decoded_token.get('email')
-        
-        if not is_email_authorized(email):
-            logger.warning(f"Unauthorized email attempted access: {email}")
-            return None
-            
-        logger.info(f"Authorized user authenticated: {email}")
+        logger.info(f"User authenticated: {email}")
         return decoded_token
     except Exception as e:
         logger.error(f"Token verification failed: {e}")

@@ -48,27 +48,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Helper function to check if email is authorized
-  const isEmailAuthorized = (email: string | null): boolean => {
-    if (!email) return false;
-    
-    // Get allowed domains and emails from environment variables
-    const allowedDomainsStr = import.meta.env.VITE_AUTH_ALLOWED_DOMAINS || '';
-    const allowedEmailsStr = import.meta.env.VITE_AUTH_ALLOWED_EMAILS || '';
-    
-    const allowedDomains = allowedDomainsStr ? allowedDomainsStr.split(',').map((d: string) => d.trim()) : [];
-    const allowedEmails = allowedEmailsStr ? allowedEmailsStr.split(',').map((e: string) => e.trim()) : [];
-    
-    // Check explicit email allowlist
-    if (allowedEmails.includes(email)) {
-      return true;
-    }
-    
-    // Check domain allowlist
-    const emailDomain = email.split('@')[1];
-    return allowedDomains.includes(emailDomain);
-  };
-
   const signup = async (email: string, password: string, displayName?: string) => {
     const result = await createUserWithEmailAndPassword(auth, email, password);
     if (displayName && result.user) {
@@ -87,33 +66,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    
-    // Check if the email is authorized
-    const email = result.user?.email;
-    if (!isEmailAuthorized(email)) {
-      // Sign out the user if they don't have an authorized email
-      await signOut(auth);
-      throw new Error('Access restricted to @google.com email addresses and authorized users only.');
-    }
-    
-    return result;
+    return signInWithPopup(auth, provider);
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // Check if the current user has an authorized email
-        const email = user.email;
-        if (!isEmailAuthorized(email)) {
-          // Sign out the user if they don't have an authorized email
-          await signOut(auth);
-          setCurrentUser(null);
-          setLoading(false);
-          return;
-        }
-      }
-      
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       setLoading(false);
     });

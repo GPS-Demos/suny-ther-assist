@@ -130,8 +130,6 @@ resource "google_cloudfunctions2_function" "therapy_analysis" {
     service_account_email = google_service_account.storage_access_sa.email
     environment_variables = {
       GOOGLE_CLOUD_PROJECT = var.project_id
-      AUTH_ALLOWED_DOMAINS = var.auth_allowed_domains
-      AUTH_ALLOWED_EMAILS  = var.auth_allowed_emails
     }
   }
   
@@ -166,8 +164,6 @@ resource "google_cloudfunctions2_function" "storage_access" {
     service_account_email = google_service_account.storage_access_sa.email
     environment_variables = {
       GOOGLE_CLOUD_PROJECT = var.project_id
-      AUTH_ALLOWED_DOMAINS = var.auth_allowed_domains
-      AUTH_ALLOWED_EMAILS  = var.auth_allowed_emails
     }
   }
   
@@ -261,16 +257,6 @@ resource "google_cloud_run_v2_service" "streaming_transcription" {
       env {
         name  = "GOOGLE_CLOUD_PROJECT"
         value = var.project_id
-      }
-      
-      env {
-        name  = "AUTH_ALLOWED_DOMAINS"
-        value = var.auth_allowed_domains
-      }
-      
-      env {
-        name  = "AUTH_ALLOWED_EMAILS"
-        value = var.auth_allowed_emails
       }
     }
     
@@ -421,8 +407,6 @@ resource "local_file" "frontend_env" {
     analysis_api_url   = "https://${var.region}-${var.project_id}.cloudfunctions.net/${google_cloudfunctions2_function.therapy_analysis.name}"
     storage_api_url    = "https://${var.region}-${var.project_id}.cloudfunctions.net/${google_cloudfunctions2_function.storage_access.name}"
     streaming_api_url  = "https://${google_cloud_run_v2_service.streaming_transcription.name}-${data.google_project.current.number}.${var.region}.run.app"
-    auth_domains       = var.auth_allowed_domains
-    auth_emails        = var.auth_allowed_emails
   })
   filename = "../frontend/.env"
   
@@ -437,8 +421,6 @@ resource "local_file" "frontend_env" {
 resource "local_file" "frontend_env_dev" {
   content = templatefile("${path.module}/templates/frontend.env.development.tpl", {
     project_id   = var.project_id
-    auth_domains = var.auth_allowed_domains
-    auth_emails  = var.auth_allowed_emails
   })
   filename = "../frontend/.env.development"
 }
@@ -447,8 +429,6 @@ resource "local_file" "frontend_env_dev" {
 resource "local_file" "backend_therapy_analysis_env" {
   content = templatefile("${path.module}/templates/backend.env.tpl", {
     project_id    = var.project_id
-    auth_domains  = var.auth_allowed_domains
-    auth_emails   = var.auth_allowed_emails
   })
   filename = "../backend/therapy-analysis-function/.env"
 }
@@ -457,8 +437,6 @@ resource "local_file" "backend_therapy_analysis_env" {
 resource "local_file" "backend_storage_access_env" {
   content = templatefile("${path.module}/templates/backend.env.tpl", {
     project_id    = var.project_id
-    auth_domains  = var.auth_allowed_domains
-    auth_emails   = var.auth_allowed_emails
   })
   filename = "../backend/storage-access-function/.env"
 }
@@ -467,8 +445,6 @@ resource "local_file" "backend_storage_access_env" {
 resource "local_file" "backend_streaming_env" {
   content = templatefile("${path.module}/templates/backend-streaming.env.tpl", {
     project_id    = var.project_id
-    auth_domains  = var.auth_allowed_domains
-    auth_emails   = var.auth_allowed_emails
   })
   filename = "../backend/streaming-transcription-service/.env"
 }
