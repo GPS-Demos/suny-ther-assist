@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 
-MODEL_NAME = "gemini-3-flash-preview"
+MODEL_NAME = os.environ.get("GEMINI_MODEL_NAME", "gemini-3.7-flash")
 
 # Phrases that trigger non-strict analysis
 TRIGGER_PHRASES = [

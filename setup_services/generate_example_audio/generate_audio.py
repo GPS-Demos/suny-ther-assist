@@ -36,7 +36,7 @@ def generate():
         api_key=os.environ.get("GEMINI_API_KEY"),
     )
 
-    model = "gemini-2.5-pro-preview-tts"
+    model = os.environ.get("GEMINI_TTS_MODEL", "gemini-3.1-pro")
     contents = [
         types.Content(
             role="user",

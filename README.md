@@ -4,7 +4,7 @@ Ther-Assist is a generative AI multimodal tool designed to help psychotherapists
 
 ## Overview
 
-Ther-Assist listens ambiently to therapy sessions and provides near real-time guidance based on evidence-based treatment manuals and protocols. The system uses Google Cloud services and Gemini 2.5 Flash to analyze therapy conversations and suggest interventions, pathway changes, and therapeutic techniques.
+Ther-Assist listens ambiently to therapy sessions and provides near real-time guidance based on evidence-based treatment manuals and protocols. The system uses Google Cloud services and Gemini 3.7 Flash to analyze therapy conversations and suggest interventions, pathway changes, and therapeutic techniques.
 
 ## Features
 
@@ -34,7 +34,7 @@ Ther-Assist listens ambiently to therapy sessions and provides near real-time gu
    - Optimized for therapy conversations
 
 2. **Therapy Analysis Service** (`backend/therapy-analysis-function/`)
-   - Uses Gemini 2.5 Flash with thinking mode
+   - Uses Gemini 3.7 Flash with thinking mode
    - RAG integration with EBT corpus
    - Provides real-time therapeutic guidance
    - Generates session summaries
