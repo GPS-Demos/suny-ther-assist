@@ -13,8 +13,7 @@
 // limitations under the License.
 
 import React from 'react';
-import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area } from 'recharts';
-import { Box, Typography } from '@mui/material';
+import { ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area } from 'recharts';
 import { formatDuration } from '../utils/timeUtils';
 
 interface SessionLineChartProps {

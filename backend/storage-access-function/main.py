@@ -13,15 +13,14 @@
 # limitations under the License.
 
 import functions_framework
-from flask import jsonify, Response, send_file
+from flask import jsonify
 from google.cloud import storage
 import os
 import logging
 import re
-from io import BytesIO
 import mimetypes
 import firebase_admin
-from firebase_admin import auth, credentials
+from firebase_admin import auth
 from dotenv import load_dotenv
 
 # Load environment variables

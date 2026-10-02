@@ -227,7 +227,7 @@ export function processNewAlert(
   shouldAdd: boolean; 
   blockReason?: string;
   similarAlert?: Alert;
-  debugInfo?: any 
+  debugInfo?: Record<string, unknown>;
 } {
   const { config = DEFAULT_CONFIG, debugMode = false } = options;
   

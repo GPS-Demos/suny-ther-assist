@@ -12,7 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { createTheme, alpha } from '@mui/material/styles';
+import { createTheme } from '@mui/material/styles';
+
+declare module '@mui/material/styles' {
+  interface Palette {
+    tertiary: Palette['primary'];
+    therapy: {
+      calm: string;
+      anxious: string;
+      distressed: string;
+      dissociated: string;
+    };
+  }
+  interface PaletteOptions {
+    tertiary?: PaletteOptions['primary'];
+    therapy?: {
+      calm?: string;
+      anxious?: string;
+      distressed?: string;
+      dissociated?: string;
+    };
+  }
+}
+
+const therapyColors = {
+  calm: '#10b981',
+  anxious: '#f59e0b', 
+  distressed: '#ef4444',
+  dissociated: '#9ca3af',
+};
 
 // Custom color palette based on material.css
 const lightPalette = {
@@ -75,7 +103,7 @@ const lightPalette = {
   },
 };
 
-const darkPalette = {
+export const darkPalette = {
   primary: {
     main: '#a8c7fa',
     light: '#d3e3fd',
@@ -139,7 +167,8 @@ export const theme = createTheme({
   palette: {
     mode: 'light',
     ...lightPalette,
-  } as any,
+    therapy: therapyColors,
+  },
   typography: {
     fontFamily: '"Google Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     h1: {
@@ -205,7 +234,7 @@ export const theme = createTheme({
           '&::-webkit-scrollbar-thumb:hover, & *::-webkit-scrollbar-thumb:hover': {
             backgroundColor: '#4b5563',
           },
-        } as any,
+        },
       },
     },
     MuiButton: {
@@ -371,31 +400,3 @@ export const theme = createTheme({
     },
   },
 });
-
-// Add therapy colors to theme
-(theme.palette as any).therapy = {
-  calm: '#10b981',
-  anxious: '#f59e0b', 
-  distressed: '#ef4444',
-  dissociated: '#9ca3af',
-};
-
-// Extend theme with custom colors for therapy-specific UI
-declare module '@mui/material/styles' {
-  interface Palette {
-    therapy: {
-      calm: string;
-      anxious: string;
-      distressed: string;
-      dissociated: string;
-    };
-  }
-  interface PaletteOptions {
-    therapy?: {
-      calm?: string;
-      anxious?: string;
-      distressed?: string;
-      dissociated?: string;
-    };
-  }
-}

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import React from 'react';
-import { Box, Typography, LinearProgress, Chip } from '@mui/material';
+import { Box, Typography, LinearProgress } from '@mui/material';
 import { AccessTime, PlayCircleOutline, Summarize } from '@mui/icons-material';
 
 interface SessionPhaseIndicatorProps {

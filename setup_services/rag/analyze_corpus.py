@@ -17,8 +17,6 @@
 Analyze corpus files to determine the best parser configuration for Vertex AI Search.
 """
 
-import os
-import sys
 from pathlib import Path
 
 # Try to import PyPDF2 or use basic file analysis

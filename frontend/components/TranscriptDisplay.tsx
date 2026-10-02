@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import React, { useEffect, useRef } from 'react';
-import { Box, Typography, Paper, Fade, Divider } from '@mui/material';
+import { Box, Typography, Fade } from '@mui/material';
 
 interface TranscriptEntry {
   text: string;

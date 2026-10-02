@@ -23,7 +23,6 @@ import {
   Box,
   Chip,
   IconButton,
-  Divider,
 } from '@mui/material';
 import {
   Close,

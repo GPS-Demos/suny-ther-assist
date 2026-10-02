@@ -49,19 +49,6 @@ const SessionMetrics: React.FC<SessionMetricsProps> = ({ metrics }) => {
     }
   };
 
-  const getAllianceColor = () => {
-    switch (metrics.therapeutic_alliance) {
-      case 'strong':
-        return 'success';
-      case 'moderate':
-        return 'warning';
-      case 'weak':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
-
   return (
     <Box>
       <Grid container spacing={2}>

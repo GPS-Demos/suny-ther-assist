@@ -14,9 +14,10 @@
 
 import React from 'react';
 import { Box, Typography, Chip } from '@mui/material';
+import { Citation } from '../types/types';
 
 interface PathwayTabProps {
-  onCitationClick?: (citation: any) => void;
+  onCitationClick?: (citation: Citation) => void;
 }
 
 const PathwayTab: React.FC<PathwayTabProps> = ({ onCitationClick }) => {

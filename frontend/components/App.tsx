@@ -24,7 +24,6 @@ import {
 } from '@mui/icons-material';
 import LandingPage from './LandingPage';
 import NewSession from './NewSession';
-import NewTherSession from './NewTherSession';
 import TherSummary from './TherSummary';
 import Patients from './Patients';
 import Patient from './Patient';
@@ -51,7 +50,7 @@ const App: React.FC = () => {
 
   // Navigation handlers
   const pushToHistory = (view: typeof currentView, patientId?: string | null) => {
-    setNavigationHistory(prev => [...prev, { view: currentView, patientId: selectedPatientId }]);
+    setNavigationHistory(prev => [...prev, { view, patientId: patientId ?? null }]);
   };
 
   const handleNavigateToPatients = () => {
@@ -80,11 +79,6 @@ const App: React.FC = () => {
     pushToHistory(currentView, selectedPatientId);
     setSelectedPatientId(patientId);
     setCurrentView('patient');
-  };
-
-  const handleNavigateToTherSummary = () => {
-    pushToHistory(currentView, selectedPatientId);
-    setCurrentView('therSummary');
   };
 
   const handleGoBack = () => {

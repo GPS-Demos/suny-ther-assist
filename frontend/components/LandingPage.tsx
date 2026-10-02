@@ -22,10 +22,7 @@ import {
   CardActionArea,
   Grid,
   Container,
-  AppBar,
-  Toolbar,
   Avatar,
-  Button,
   Menu,
   MenuItem,
   IconButton,
@@ -34,7 +31,6 @@ import {
   People,
   CalendarToday,
   Add,
-  AccountCircle,
   Logout,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
@@ -247,7 +243,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
       {/* Main Content */}
       <Container maxWidth="lg" sx={{ flex: 1, py: 6 }}>
         <Grid container spacing={4} justifyContent="center">
-          {tiles.map((tile, index) => (
+          {tiles.map((tile) => (
             <Grid item xs={12} sm={6} md={4} key={tile.title}>
               <Card
                 sx={{

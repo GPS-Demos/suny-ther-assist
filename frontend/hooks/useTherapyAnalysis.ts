@@ -14,12 +14,12 @@
 
 import { useCallback } from 'react';
 import axios from 'axios';
-import { AnalysisResponse, SessionContext } from '../types/types';
+import { AnalysisResponse, SessionContext, PathwayGuidance, SessionSummary, Alert, SessionHistory, SessionMetrics } from '../types/types';
 
 interface UseTherapyAnalysisProps {
   onAnalysis: (analysis: AnalysisResponse) => void;
-  onPathwayGuidance?: (guidance: any) => void;
-  onSessionSummary?: (summary: any) => void;
+  onPathwayGuidance?: (guidance: PathwayGuidance) => void;
+  onSessionSummary?: (summary: SessionSummary) => void;
   authToken?: string | null;
 }
 
@@ -33,12 +33,12 @@ export const useTherapyAnalysis = ({
 
   const analyzeSegment = useCallback(async (
     transcriptSegment: Array<{ speaker: string; text: string; timestamp: string }>,
-    sessionContext: SessionContext | { is_realtime?: boolean } & SessionContext,
+    sessionContext: SessionContext & { is_realtime?: boolean },
     sessionDurationMinutes: number,
-    previousAlert?: any
+    previousAlert?: Alert | null
   ) => {
     // Extract is_realtime flag if present
-    const { is_realtime, ...cleanContext } = sessionContext as any;
+    const { is_realtime, ...cleanContext } = sessionContext;
     const analysisType = is_realtime ? 'realtime' : 'comprehensive';
     
     const requestPayload = {
@@ -85,18 +85,22 @@ export const useTherapyAnalysis = ({
       } else {
         console.warn('[Analysis] ⚠️ Empty response from backend');
       }
-    } catch (error: any) {
-      console.error('[Analysis] ❌ Request failed:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data
-      });
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        console.error('[Analysis] ❌ Request failed:', {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data
+        });
+      } else {
+        console.error('[Analysis] ❌ Request failed:', error);
+      }
     }
   }, [onAnalysis, ANALYSIS_API, authToken]);
 
   const getPathwayGuidance = useCallback(async (
     currentApproach: string,
-    sessionHistory: any[],
+    sessionHistory: SessionHistory[],
     presentingIssues: string[]
   ) => {
     const startTime = performance.now();
@@ -130,10 +134,12 @@ export const useTherapyAnalysis = ({
       }
       
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      const message = error instanceof Error ? error.message : String(error);
       console.error('[Pathway] ❌ Request failed:', {
-        message: error.message,
-        status: error.response?.status,
+        message,
+        status,
         responseTime: `${(performance.now() - startTime).toFixed(0)}ms`
       });
       throw error;
@@ -142,7 +148,7 @@ export const useTherapyAnalysis = ({
 
   const generateSessionSummary = useCallback(async (
     fullTranscript: Array<{ speaker: string; text: string; timestamp: string }>,
-    sessionMetrics: any
+    sessionMetrics: SessionMetrics
   ) => {
     const startTime = performance.now();
     
@@ -167,10 +173,12 @@ export const useTherapyAnalysis = ({
       }
       
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      const message = error instanceof Error ? error.message : String(error);
       console.error('[Summary] ❌ Request failed:', {
-        message: error.message,
-        status: error.response?.status,
+        message,
+        status,
         responseTime: `${(performance.now() - startTime).toFixed(0)}ms`
       });
       throw error;

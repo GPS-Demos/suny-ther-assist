@@ -15,40 +15,33 @@
 import React, { useState } from 'react';
 import {
   Box,
-  Paper,
   Typography,
   Button,
   Chip,
-  useTheme,
-  useMediaQuery,
   IconButton,
-  Fab,
   Tooltip,
 } from '@mui/material';
 import {
   HealthAndSafety,
   NaturePeople,
   Category,
-  Exposure,
   Check,
   Warning,
   Psychology,
   Timeline,
   Stop,
-  FiberManualRecord,
   ArrowBack,
   Search,
   CallSplit,
   Route,
 } from '@mui/icons-material';
-import { Alert, SessionMetrics, PathwayIndicators } from '../types/types';
+import { Alert, SessionMetrics, PathwayIndicators, Citation } from '../types/types';
 import { formatDuration } from '../utils/timeUtils';
-import { getStatusColor } from '../utils/colorUtils';
 import SessionLineChart from './SessionLineChart';
 import ActionDetailsPanel from './ActionDetailsPanel';
 import EvidenceTab from './EvidenceTab';
 import PathwayTab from './PathwayTab';
-import GuidanceTab from './GuidanceTab';
+import GuidanceTab, { GuidanceAction } from './GuidanceTab';
 import AlternativesTab from './AlternativesTab';
 
 interface NewTherSessionProps {
@@ -81,19 +74,12 @@ interface NewTherSessionProps {
 const NewTherSession: React.FC<NewTherSessionProps> = ({
   onNavigateBack,
   onStopRecording,
-  patientId,
-  alerts = [],
   sessionMetrics = {
     engagement_level: 70,
     therapeutic_alliance: 'moderate',
     techniques_detected: ['CBT', 'Cognitive Restructuring'],
     emotional_state: 'distressed',
     phase_appropriate: true,
-  },
-  pathwayIndicators = {
-    current_approach_effectiveness: 'effective',
-    alternative_pathways: ['Cognitive Restructuring', 'Strong adherence'],
-    change_urgency: 'none',
   },
   sessionDuration = 382, // 06:22 in seconds
   sessionPhase = 'Beginning (1 - 10 minutes)',
@@ -132,11 +118,9 @@ This can help connect physical sensations to thoughts / emotions and identify sp
     ],
   },
 }) => {
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const [activeTab, setActiveTab] = useState<'guidance' | 'evidence' | 'pathway' | 'alternatives'>('guidance');
-  const [selectedAction, setSelectedAction] = useState<any>(null);
-  const [selectedCitation, setSelectedCitation] = useState<any>(null);
+  const [selectedAction, setSelectedAction] = useState<GuidanceAction | null>(null);
+  const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null);
   const [isContraindication, setIsContraindication] = useState(false);
 
   // Generate current date in the format "Month Day, Year"
@@ -149,13 +133,13 @@ This can help connect physical sensations to thoughts / emotions and identify sp
     });
   };
 
-  const handleActionClick = (action: any, isContra: boolean) => {
+  const handleActionClick = (action: GuidanceAction, isContra: boolean) => {
     setSelectedAction(action);
     setSelectedCitation(null); // Clear citation if action is selected
     setIsContraindication(isContra);
   };
 
-  const handleCitationClick = (citation: any) => {
+  const handleCitationClick = (citation: Citation) => {
     setSelectedCitation(citation);
     setSelectedAction(null); // Clear action if citation is selected
   };
@@ -247,10 +231,10 @@ This can help connect physical sensations to thoughts / emotions and identify sp
             {/* Navigation Menu */}
             <Box>
               {[
-                { key: 'guidance', label: 'Guidance', icon: <Category sx={{ fontSize: 24, color: '#444746' }} /> },
-                { key: 'evidence', label: 'Evidence', icon: <Search sx={{ fontSize: 24, color: '#444746' }} /> },
-                { key: 'pathway', label: 'Pathway', icon: <Route sx={{ fontSize: 24, color: '#444746' }} /> },
-                { key: 'alternatives', label: 'Alternatives', icon: <CallSplit sx={{ fontSize: 24, color: '#444746' }} /> },
+                { key: 'guidance' as const, label: 'Guidance', icon: <Category sx={{ fontSize: 24, color: '#444746' }} /> },
+                { key: 'evidence' as const, label: 'Evidence', icon: <Search sx={{ fontSize: 24, color: '#444746' }} /> },
+                { key: 'pathway' as const, label: 'Pathway', icon: <Route sx={{ fontSize: 24, color: '#444746' }} /> },
+                { key: 'alternatives' as const, label: 'Alternatives', icon: <CallSplit sx={{ fontSize: 24, color: '#444746' }} /> },
               ].map((item) => (
                 <Box
                   key={item.key}
@@ -267,7 +251,7 @@ This can help connect physical sensations to thoughts / emotions and identify sp
                     },
                     borderBottom: item.key !== 'alternatives' ? '1px solid rgba(196, 199, 197, 0.3)' : 'none',
                   }}
-                  onClick={() => setActiveTab(item.key as any)}
+                  onClick={() => setActiveTab(item.key)}
                 >
                   <Box sx={{ mr: 1.5, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {activeTab === item.key ? item.icon : null}

@@ -36,8 +36,9 @@ const LoginPage: React.FC = () => {
       setError('');
       setLoading(true);
       await signInWithGoogle();
-    } catch (error: any) {
-      setError(error.message || 'Failed to sign in with Google');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to sign in with Google';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

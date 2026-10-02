@@ -29,7 +29,6 @@ import {
   Card,
   CardContent,
   Grid,
-  Divider,
   Button,
   IconButton,
   TableSortLabel,
@@ -45,7 +44,7 @@ import {
   Edit,
   Delete,
 } from '@mui/icons-material';
-import { Patient as PatientType, SessionHistory } from '../types/types';
+import { SessionHistory } from '../types/types';
 import { mockPatients } from '../utils/mockPatients';
 
 interface PatientProps {
@@ -75,8 +74,8 @@ const Patient: React.FC<PatientProps> = ({ patientId, onNavigateBack, onNavigate
   // Sort function
   const sortSessions = (sessions: SessionHistory[], column: SortableColumn, direction: SortDirection) => {
     return [...sessions].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number;
+      let bValue: string | number;
 
       switch (column) {
         case 'date':
@@ -144,19 +143,6 @@ const Patient: React.FC<PatientProps> = ({ patientId, onNavigateBack, onNavigate
       month: 'long', 
       day: 'numeric' 
     });
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'success';
-      case 'paused':
-        return 'warning';
-      case 'inactive':
-        return 'error';
-      default:
-        return 'default';
-    }
   };
 
   const getStatusStyles = (status: string) => {

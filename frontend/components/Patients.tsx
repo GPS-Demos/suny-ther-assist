@@ -66,8 +66,8 @@ const Patients: React.FC<PatientsProps> = ({ onNavigateBack, onNavigateToNewSess
   // Sort function
   const sortPatients = (patients: Patient[], column: SortableColumn, direction: SortDirection) => {
     return [...patients].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number;
+      let bValue: string | number;
 
       switch (column) {
         case 'name':

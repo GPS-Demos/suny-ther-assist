@@ -15,7 +15,7 @@ This Terraform configuration automates the deployment of the Ther-Assist applica
 **Environment Configuration**
 - ✅ Automatically generate all `.env` files with correct service URLs
 - ✅ Update frontend environment with deployed backend URLs
-- ✅ Configure authentication settings across all services
+- ✅ Configure environment variables across all services
 
 ## Prerequisites
 

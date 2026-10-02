@@ -13,9 +13,10 @@
 // limitations under the License.
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { TranscriptMessage } from '../types/types';
 
 interface UseAudioStreamingProps {
-  onTranscript: (transcript: any) => void;
+  onTranscript: (transcript: TranscriptMessage) => void;
   onError?: (error: string) => void;
   authToken?: string | null;
 }
@@ -219,7 +220,7 @@ export const useAudioStreamingWebSocket = ({
       currentAudioUrlRef.current = audioUrl;
 
       // Create audio context for processing
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
       
       // Create audio element for playback
       audioElementRef.current = new Audio(audioUrl);

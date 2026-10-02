@@ -129,18 +129,18 @@ terraform apply
 This section assumes that you have successfully completed the deployment steps
 
 **Backend Services:**
-1. Check your .env files at `backend/streaming-transcription-service/.env`, `backend/backend/storage-access-function/.env`, and `backend/thereapy-analysis-service/.env` and update values as needed (if needed)
+1. Check your .env files at `backend/streaming-transcription-service/.env`, `backend/storage-access-function/.env`, and `backend/therapy-analysis-function/.env` and update values as needed (if needed)
 2. Deploy the Streaming Transcription Service
 ```bash
 cd backend/streaming-transcription-service
 PROJECT_ID=your-project-id ./deploy.sh
 ```
-3. Deploy the storage Caccess Function
+3. Deploy the Storage Access Function
 ```bash
 cd backend/storage-access-function
 PROJECT_ID=your-project-id ./deploy.sh
 ```
-4. Deploy the Therapy Analsis Function
+4. Deploy the Therapy Analysis Function
 ```bash
 export PROJECT_ID=your-project-id
 cd backend/therapy-analysis-function

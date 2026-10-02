@@ -18,9 +18,6 @@ import {
   Paper,
   Typography,
   Button,
-  Chip,
-  useTheme,
-  useMediaQuery,
   IconButton,
   Divider,
 } from '@mui/material';
@@ -41,7 +38,6 @@ import {
 } from '@mui/icons-material';
 import SessionLineChart from './SessionLineChart';
 import { formatDuration } from '../utils/timeUtils';
-import { testTranscriptData } from '../utils/mockTranscript';
 
 interface TherSummaryProps {
   onNavigateBack?: () => void;
@@ -99,7 +95,6 @@ const TherSummary: React.FC<TherSummaryProps> = ({
     },
   ],
 }) => {
-  const theme = useTheme();
   const [activeTab, setActiveTab] = useState<'performance' | 'key-moments' | 'transcript'>('performance');
 
   const getRiskLevelColor = (level: string) => {
@@ -173,9 +168,9 @@ const TherSummary: React.FC<TherSummaryProps> = ({
                 Session Summary
               </Typography>
               {[
-                { key: 'performance', label: 'Performance', icon: <Assessment sx={{ fontSize: 24, color: '#444746' }} /> },
-                { key: 'key-moments', label: 'Key Moments', icon: <AccessTime sx={{ fontSize: 24, color: '#444746' }} /> },
-                { key: 'transcript', label: 'Transcript', icon: <Description sx={{ fontSize: 24, color: '#444746' }} /> },
+                { key: 'performance' as const, label: 'Performance', icon: <Assessment sx={{ fontSize: 24, color: '#444746' }} /> },
+                { key: 'key-moments' as const, label: 'Key Moments', icon: <AccessTime sx={{ fontSize: 24, color: '#444746' }} /> },
+                { key: 'transcript' as const, label: 'Transcript', icon: <Description sx={{ fontSize: 24, color: '#444746' }} /> },
               ].map((item) => (
                 <Box
                   key={item.key}
@@ -191,7 +186,7 @@ const TherSummary: React.FC<TherSummaryProps> = ({
                       backgroundColor: 'rgba(0, 0, 0, 0.04)',
                     },
                   }}
-                  onClick={() => setActiveTab(item.key as any)}
+                  onClick={() => setActiveTab(item.key)}
                 >
                   <Box sx={{ mr: 1.5, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {activeTab === item.key && item.icon ? item.icon : null}

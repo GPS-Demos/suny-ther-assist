@@ -15,6 +15,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   User,
+  UserCredential,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -28,10 +29,10 @@ import { auth } from '../firebase-config';
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<any>;
-  signup: (email: string, password: string, displayName?: string) => Promise<any>;
+  login: (email: string, password: string) => Promise<UserCredential>;
+  signup: (email: string, password: string, displayName?: string) => Promise<UserCredential>;
   logout: () => Promise<void>;
-  signInWithGoogle: () => Promise<any>;
+  signInWithGoogle: () => Promise<UserCredential>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

@@ -21,10 +21,10 @@ import os
 import json
 import logging
 import re
-from typing import List, Dict, Tuple, Optional, Any
-from datetime import datetime, timedelta
+from typing import List, Dict, Optional, Any
+from datetime import datetime
 import firebase_admin
-from firebase_admin import auth, credentials
+from firebase_admin import auth
 from dotenv import load_dotenv
 from . import constants
 

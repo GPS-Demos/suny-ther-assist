@@ -29,9 +29,8 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from google.cloud import speech_v2
 from google.cloud.speech_v2 import types
-import google.auth
 import firebase_admin
-from firebase_admin import auth, credentials
+from firebase_admin import auth
 
 # Load environment variables
 # Load base .env file first

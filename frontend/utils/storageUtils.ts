@@ -52,7 +52,7 @@ export function getStorageAccessUrl(gcsUri: string): string {
  * @param authToken - Firebase ID token for authentication
  * @returns Promise with file metadata or null if not found
  */
-export async function getFileMetadata(gcsUri: string, authToken?: string): Promise<any | null> {
+export async function getFileMetadata(gcsUri: string, authToken?: string): Promise<Record<string, unknown> | null> {
   try {
     const metadataUrl = `${STORAGE_ACCESS_URL}/metadata?uri=${encodeURIComponent(gcsUri)}`;
     const headers: HeadersInit = {
@@ -170,6 +170,6 @@ export function getFilenameFromGcsUri(gcsUri: string): string {
 export function getBucketFromGcsUri(gcsUri: string): string {
   if (!isGcsUri(gcsUri)) return '';
   
-  const match = gcsUri.match(/^gs:\/\/([^\/]+)/);
+  const match = gcsUri.match(/^gs:\/\/([^/]+)/);
   return match ? match[1] : '';
 }

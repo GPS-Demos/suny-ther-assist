@@ -19,25 +19,17 @@ import {
   Typography,
   Button,
   IconButton,
-  Chip,
-  Collapse,
   Badge,
   Drawer,
   Fab,
   useMediaQuery,
   useTheme,
-  LinearProgress,
 } from '@mui/material';
 import {
   Mic,
   Stop,
   Pause,
   PlayArrow,
-  Info,
-  TrendingUp,
-  FiberManualRecord,
-  ExpandLess,
-  ExpandMore,
   Article,
   Shield,
   Close,
@@ -53,10 +45,6 @@ import {
 } from '@mui/icons-material';
 import { CircularProgress } from '@mui/material';
 import TranscriptDisplay from './TranscriptDisplay';
-import AlertDisplay from './AlertDisplay';
-import SessionMetrics from './SessionMetrics';
-import PathwayIndicator from './PathwayIndicator';
-import SessionPhaseIndicator from './SessionPhaseIndicator.tsx';
 import SessionSummaryModal from './SessionSummaryModal';
 import RationaleModal from './RationaleModal';
 import CitationModal from './CitationModal';
@@ -66,9 +54,8 @@ import { useTherapyAnalysis } from '../hooks/useTherapyAnalysis';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDuration } from '../utils/timeUtils';
 import { getStatusColor } from '../utils/colorUtils';
-import { renderMarkdown } from '../utils/textRendering';
-import { processNewAlert, cleanupOldAlerts } from '../utils/alertDeduplication';
-import { SessionContext, Alert as IAlert, Citation, SessionSummary } from '../types/types';
+import { processNewAlert } from '../utils/alertDeduplication';
+import { SessionContext, Alert as IAlert, Citation, SessionSummary, TranscriptMessage, PathwayGuidance } from '../types/types';
 import { testTranscriptData } from '../utils/mockTranscript.ts';
 import { mockPatients } from '../utils/mockPatients';
 
@@ -97,9 +84,8 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     primary_concern: 'Anxiety',
     current_approach: 'Cognitive Behavioral Therapy',
   });
-  const [historyExpanded, setHistoryExpanded] = useState(false);
-  const [wordsSinceLastAnalysis, setWordsSinceLastAnalysis] = useState(0);
   const [selectedAlertIndex, setSelectedAlertIndex] = useState<number | null>(null);
+  const wordsSinceLastAnalysisRef = useRef(0);
 
   const [transcript, setTranscript] = useState<Array<{
     text: string;
@@ -121,23 +107,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     alternative_pathways: [] as string[],
     change_urgency: 'monitor' as 'none' | 'monitor' | 'consider' | 'recommended',
   });
-  const [pathwayGuidance, setPathwayGuidance] = useState<{
-    rationale?: string;
-    immediate_actions?: string[];
-    contraindications?: string[];
-    alternative_pathways?: Array<{
-      approach: string;
-      reason: string;
-      techniques: string[];
-    }>;
-  }>({});
-  const [pathwayHistory, setPathwayHistory] = useState<Array<{
-    timestamp: string;
-    effectiveness: 'effective' | 'struggling' | 'ineffective' | 'unknown';
-    change_urgency: 'none' | 'monitor' | 'consider' | 'recommended';
-    rationale?: string;
-  }>>([]);
-  const [riskLevel] = useState<'low' | 'moderate' | 'high' | null>(null);
+  const [pathwayGuidance, setPathwayGuidance] = useState<PathwayGuidance>({});
   const [showSessionSummary, setShowSessionSummary] = useState(false);
   const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -159,18 +129,16 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
 
   // Audio streaming hook with WebSocket for both microphone and file
   const { 
-    isConnected, 
     startMicrophoneRecording, 
     startAudioFileStreaming,
     pauseAudioStreaming,
     resumeAudioStreaming,
     stopStreaming, 
     isPlayingAudio,
-    audioProgress,
     sessionId 
   } = useAudioStreamingWebSocket({
     authToken,
-    onTranscript: (newTranscript: any) => {
+    onTranscript: (newTranscript: TranscriptMessage) => {
       if (newTranscript.is_interim) {
         setTranscript(prev => {
           const newEntry = {
@@ -231,7 +199,7 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
   const { analyzeSegment, generateSessionSummary } = useTherapyAnalysis({
     authToken,
     onAnalysis: (analysis) => {
-      const analysisType = (analysis as any).analysis_type;
+      const analysisType = analysis.analysis_type;
       const isRealtime = analysisType === 'realtime';
       
       // Create a unique identifier for this analysis to prevent duplicate logs
@@ -305,25 +273,14 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
         if (analysis.pathway_indicators) {
           const newIndicators = analysis.pathway_indicators;
           
-          // Check if there's a change in urgency or effectiveness to add to history
-          if (pathwayIndicators.change_urgency !== newIndicators.change_urgency ||
-              pathwayIndicators.current_approach_effectiveness !== newIndicators.current_approach_effectiveness) {
-            setPathwayHistory(prev => [...prev, {
-              timestamp: new Date().toISOString(),
-              effectiveness: newIndicators.current_approach_effectiveness || 'unknown',
-              change_urgency: newIndicators.change_urgency || 'none',
-              rationale: (analysis as any).pathway_guidance?.rationale
-            }].slice(-10));
-          }
-          
           setPathwayIndicators(prev => ({
             ...prev,
             ...newIndicators
           }));
         }
         
-        if ((analysis as any).pathway_guidance) {
-          setPathwayGuidance((analysis as any).pathway_guidance);
+        if (analysis.pathway_guidance) {
+          setPathwayGuidance(analysis.pathway_guidance);
         }
         
         if (analysis.citations) {
@@ -391,51 +348,47 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     // Count words in the new entry
     const newWords = lastEntry.text.split(' ').filter(word => word.trim()).length;
     
-    setWordsSinceLastAnalysis(prev => {
-      const updatedWordCount = prev + newWords;
+    wordsSinceLastAnalysisRef.current += newWords;
+    
+    // Trigger analysis every 10 words
+    const WORDS_PER_ANALYSIS = 10;
+    const TRANSCRIPT_WINDOW_MINUTES = 5;
+    
+    if (wordsSinceLastAnalysisRef.current >= WORDS_PER_ANALYSIS) {
+      console.log(`[Session] 🔄 Auto-analysis triggered (${wordsSinceLastAnalysisRef.current} words)`);
       
-      // Trigger analysis every 10 words
-      const WORDS_PER_ANALYSIS = 10;
-      const TRANSCRIPT_WINDOW_MINUTES = 5;
+      // Get last 5 minutes of transcript
+      const fiveMinutesAgo = new Date(Date.now() - TRANSCRIPT_WINDOW_MINUTES * 60 * 1000);
+      const recentTranscript = transcript
+        .filter(t => !t.is_interim && new Date(t.timestamp) > fiveMinutesAgo)
+        .map(t => ({
+          speaker: 'conversation',
+          text: t.text,
+          timestamp: t.timestamp
+        }));
       
-      if (updatedWordCount >= WORDS_PER_ANALYSIS) {
-        console.log(`[Session] 🔄 Auto-analysis triggered (${updatedWordCount} words)`);
+      if (recentTranscript.length > 0) {
+        // Get the most recent alert for backend deduplication
+        const recentAlert = alertsRef.current.length > 0 ? alertsRef.current[0] : null;
         
-        // Get last 5 minutes of transcript
-        const fiveMinutesAgo = new Date(Date.now() - TRANSCRIPT_WINDOW_MINUTES * 60 * 1000);
-        const recentTranscript = transcript
-          .filter(t => !t.is_interim && new Date(t.timestamp) > fiveMinutesAgo)
-          .map(t => ({
-            speaker: 'conversation',
-            text: t.text,
-            timestamp: t.timestamp
-          }));
+        // Trigger both real-time and comprehensive analysis
+        analyzeSegmentRef.current(
+          recentTranscript,
+          { ...sessionContextRef.current, is_realtime: true },
+          Math.floor(sessionDurationRef.current / 60),
+          recentAlert
+        );
         
-        if (recentTranscript.length > 0) {
-          // Get the most recent alert for backend deduplication
-          const recentAlert = alertsRef.current.length > 0 ? alertsRef.current[0] : null;
-          
-          // Trigger both real-time and comprehensive analysis
-          analyzeSegmentRef.current(
-            recentTranscript,
-            { ...sessionContextRef.current, is_realtime: true },
-            Math.floor(sessionDurationRef.current / 60),
-            recentAlert
-          );
-          
-          analyzeSegmentRef.current(
-            recentTranscript,
-            { ...sessionContextRef.current, is_realtime: false },
-            Math.floor(sessionDurationRef.current / 60)
-          );
-        }
-        
-        // Reset word count
-        return 0;
+        analyzeSegmentRef.current(
+          recentTranscript,
+          { ...sessionContextRef.current, is_realtime: false },
+          Math.floor(sessionDurationRef.current / 60)
+        );
       }
       
-      return updatedWordCount;
-    });
+      // Reset word count
+      wordsSinceLastAnalysisRef.current = 0;
+    }
   }, [transcript, isRecording]);
 
   const handleStartSession = async () => {
@@ -635,19 +588,6 @@ const NewSession: React.FC<NewSessionProps> = ({ onNavigateBack, patientId }) =>
     }
     setIsTestMode(false);
     setIsRecording(false);
-  };
-
-  const handleDismissAlert = (index: number) => {
-    setAlerts(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const getRiskIndicatorColor = () => {
-    switch (riskLevel) {
-      case 'low': return '#10b981';
-      case 'moderate': return '#f59e0b';
-      case 'high': return '#ef4444';
-      default: return '#9ca3af';
-    }
   };
 
   const selectedAlert = selectedAlertIndex !== null ? alerts[selectedAlertIndex] : null;

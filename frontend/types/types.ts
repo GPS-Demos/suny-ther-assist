@@ -42,7 +42,7 @@ export interface Alert {
 
 export interface SessionMetrics {
   engagement_level: number;
-  therapeutic_alliance: 'weak' | 'moderate' | 'strong';
+  therapeutic_alliance: 'weak' | 'moderate' | 'strong' | 'unknown';
   techniques_detected: string[];
   emotional_state: 'calm' | 'anxious' | 'distressed' | 'dissociated' | 'engaged' | 'unknown';
   phase_appropriate: boolean;
@@ -52,6 +52,19 @@ export interface PathwayIndicators {
   current_approach_effectiveness: 'effective' | 'struggling' | 'ineffective' | 'unknown';
   alternative_pathways: string[];
   change_urgency: 'none' | 'monitor' | 'consider' | 'recommended';
+}
+
+export interface PathwayAlternative {
+  approach: string;
+  reason: string;
+  techniques: string[];
+}
+
+export interface PathwayGuidance {
+  rationale?: string;
+  immediate_actions?: string[];
+  contraindications?: string[];
+  alternative_pathways?: PathwayAlternative[];
 }
 
 export interface Citation {
@@ -72,10 +85,22 @@ export interface AnalysisResponse {
   alert?: Alert; // New single alert property
   session_metrics?: SessionMetrics;
   pathway_indicators?: PathwayIndicators;
+  pathway_guidance?: PathwayGuidance;
   citations?: Citation[];
   timestamp?: string;
   session_phase?: string;
   analysis_type?: 'realtime' | 'comprehensive';
+}
+
+export interface TranscriptMessage {
+  transcript: string;
+  confidence?: number;
+  is_final?: boolean;
+  is_interim?: boolean;
+  speaker?: string;
+  timestamp?: string;
+  words?: unknown[];
+  result_end_offset?: number | string;
 }
 
 export interface TranscriptEntry {

@@ -16,6 +16,12 @@ import React from 'react';
 import { Box, Paper, Typography } from '@mui/material';
 import { HealthAndSafety, NaturePeople, Category, Exposure } from '@mui/icons-material';
 
+export interface GuidanceAction {
+  title: string;
+  description: string;
+  icon: string;
+}
+
 interface GuidanceTabProps {
   currentGuidance: {
     title: string;
@@ -32,7 +38,7 @@ interface GuidanceTabProps {
       icon: 'cognitive' | 'exposure';
     }>;
   };
-  onActionClick: (action: any, isContraindication: boolean) => void;
+  onActionClick: (action: GuidanceAction, isContraindication: boolean) => void;
 }
 
 const GuidanceTab: React.FC<GuidanceTabProps> = ({ currentGuidance, onActionClick }) => {
@@ -47,7 +53,7 @@ const GuidanceTab: React.FC<GuidanceTabProps> = ({ currentGuidance, onActionClic
   };
 
   const ActionCard = ({ action, isContraindication = false }: { 
-    action: any; 
+    action: GuidanceAction; 
     isContraindication?: boolean; 
   }) => (
     <Paper

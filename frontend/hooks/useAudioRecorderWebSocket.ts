@@ -13,9 +13,10 @@
 // limitations under the License.
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { TranscriptMessage } from '../types/types';
 
 interface UseAudioRecorderProps {
-  onTranscript: (transcript: any) => void;
+  onTranscript: (transcript: TranscriptMessage) => void;
   onError?: (error: string) => void;
   authToken?: string | null;
 }

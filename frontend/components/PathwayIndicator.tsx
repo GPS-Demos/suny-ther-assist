@@ -13,11 +13,10 @@
 // limitations under the License.
 
 import React, { useState } from 'react';
-import { Box, Paper, Typography, Button, Chip, Collapse, IconButton, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import { Box, Paper, Typography, Chip, Collapse, IconButton, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
 import { SwapHoriz, CheckCircle, Warning, TrendingDown, ExpandMore, Info, ErrorOutline, PlayCircle } from '@mui/icons-material';
 import { Citation } from '../types/types';
-import { renderTextWithCitations, renderMarkdown } from '../utils/textRendering';
-import CitationModal from './CitationModal';
+import { renderTextWithCitations } from '../utils/textRendering';
 
 interface PathwayIndicatorProps {
   currentApproach: string;
@@ -52,20 +51,6 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
   onCitationClick
 }) => {
   const [detailsExpanded, setDetailsExpanded] = useState(true);
-  const getEffectivenessColor = () => {
-    switch (effectiveness) {
-      case 'effective':
-        return 'success';
-      case 'struggling':
-        return 'warning';
-      case 'ineffective':
-        return 'error';
-      case 'unknown':
-        return 'default';
-      default:
-        return 'default';
-    }
-  };
 
   const getEffectivenessIcon = () => {
     switch (effectiveness) {
@@ -79,21 +64,6 @@ const PathwayIndicator: React.FC<PathwayIndicatorProps> = ({
         return null;
       default:
         return null;
-    }
-  };
-
-  const getEffectivenessGradient = () => {
-    switch (effectiveness) {
-      case 'effective':
-        return 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-      case 'struggling':
-        return 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
-      case 'ineffective':
-        return 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-      case 'unknown':
-        return 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
-      default:
-        return 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
     }
   };
 

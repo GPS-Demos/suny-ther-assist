@@ -15,10 +15,8 @@
 # To run this code you need to install the following dependencies:
 # pip install google-genai
 
-import base64
 import mimetypes
 import os
-import re
 import struct
 from google import genai
 from google.genai import types
@@ -28,7 +26,7 @@ def save_binary_file(file_name, data):
     f = open(file_name, "wb")
     f.write(data)
     f.close()
-    print(f"File saved to to: {file_name}")
+    print(f"File saved to: {file_name}")
 
 
 def generate():

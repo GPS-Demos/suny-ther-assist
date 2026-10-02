@@ -26,7 +26,7 @@ import {
   Chip,
   Grid,
 } from '@mui/material';
-import { Close, PlayCircle, CheckCircle, ErrorOutline, Warning, Info, Psychology, Lightbulb } from '@mui/icons-material';
+import { Close, PlayCircle, CheckCircle, ErrorOutline, Warning, Info, Psychology } from '@mui/icons-material';
 import { renderTextWithCitations } from '../utils/textRendering';
 import { Citation } from '../types/types';
 
@@ -55,7 +55,6 @@ const RationaleModal: React.FC<RationaleModalProps> = ({
   citations = [], 
   onCitationClick,
   detectedTechniques = [],
-  alternativePathways = []
 }) => {
   return (
     <Modal
