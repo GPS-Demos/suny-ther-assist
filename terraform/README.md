@@ -4,6 +4,9 @@ This Terraform configuration automates the deployment of the Ther-Assist applica
 
 ## What This Automates
 
+**GCP Project APIs**
+- ✅ Automatically enable all required GCP APIs (Cloud Functions, Cloud Run, Speech-to-Text v2, Vertex AI, Discovery Engine, Generative Language, Artifact Registry, Cloud Build, Compute Engine, Storage, IAM, Identity Toolkit)
+
 **Step 4: Backend Deployments**
 - ✅ Deploy Therapy Analysis Function (Cloud Function)
 - ✅ Deploy Storage Access Function (Cloud Function)  
@@ -21,7 +24,7 @@ This Terraform configuration automates the deployment of the Ther-Assist applica
 
 **Complete these steps from the main README first:**
 
-1. ✅ **GCP & Firebase Setup** (Step 1) - Enable APIs, Firebase Auth
+1. ✅ **GCP & Firebase Setup** (Step 1) - Project created, billing enabled, Firebase Auth enabled (GCP APIs are automated by Terraform)
 2. ✅ **Firebase Authentication Setup** (Step 2) - Configure domains and get Firebase config
 3. ✅ **Create RAG Corpuses** (Step 3) - **MUST BE COMPLETED BEFORE RUNNING TERRAFORM**
 

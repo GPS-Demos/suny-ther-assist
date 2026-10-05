@@ -48,13 +48,15 @@ Ther-Assist listens ambiently to therapy sessions and provides near real-time gu
 
 ### Initial GCP & Firebase Setup
 
-1. Enable APIs
+1. Enable APIs *(Automated if using Terraform)*
+> **Note:** If you are using Terraform to deploy (see [Deploy Services](#deploy-services)), Terraform automatically enables all required APIs. You only need to run this manually if setting up services outside of Terraform.
+
 ```bash
 # Set your project ID
 gcloud init
 gcloud auth application-default login
 
-# Enable required APIs
+# Enable required APIs (handled automatically by Terraform)
 gcloud services enable speech.googleapis.com
 gcloud services enable aiplatform.googleapis.com
 gcloud services enable discoveryengine.googleapis.com

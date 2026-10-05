@@ -22,3 +22,24 @@ variable "region" {
   type        = string
   default     = "us-central1"
 }
+
+variable "enabled_apis" {
+  description = "List of GCP APIs to enable on the project"
+  type        = list(string)
+  default = [
+    "cloudfunctions.googleapis.com",
+    "run.googleapis.com",
+    "artifactregistry.googleapis.com",
+    "cloudbuild.googleapis.com",
+    "speech.googleapis.com",
+    "aiplatform.googleapis.com",
+    "discoveryengine.googleapis.com",
+    "generativelanguage.googleapis.com",
+    "compute.googleapis.com",
+    "storage.googleapis.com",
+    "iam.googleapis.com",
+    "identitytoolkit.googleapis.com",
+    "logging.googleapis.com",
+    "monitoring.googleapis.com"
+  ]
+}

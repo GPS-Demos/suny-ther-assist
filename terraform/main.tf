@@ -55,12 +55,7 @@ data "google_project" "current" {
 
 # Enable required APIs
 resource "google_project_service" "apis" {
-  for_each = toset([
-    "cloudfunctions.googleapis.com",
-    "run.googleapis.com",
-    "artifactregistry.googleapis.com",
-    "cloudbuild.googleapis.com"
-  ])
+  for_each = toset(var.enabled_apis)
   
   service = each.key
   project = var.project_id
@@ -74,6 +69,8 @@ resource "google_service_account" "storage_access_sa" {
   account_id   = "storage-access-sa"
   display_name = "Storage Access Function Service Account"
   project      = var.project_id
+
+  depends_on = [google_project_service.apis]
 }
 
 # Grant Storage Object Viewer role to service account
@@ -184,6 +181,8 @@ resource "google_storage_bucket" "functions_bucket" {
   project  = var.project_id
   
   uniform_bucket_level_access = true
+
+  depends_on = [google_project_service.apis]
 }
 
 # Upload therapy analysis function source
@@ -216,9 +215,6 @@ resource "null_resource" "build_streaming_service" {
     command = <<-EOT
       echo "Building Docker image for streaming transcription service..."
       cd ../backend/streaming-transcription-service
-      
-      # Enable required APIs first
-      gcloud services enable cloudbuild.googleapis.com artifactregistry.googleapis.com --project=${var.project_id}
       
       # Build and push the Docker image
       gcloud builds submit --tag gcr.io/${var.project_id}/therapy-streaming-transcription:latest --project=${var.project_id} --timeout=20m || {
