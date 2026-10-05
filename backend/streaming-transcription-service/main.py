@@ -18,7 +18,7 @@ import asyncio
 import logging
 import threading
 import queue
-from typing import Generator, Optional
+from typing import Generator, Optional, List, Set
 from datetime import datetime
 import base64
 
@@ -99,10 +99,36 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="Invalid or unauthorized token")
     return decoded_token
 
+# --- CORS Configuration ---
+def get_allowed_cors_origins() -> List[str]:
+    """Return the list of allowed CORS origins for frontend access."""
+    origins = set()
+    env_cors = os.environ.get("CORS_ORIGINS")
+    if env_cors:
+        origins.update(o.strip().rstrip('/') for o in env_cors.split(",") if o.strip())
+        
+    frontend_url = os.environ.get("FRONTEND_URL")
+    if frontend_url:
+        origins.update(o.strip().rstrip('/') for o in frontend_url.split(",") if o.strip())
+        
+    # Standard development origins
+    origins.update({
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    })
+    return list(origins)
+
+ALLOWED_ORIGINS = get_allowed_cors_origins()
+ALLOWED_ORIGINS_SET = set(ALLOWED_ORIGINS)
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend URL
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -318,6 +344,15 @@ class StreamingTranscriptionSession:
 @app.websocket("/ws/transcribe")
 async def websocket_transcribe(websocket: WebSocket):
     """WebSocket endpoint for real-time audio streaming and transcription"""
+    # Origin validation for WebSocket connection
+    origin = websocket.headers.get("origin")
+    if origin:
+        clean_origin = origin.strip().rstrip('/')
+        if clean_origin not in ALLOWED_ORIGINS_SET:
+            logger.warning(f"WebSocket connection rejected for unauthorized origin: {origin}")
+            await websocket.close(code=1008, reason="Origin not allowed")
+            return
+
     await websocket.accept()
     session: Optional[StreamingTranscriptionSession] = None
     response_task = None

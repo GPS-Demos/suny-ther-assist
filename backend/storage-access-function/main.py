@@ -17,7 +17,7 @@ from flask import jsonify
 from google.cloud import storage
 import os
 import logging
-from typing import Optional, Tuple, Set
+from typing import Optional, Tuple, Set, Dict
 import posixpath
 import re
 import mimetypes
@@ -142,6 +142,57 @@ def verify_firebase_token(token: str):
 # Initialize Storage client
 storage_client = storage.Client()
 
+# --- CORS Configuration ---
+def get_allowed_cors_origins() -> Set[str]:
+    """Return the set of allowed CORS origins for frontend access."""
+    origins = set()
+    env_cors = os.environ.get("CORS_ORIGINS")
+    if env_cors:
+        origins.update(o.strip().rstrip('/') for o in env_cors.split(",") if o.strip())
+        
+    frontend_url = os.environ.get("FRONTEND_URL")
+    if frontend_url:
+        origins.update(o.strip().rstrip('/') for o in frontend_url.split(",") if o.strip())
+        
+    # Standard development origins
+    origins.update({
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    })
+    return origins
+
+def get_cors_headers(request, methods: str = "GET, POST") -> Tuple[Dict[str, str], Optional[Tuple]]:
+    """
+    Generate CORS headers dynamically based on request origin and allowlist.
+    Returns:
+        (headers, error_response)
+        If the origin is disallowed on a cross-origin request, error_response is returned.
+        Otherwise, error_response is None and headers contains the appropriate CORS headers.
+    """
+    allowed_origins = get_allowed_cors_origins()
+    origin = request.headers.get('Origin', '').strip()
+    clean_origin = origin.rstrip('/')
+
+    base_headers = {
+        'Access-Control-Allow-Methods': methods,
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Vary': 'Origin',
+    }
+
+    if origin:
+        if clean_origin not in allowed_origins:
+            logging.warning(f"CORS request blocked for unauthorized origin: {origin}")
+            return base_headers, (jsonify({'error': 'CORS origin not allowed'}), 403, base_headers)
+        
+        base_headers['Access-Control-Allow-Origin'] = origin
+        base_headers['Access-Control-Allow-Credentials'] = 'true'
+
+    return base_headers, None
+
 @functions_framework.http
 def storage_access(request):
     """
@@ -150,20 +201,13 @@ def storage_access(request):
     """
     
     # CORS handling
+    headers, error_response = get_cors_headers(request, methods='GET, POST, OPTIONS')
+    if error_response:
+        return error_response
+
     if request.method == 'OPTIONS':
-        headers = {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            'Access-Control-Max-Age': '3600'
-        }
+        headers['Access-Control-Max-Age'] = '3600'
         return ('', 204, headers)
-    
-    headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-    }
     
     # --- Authentication Check ---
     auth_header = request.headers.get('Authorization')
@@ -181,21 +225,6 @@ def storage_access(request):
         bucket_name, blob_path, error_msg, status_code = validate_gcs_uri(gcs_uri)
         if error_msg:
             return (jsonify({'error': error_msg}), status_code, headers)
-        
-        if not gcs_uri:
-            logging.warning("No URI provided in request")
-            return (jsonify({'error': 'Missing uri parameter'}), 400, headers)
-        
-        # Parse the GCS URI
-        # Expected format: gs://bucket-name/path/to/file
-        match = re.match(r'^gs://([^/]+)/(.+)$', gcs_uri)
-        
-        if not match:
-            logging.warning(f"Invalid GCS URI format: {gcs_uri}")
-            return (jsonify({'error': 'Invalid GCS URI format'}), 400, headers)
-        
-        bucket_name = match.group(1)
-        blob_path = match.group(2)
         
         logging.info(f"Accessing file: bucket={bucket_name}, path={blob_path}")
         
@@ -259,20 +288,13 @@ def storage_access_metadata(request):
     """
     
     # CORS handling
+    headers, error_response = get_cors_headers(request, methods='GET, OPTIONS')
+    if error_response:
+        return error_response
+
     if request.method == 'OPTIONS':
-        headers = {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-            'Access-Control-Max-Age': '3600'
-        }
+        headers['Access-Control-Max-Age'] = '3600'
         return ('', 204, headers)
-    
-    headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-    }
     
     # --- Authentication Check ---
     auth_header = request.headers.get('Authorization')
@@ -289,18 +311,6 @@ def storage_access_metadata(request):
         bucket_name, blob_path, error_msg, status_code = validate_gcs_uri(gcs_uri)
         if error_msg:
             return (jsonify({'error': error_msg}), status_code, headers)
-        
-        if not gcs_uri:
-            return (jsonify({'error': 'Missing uri parameter'}), 400, headers)
-        
-        # Parse the GCS URI
-        match = re.match(r'^gs://([^/]+)/(.+)$', gcs_uri)
-        
-        if not match:
-            return (jsonify({'error': 'Invalid GCS URI format'}), 400, headers)
-        
-        bucket_name = match.group(1)
-        blob_path = match.group(2)
         
         # Get the bucket and blob
         bucket = storage_client.bucket(bucket_name)

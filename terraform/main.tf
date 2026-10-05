@@ -130,6 +130,7 @@ resource "google_cloudfunctions2_function" "therapy_analysis" {
     service_account_email = google_service_account.storage_access_sa.email
     environment_variables = {
       GOOGLE_CLOUD_PROJECT = var.project_id
+      FRONTEND_URL         = "https://ther-assist-frontend-${data.google_project.current.number}.${var.region}.run.app"
     }
   }
   
@@ -163,9 +164,9 @@ resource "google_cloudfunctions2_function" "storage_access" {
     timeout_seconds       = 30
     service_account_email = google_service_account.storage_access_sa.email
     environment_variables = {
-      GOOGLE_CLOUD_PROJECT = var.project_id
       GOOGLE_CLOUD_PROJECT     = var.project_id
       ALLOWED_CITATIONS_BUCKET = "${var.project_id}-ebt-corpus"
+      FRONTEND_URL             = "https://ther-assist-frontend-${data.google_project.current.number}.${var.region}.run.app"
     }
   }
   
@@ -259,6 +260,11 @@ resource "google_cloud_run_v2_service" "streaming_transcription" {
       env {
         name  = "GOOGLE_CLOUD_PROJECT"
         value = var.project_id
+      }
+      
+      env {
+        name  = "FRONTEND_URL"
+        value = "https://ther-assist-frontend-${data.google_project.current.number}.${var.region}.run.app"
       }
     }
     
