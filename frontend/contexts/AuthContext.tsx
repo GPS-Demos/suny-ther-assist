@@ -49,7 +49,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Helper function to check if email is authorized (@google.com)
+  const isEmailAuthorized = (email: string | null): boolean => {
+    if (!email || !email.includes('@')) return false;
+    const allowedDomainsStr = import.meta.env.VITE_AUTH_ALLOWED_DOMAINS;
+    const allowedDomains = allowedDomainsStr
+      ? allowedDomainsStr.split(',').map((d: string) => d.trim().toLowerCase()).filter(Boolean)
+      : ['google.com'];
+    const emailDomain = email.split('@')[1]?.toLowerCase();
+    return allowedDomains.includes(emailDomain);
+  };
+
   const signup = async (email: string, password: string, displayName?: string) => {
+    if (!isEmailAuthorized(email)) {
+      throw new Error('Access restricted to @google.com email addresses.');
+    }
     const result = await createUserWithEmailAndPassword(auth, email, password);
     if (displayName && result.user) {
       await updateProfile(result.user, { displayName });
@@ -58,6 +72,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = (email: string, password: string) => {
+    if (!isEmailAuthorized(email)) {
+      throw new Error('Access restricted to @google.com email addresses.');
+    }
     return signInWithEmailAndPassword(auth, email, password);
   };
 
@@ -67,11 +84,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
-    return signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider);
+    
+    // Check if the email has an authorized domain
+    const email = result.user?.email;
+    if (!isEmailAuthorized(email)) {
+      await signOut(auth);
+      throw new Error('Access restricted to @google.com email addresses.');
+    }
+    
+    return result;
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Check if the current user has an authorized email
+        const email = user.email;
+        if (!isEmailAuthorized(email)) {
+          await signOut(auth);
+          setCurrentUser(null);
+          setLoading(false);
+          return;
+        }
+      }
+
       setCurrentUser(user);
       setLoading(false);
     });

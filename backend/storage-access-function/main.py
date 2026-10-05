@@ -17,6 +17,8 @@ from flask import jsonify
 from google.cloud import storage
 import os
 import logging
+from typing import Optional, Tuple, Set
+import posixpath
 import re
 import mimetypes
 import firebase_admin
@@ -38,11 +40,99 @@ try:
 except Exception as e:
     logging.error(f"Error initializing Firebase Admin SDK: {e}", exc_info=True)
 
+# --- Authorization Configuration ---
+_allowed_domains_env = os.environ.get("AUTH_ALLOWED_DOMAINS")
+ALLOWED_DOMAINS = {
+    d.strip().lower() for d in _allowed_domains_env.split(",") if d.strip()
+} if _allowed_domains_env else {"google.com"}
+
+def is_email_authorized(email: Optional[str]) -> bool:
+    """Check if email belongs to an authorized domain (@google.com)."""
+    if not email or "@" not in email:
+        return False
+    domain = email.rsplit("@", 1)[-1].lower()
+    return domain in ALLOWED_DOMAINS
+
+# --- Storage Access Allowlist Configuration ---
+_allowed_citations_bucket = os.environ.get("ALLOWED_CITATIONS_BUCKET")
+_allowed_storage_buckets = os.environ.get("ALLOWED_STORAGE_BUCKETS")
+_project_id = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("GCP_PROJECT")
+
+def get_allowed_buckets() -> Set[str]:
+    """Return the set of allowed GCS bucket names for citations access."""
+    buckets = set()
+    if _allowed_citations_bucket:
+        buckets.update(b.strip() for b in _allowed_citations_bucket.split(",") if b.strip())
+    if _allowed_storage_buckets:
+        buckets.update(b.strip() for b in _allowed_storage_buckets.split(",") if b.strip())
+    if not buckets and _project_id:
+        buckets.add(f"{_project_id}-ebt-corpus")
+    return buckets
+
+ALLOWED_EXTENSIONS = {
+    '.pdf', '.txt', '.docx', '.doc', '.json', '.jsonl', '.csv', '.md', '.png', '.jpg', '.jpeg'
+}
+
+def validate_gcs_uri(gcs_uri: Optional[str]) -> Tuple[Optional[str], Optional[str], Optional[str], int]:
+    """
+    Validate and parse a GCS URI for citation storage access.
+    
+    Returns:
+        (bucket_name, blob_path, error_message, status_code)
+    """
+    if not gcs_uri:
+        logging.warning("No URI provided in request")
+        return None, None, "Missing uri parameter", 400
+
+    match = re.match(r'^gs://([^/]+)/(.+)$', gcs_uri)
+    if not match:
+        logging.warning(f"Invalid GCS URI format: {gcs_uri}")
+        return None, None, "Invalid GCS URI format. Expected gs://bucket-name/path/to/file", 400
+
+    bucket_name = match.group(1).strip()
+    blob_path = match.group(2).strip()
+
+    # 1. Bucket allowlist validation
+    allowed_buckets = get_allowed_buckets()
+    if not allowed_buckets:
+        logging.error("No allowed citations storage buckets configured.")
+        return None, None, "Storage access is not configured", 500
+
+    if bucket_name not in allowed_buckets:
+        logging.warning(f"Unauthorized bucket access attempt: bucket={bucket_name}, uri={gcs_uri}")
+        return None, None, f"Access to bucket '{bucket_name}' is not allowed", 403
+
+    # 2. Object path validation (prevent path traversal, null bytes, backslashes)
+    if '\\' in blob_path or '\0' in blob_path:
+        logging.warning(f"Invalid characters in blob path: {blob_path}")
+        return None, None, "Invalid file path", 400
+
+    normalized_path = posixpath.normpath(blob_path)
+    parts = normalized_path.split('/')
+    if any(part == '..' or part == '.' for part in parts) or normalized_path.startswith('/'):
+        logging.warning(f"Path traversal attempt in blob path: {blob_path}")
+        return None, None, "Path traversal is not permitted", 403
+
+    if any(part.startswith('.') for part in parts):
+        logging.warning(f"Attempt to access hidden file or directory: {blob_path}")
+        return None, None, "Access to hidden files is not permitted", 403
+
+    # 3. File extension validation
+    _, ext = posixpath.splitext(normalized_path)
+    if not ext or ext.lower() not in ALLOWED_EXTENSIONS:
+        logging.warning(f"Disallowed file extension '{ext}' in blob path: {blob_path}")
+        return None, None, f"File type '{ext}' is not permitted", 403
+
+    return bucket_name, normalized_path, None, 200
+
 def verify_firebase_token(token: str):
     """Verify Firebase ID token and return decoded claims"""
     try:
         decoded_token = auth.verify_id_token(token)
         email = decoded_token.get('email')
+        if not is_email_authorized(email):
+            logging.warning(f"Unauthorized email attempted access: {email}")
+            return None
         logging.info(f"User authenticated: {email}")
         return decoded_token
     except Exception as e:
@@ -88,6 +178,9 @@ def storage_access(request):
     try:
         # Get the GCS URI from request parameters
         gcs_uri = request.args.get('uri')
+        bucket_name, blob_path, error_msg, status_code = validate_gcs_uri(gcs_uri)
+        if error_msg:
+            return (jsonify({'error': error_msg}), status_code, headers)
         
         if not gcs_uri:
             logging.warning("No URI provided in request")
@@ -193,6 +286,9 @@ def storage_access_metadata(request):
     
     try:
         gcs_uri = request.args.get('uri')
+        bucket_name, blob_path, error_msg, status_code = validate_gcs_uri(gcs_uri)
+        if error_msg:
+            return (jsonify({'error': error_msg}), status_code, headers)
         
         if not gcs_uri:
             return (jsonify({'error': 'Missing uri parameter'}), 400, headers)

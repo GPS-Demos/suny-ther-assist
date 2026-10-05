@@ -164,6 +164,8 @@ resource "google_cloudfunctions2_function" "storage_access" {
     service_account_email = google_service_account.storage_access_sa.email
     environment_variables = {
       GOOGLE_CLOUD_PROJECT = var.project_id
+      GOOGLE_CLOUD_PROJECT     = var.project_id
+      ALLOWED_CITATIONS_BUCKET = "${var.project_id}-ebt-corpus"
     }
   }
   

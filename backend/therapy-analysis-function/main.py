@@ -88,11 +88,27 @@ def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
     logging.info(text)
     return None
 
+# --- Authorization Configuration ---
+_allowed_domains_env = os.environ.get("AUTH_ALLOWED_DOMAINS")
+ALLOWED_DOMAINS = {
+    d.strip().lower() for d in _allowed_domains_env.split(",") if d.strip()
+} if _allowed_domains_env else {"google.com"}
+
+def is_email_authorized(email: Optional[str]) -> bool:
+    """Check if email belongs to an authorized domain (@google.com)."""
+    if not email or "@" not in email:
+        return False
+    domain = email.rsplit("@", 1)[-1].lower()
+    return domain in ALLOWED_DOMAINS
+
 def verify_firebase_token(token: str) -> Optional[Dict]:
     """Verify Firebase ID token and return decoded claims"""
     try:
         decoded_token = auth.verify_id_token(token)
         email = decoded_token.get('email')
+        if not is_email_authorized(email):
+            logging.warning(f"Unauthorized email attempted access: {email}")
+            return None
         logging.info(f"User authenticated: {email}")
         return decoded_token
     except Exception as e:
