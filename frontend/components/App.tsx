@@ -43,6 +43,16 @@ const App: React.FC = () => {
     sessionPatientId?: string | null;
   }>>([]);
 
+  // Clear sensitive session and navigation state when user logs out
+  React.useEffect(() => {
+    if (!currentUser) {
+      setCurrentView('landing');
+      setSelectedPatientId(null);
+      setSessionPatientId(null);
+      setNavigationHistory([]);
+    }
+  }, [currentUser]);
+
   // If user is not authenticated, show login page
   if (!currentUser) {
     return <LoginPage />;

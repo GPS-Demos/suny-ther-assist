@@ -40,11 +40,26 @@ try:
 except Exception as e:
     logging.error(f"Error initializing Firebase Admin SDK: {e}", exc_info=True)
 
-# --- Authorization Configuration ---
-_allowed_domains_env = os.environ.get("AUTH_ALLOWED_DOMAINS")
-ALLOWED_DOMAINS = {
-    d.strip().lower() for d in _allowed_domains_env.split(",") if d.strip()
-} if _allowed_domains_env else {"google.com"}
+# --- Load Authorization Configuration from Environment ---
+ALLOWED_DOMAINS = set(os.environ.get('AUTH_ALLOWED_DOMAINS', '').split(',')) if os.environ.get('AUTH_ALLOWED_DOMAINS') else set()
+ALLOWED_EMAILS = set(os.environ.get('AUTH_ALLOWED_EMAILS', '').split(',')) if os.environ.get('AUTH_ALLOWED_EMAILS') else set()
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
+    ).split(",")
+    if origin.strip()
+]
+PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
+ALLOWED_BUCKETS = set(filter(None, [
+    os.environ.get('TARGET_BUCKET'),
+    os.environ.get('STORAGE_BUCKET'),
+    os.environ.get('CORPUS_BUCKET'),
+    f"{PROJECT_ID}-ebt-corpus" if PROJECT_ID else None,
+    f"{PROJECT_ID}-transcript-patterns" if PROJECT_ID else None,
+]))
+MAX_FILE_SIZE = int(os.environ.get('MAX_FILE_SIZE', 25 * 1024 * 1024))  # 25MB limit
 
 def is_email_authorized(email: Optional[str]) -> bool:
     """Check if email belongs to an authorized domain (@google.com)."""
@@ -130,6 +145,12 @@ def verify_firebase_token(token: str):
     try:
         decoded_token = auth.verify_id_token(token)
         email = decoded_token.get('email')
+        
+        # Enforce email_verified check before trusting email
+        if not decoded_token.get('email_verified', False):
+            logging.warning(f"Unverified email attempted access: {email}")
+            return None
+        
         if not is_email_authorized(email):
             logging.warning(f"Unauthorized email attempted access: {email}")
             return None
@@ -142,56 +163,28 @@ def verify_firebase_token(token: str):
 # Initialize Storage client
 storage_client = storage.Client()
 
-# --- CORS Configuration ---
-def get_allowed_cors_origins() -> Set[str]:
-    """Return the set of allowed CORS origins for frontend access."""
-    origins = set()
-    env_cors = os.environ.get("CORS_ORIGINS")
-    if env_cors:
-        origins.update(o.strip().rstrip('/') for o in env_cors.split(",") if o.strip())
-        
-    frontend_url = os.environ.get("FRONTEND_URL")
-    if frontend_url:
-        origins.update(o.strip().rstrip('/') for o in frontend_url.split(",") if o.strip())
-        
-    # Standard development origins
-    origins.update({
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-    })
-    return origins
-
-def get_cors_headers(request, methods: str = "GET, POST") -> Tuple[Dict[str, str], Optional[Tuple]]:
-    """
-    Generate CORS headers dynamically based on request origin and allowlist.
-    Returns:
-        (headers, error_response)
-        If the origin is disallowed on a cross-origin request, error_response is returned.
-        Otherwise, error_response is None and headers contains the appropriate CORS headers.
-    """
-    allowed_origins = get_allowed_cors_origins()
-    origin = request.headers.get('Origin', '').strip()
-    clean_origin = origin.rstrip('/')
-
-    base_headers = {
-        'Access-Control-Allow-Methods': methods,
+def _get_cors_headers(request):
+    origin = request.headers.get('Origin', '')
+    allowed_origin = origin if origin in ALLOWED_ORIGINS else (ALLOWED_ORIGINS[0] if ALLOWED_ORIGINS else '')
+    return {
+        'Access-Control-Allow-Origin': allowed_origin,
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Vary': 'Origin',
+        'Access-Control-Max-Age': '3600'
     }
 
-    if origin:
-        if clean_origin not in allowed_origins:
-            logging.warning(f"CORS request blocked for unauthorized origin: {origin}")
-            return base_headers, (jsonify({'error': 'CORS origin not allowed'}), 403, base_headers)
-        
-        base_headers['Access-Control-Allow-Origin'] = origin
-        base_headers['Access-Control-Allow-Credentials'] = 'true'
-
-    return base_headers, None
+def is_bucket_authorized(bucket_name: str) -> bool:
+    """Validate bucket name against authorized bucket allowlist"""
+    if not bucket_name:
+        return False
+    if ALLOWED_BUCKETS and bucket_name in ALLOWED_BUCKETS:
+        return True
+    if PROJECT_ID and bucket_name.startswith(f"{PROJECT_ID}-"):
+        return True
+    # If no explicit list configured, verify it doesn't contain path traversal
+    if re.match(r'^[a-z0-9][a-z0-9._\-]{1,61}[a-z0-9]$', bucket_name):
+        return True if not ALLOWED_BUCKETS else False
+    return False
 
 @functions_framework.http
 def storage_access(request):
@@ -199,6 +192,7 @@ def storage_access(request):
     HTTP Cloud Function to access Google Cloud Storage files.
     Provides secure access to citation documents stored in GCS.
     """
+    headers = _get_cors_headers(request)
     
     # CORS handling
     headers, error_response = get_cors_headers(request, methods='GET, POST, OPTIONS')
@@ -206,7 +200,6 @@ def storage_access(request):
         return error_response
 
     if request.method == 'OPTIONS':
-        headers['Access-Control-Max-Age'] = '3600'
         return ('', 204, headers)
     
     # --- Authentication Check ---
@@ -222,9 +215,26 @@ def storage_access(request):
     try:
         # Get the GCS URI from request parameters
         gcs_uri = request.args.get('uri')
-        bucket_name, blob_path, error_msg, status_code = validate_gcs_uri(gcs_uri)
-        if error_msg:
-            return (jsonify({'error': error_msg}), status_code, headers)
+        
+        if not gcs_uri:
+            logging.warning("No URI provided in request")
+            return (jsonify({'error': 'Missing uri parameter'}), 400, headers)
+        
+        # Parse the GCS URI
+        # Expected format: gs://bucket-name/path/to/file
+        match = re.match(r'^gs://([^/]+)/(.+)$', gcs_uri)
+        
+        if not match:
+            logging.warning(f"Invalid GCS URI format: {gcs_uri}")
+            return (jsonify({'error': 'Invalid GCS URI format'}), 400, headers)
+        
+        bucket_name = match.group(1)
+        blob_path = match.group(2)
+        
+        # Enforce bucket authorization to prevent arbitrary bucket reads
+        if not is_bucket_authorized(bucket_name):
+            logging.warning(f"Unauthorized bucket access attempt: {bucket_name}")
+            return (jsonify({'error': f'Unauthorized bucket: {bucket_name}'}), 403, headers)
         
         logging.info(f"Accessing file: bucket={bucket_name}, path={blob_path}")
         
@@ -237,6 +247,12 @@ def storage_access(request):
             if not blob.exists():
                 logging.warning(f"File not found: {gcs_uri}")
                 return (jsonify({'error': 'File not found'}), 404, headers)
+            
+            # Enforce max file size check to prevent Out-Of-Memory (OOM) Denial of Service
+            blob.reload()
+            if blob.size and blob.size > MAX_FILE_SIZE:
+                logging.warning(f"File size {blob.size} exceeds maximum limit of {MAX_FILE_SIZE} bytes")
+                return (jsonify({'error': f'File too large ({blob.size} bytes). Maximum allowed is {MAX_FILE_SIZE} bytes.'}), 413, headers)
             
             # Download the file content
             file_content = blob.download_as_bytes()
@@ -287,13 +303,14 @@ def storage_access_metadata(request):
     Useful for checking file existence and getting file info.
     """
     
+    headers = _get_cors_headers(request)
+    
     # CORS handling
     headers, error_response = get_cors_headers(request, methods='GET, OPTIONS')
     if error_response:
         return error_response
 
     if request.method == 'OPTIONS':
-        headers['Access-Control-Max-Age'] = '3600'
         return ('', 204, headers)
     
     # --- Authentication Check ---
@@ -308,9 +325,23 @@ def storage_access_metadata(request):
     
     try:
         gcs_uri = request.args.get('uri')
-        bucket_name, blob_path, error_msg, status_code = validate_gcs_uri(gcs_uri)
-        if error_msg:
-            return (jsonify({'error': error_msg}), status_code, headers)
+        
+        if not gcs_uri:
+            return (jsonify({'error': 'Missing uri parameter'}), 400, headers)
+        
+        # Parse the GCS URI
+        match = re.match(r'^gs://([^/]+)/(.+)$', gcs_uri)
+        
+        if not match:
+            return (jsonify({'error': 'Invalid GCS URI format'}), 400, headers)
+        
+        bucket_name = match.group(1)
+        blob_path = match.group(2)
+        
+        # Enforce bucket authorization to prevent arbitrary bucket reads
+        if not is_bucket_authorized(bucket_name):
+            logging.warning(f"Unauthorized bucket access attempt: {bucket_name}")
+            return (jsonify({'error': f'Unauthorized bucket: {bucket_name}'}), 403, headers)
         
         # Get the bucket and blob
         bucket = storage_client.bucket(bucket_name)

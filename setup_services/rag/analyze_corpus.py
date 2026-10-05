@@ -19,23 +19,29 @@ Analyze corpus files to determine the best parser configuration for Vertex AI Se
 
 from pathlib import Path
 
-# Try to import PyPDF2 or use basic file analysis
+# Try to import pypdf or fallback to PyPDF2 or use basic file analysis
 try:
-    import PyPDF2
+    import pypdf
     PYPDF_AVAILABLE = True
+    PDF_READER = pypdf.PdfReader
 except ImportError:
-    PYPDF_AVAILABLE = False
-    print("PyPDF2 not available - will use basic analysis")
+    try:
+        import PyPDF2
+        PYPDF_AVAILABLE = True
+        PDF_READER = PyPDF2.PdfReader
+    except ImportError:
+        PYPDF_AVAILABLE = False
+        print("pypdf not available - will use basic analysis")
 
 def analyze_pdf(file_path):
     """Analyze a PDF file to determine its characteristics."""
-    print(f"\nAnalyzing PDF: {file_path.name}")
+    print(f"\nAnalyzing PDF: {repr(file_path.name)}")
     print(f"  File size: {file_path.stat().st_size / 1024 / 1024:.2f} MB")
     
     if PYPDF_AVAILABLE:
         try:
             with open(file_path, 'rb') as file:
-                reader = PyPDF2.PdfReader(file)
+                reader = PDF_READER(file)
                 num_pages = len(reader.pages)
                 print(f"  Number of pages: {num_pages}")
                 
@@ -52,7 +58,9 @@ def analyze_pdf(file_path):
                 
                 if text_found:
                     print(f"  Type: Digital PDF (searchable text)")
-                    print(f"  Sample text: {sample_text}...")
+                    # Escape control sequences to prevent terminal escape injection
+                    clean_sample = repr(sample_text)
+                    print(f"  Sample text: {clean_sample}...")
                     
                     # Check for structure indicators
                     if any(word in sample_text.lower() for word in ['chapter', 'section', 'table of contents', 'introduction']):
@@ -63,11 +71,11 @@ def analyze_pdf(file_path):
         except Exception as e:
             print(f"  Error analyzing PDF: {e}")
     else:
-        print(f"  Type: Cannot determine without PyPDF2")
+        print(f"  Type: Cannot determine without pypdf")
 
 def analyze_docx(file_path):
     """Analyze a DOCX file."""
-    print(f"\nAnalyzing DOCX: {file_path.name}")
+    print(f"\nAnalyzing DOCX: {repr(file_path.name)}")
     print(f"  File size: {file_path.stat().st_size / 1024:.2f} KB")
     print(f"  Type: Word document (likely structured with headings)")
 

@@ -43,6 +43,27 @@ try:
 except Exception as e:
     logging.error(f"Error initializing Firebase Admin SDK: {e}", exc_info=True)
 
+# --- Load Authorization Configuration from Environment ---
+ALLOWED_DOMAINS = set(os.environ.get('AUTH_ALLOWED_DOMAINS', '').split(',')) if os.environ.get('AUTH_ALLOWED_DOMAINS') else set()
+ALLOWED_EMAILS = set(os.environ.get('AUTH_ALLOWED_EMAILS', '').split(',')) if os.environ.get('AUTH_ALLOWED_EMAILS') else set()
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
+    ).split(",")
+    if origin.strip()
+]
+
+def sanitize_prompt_text(text: Any) -> str:
+    """Sanitize user input before formatting into prompt templates to prevent prompt injection."""
+    if not isinstance(text, str):
+        return str(text) if text is not None else ""
+    for tag in ["transcript", "context", "issues", "approach", "history", "metrics", "user_input"]:
+        text = text.replace(f"</{tag}>", f"<\\/{tag}>")
+        text = text.replace(f"<{tag}>", f"\\<{tag}>")
+    return text
+
 def extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
     """
     Simplified JSON extraction from text that may contain extra content.
@@ -106,6 +127,12 @@ def verify_firebase_token(token: str) -> Optional[Dict]:
     try:
         decoded_token = auth.verify_id_token(token)
         email = decoded_token.get('email')
+        
+        # Enforce email_verified claim before trusting email
+        if not decoded_token.get('email_verified', False):
+            logging.warning(f"Unverified email attempted access: {email}")
+            return None
+        
         if not is_email_authorized(email):
             logging.warning(f"Unauthorized email attempted access: {email}")
             return None
@@ -209,13 +236,26 @@ def therapy_analysis(request):
     Requires Firebase authentication.
     """
     # --- CORS Handling ---
-    headers, error_response = get_cors_headers(request, methods='GET, POST, OPTIONS')
-    if error_response:
-        return error_response
+    request_origin = request.headers.get('Origin', '')
+    allowed_origin = request_origin if request_origin in ALLOWED_ORIGINS else (ALLOWED_ORIGINS[0] if ALLOWED_ORIGINS else '')
 
     if request.method == 'OPTIONS':
-        headers['Access-Control-Max-Age'] = '3600'
+        headers = {
+            'Access-Control-Allow-Origin': allowed_origin,
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Access-Control-Max-Age': '3600'
+        }
         return ('', 204, headers)
+
+    headers = {
+        'Access-Control-Allow-Origin': allowed_origin,
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    }
+
+    if request.content_length and request.content_length > 10 * 1024 * 1024:
+        return (jsonify({'error': 'Payload exceeds maximum allowed size (10MB)'}), 413, headers)
 
     if request.method != 'POST':
         logging.warning(f"Received non-POST request: {request.method}")
@@ -271,8 +311,9 @@ def handle_segment_analysis(request_json, headers):
         # Determine therapy phase
         phase = determine_therapy_phase(session_duration)
         
-        # Format transcript
-        transcript_text = format_transcript_segment(transcript_segment)
+        # Format transcript and sanitize
+        raw_transcript_text = format_transcript_segment(transcript_segment)
+        transcript_text = sanitize_prompt_text(raw_transcript_text)
         
         # Log timing for diagnostics
         analysis_start = datetime.now()
@@ -282,11 +323,11 @@ def handle_segment_analysis(request_json, headers):
         if previous_alert and is_realtime:
             # Only use previous alert context for real-time analysis (where we generate alerts)
             previous_alert_context = f"""
-Title: {previous_alert.get('title', 'N/A')}
-Category: {previous_alert.get('category', 'N/A')}
-Message: {previous_alert.get('message', 'N/A')}
-Recommendation: {previous_alert.get('recommendation', 'N/A')}
-Timing: {previous_alert.get('timing', 'N/A')}
+Title: {sanitize_prompt_text(previous_alert.get('title', 'N/A'))}
+Category: {sanitize_prompt_text(previous_alert.get('category', 'N/A'))}
+Message: {sanitize_prompt_text(previous_alert.get('message', 'N/A'))}
+Recommendation: {sanitize_prompt_text(previous_alert.get('recommendation', 'N/A'))}
+Timing: {sanitize_prompt_text(previous_alert.get('timing', 'N/A'))}
 """
         else:
             previous_alert_context = "No previous alert to consider."
@@ -303,9 +344,9 @@ Timing: {previous_alert.get('timing', 'N/A')}
                 phase=phase,
                 phase_focus=constants.THERAPY_PHASES[phase]['focus'],
                 session_duration=session_duration,
-                session_type=session_context.get('session_type', 'General Therapy'),
-                primary_concern=session_context.get('primary_concern', 'Not specified'),
-                current_approach=session_context.get('current_approach', 'Not specified'),
+                session_type=sanitize_prompt_text(session_context.get('session_type', 'General Therapy')),
+                primary_concern=sanitize_prompt_text(session_context.get('primary_concern', 'Not specified')),
+                current_approach=sanitize_prompt_text(session_context.get('current_approach', 'Not specified')),
                 transcript_text=transcript_text
             )
             
@@ -526,7 +567,7 @@ def handle_comprehensive_analysis(analysis_prompt, phase, headers):
                         threshold="OFF"
                     )
                 ],
-                tools=[MANUAL_RAG_TOOL, TRANSCRIPT_RAG_TOOL],
+                tools=[MANUAL_RAG_TOOL],
                 thinking_config=types.ThinkingConfig(
                     thinking_budget=thinking_budget,
                     include_thoughts=False  # Don't include thoughts in response
@@ -622,9 +663,9 @@ def handle_pathway_guidance(request_json, headers):
         
         # Create pathway guidance prompt
         guidance_prompt = constants.PATHWAY_GUIDANCE_PROMPT.format(
-            current_approach=current_approach,
-            presenting_issues=', '.join(presenting_issues),
-            history_summary=history_summary
+            current_approach=sanitize_prompt_text(current_approach),
+            presenting_issues=', '.join([sanitize_prompt_text(issue) for issue in presenting_issues]),
+            history_summary=sanitize_prompt_text(history_summary)
         )
         
         contents = [types.Content(
@@ -728,11 +769,11 @@ def handle_session_summary(request_json, headers):
         
         logging.info(f"Session summary request - transcript length: {len(full_transcript)}")
         
-        transcript_text = format_transcript_segment(full_transcript)
+        transcript_text = sanitize_prompt_text(format_transcript_segment(full_transcript))
         
         summary_prompt = constants.SESSION_SUMMARY_PROMPT.format(
             transcript_text=transcript_text,
-            session_metrics=json.dumps(session_metrics, indent=2)
+            session_metrics=sanitize_prompt_text(json.dumps(session_metrics, indent=2))
         )
         
         contents = [types.Content(

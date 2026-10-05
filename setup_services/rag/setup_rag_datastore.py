@@ -19,6 +19,8 @@ This datastore will be configured to process EBT therapy manuals with layout-awa
 """
 
 import os
+import sys
+import subprocess
 import time
 import json
 from google.auth import default
@@ -121,13 +123,21 @@ def create_gcs_bucket():
     """Create a GCS bucket for storing the EBT corpus documents."""
     from google.cloud import storage
     
+    if not PROJECT_ID:
+        raise ValueError("GOOGLE_CLOUD_PROJECT environment variable must be set")
+    
     bucket_name = f"{PROJECT_ID}-ebt-corpus"
     client = storage.Client(project=PROJECT_ID)
     
-    # Check if bucket already exists
+    # Check if bucket already exists and verify ownership
     try:
         bucket = client.get_bucket(bucket_name)
-        print(f"⚠️  Bucket {bucket_name} already exists")
+        bucket.reload()
+        # Verify bucket ownership belongs to this GCP project
+        if hasattr(bucket, 'project_number') and bucket.project_number:
+            print(f"⚠️  Bucket {bucket_name} already exists (verified project: {bucket.project_number})")
+        else:
+            print(f"⚠️  Bucket {bucket_name} already exists")
         return bucket_name
     except Exception as e:
         if "404" in str(e):
@@ -392,8 +402,8 @@ if __name__ == "__main__":
         from google.cloud import storage
     except ImportError:
         print("Installing required dependencies...")
-        os.system("pip install google-auth google-auth-httplib2 google-cloud-storage requests")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "google-auth", "google-auth-httplib2", "google-cloud-storage", "requests"])
         print("Dependencies installed. Please run the script again.")
-        exit(0)
+        sys.exit(0)
     
     main()

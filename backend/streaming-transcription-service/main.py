@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import re
 import json
 import asyncio
 import logging
@@ -59,11 +60,17 @@ try:
 except Exception as e:
     logger.error(f"Error initializing Firebase Admin SDK: {e}", exc_info=True)
 
-# --- Authorization Configuration ---
-_allowed_domains_env = os.environ.get("AUTH_ALLOWED_DOMAINS")
-ALLOWED_DOMAINS = {
-    d.strip().lower() for d in _allowed_domains_env.split(",") if d.strip()
-} if _allowed_domains_env else {"google.com"}
+# --- Load Authorization Configuration from Environment ---
+ALLOWED_DOMAINS = set(os.environ.get('AUTH_ALLOWED_DOMAINS', '').split(',')) if os.environ.get('AUTH_ALLOWED_DOMAINS') else set()
+ALLOWED_EMAILS = set(os.environ.get('AUTH_ALLOWED_EMAILS', '').split(',')) if os.environ.get('AUTH_ALLOWED_EMAILS') else set()
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
+    ).split(",")
+    if origin.strip()
+]
 
 def is_email_authorized(email: Optional[str]) -> bool:
     """Check if email belongs to an authorized domain (@google.com)."""
@@ -77,6 +84,12 @@ def verify_firebase_token(token: str) -> Optional[dict]:
     try:
         decoded_token = auth.verify_id_token(token)
         email = decoded_token.get('email')
+        
+        # Enforce email_verified check
+        if not decoded_token.get('email_verified', False):
+            logger.warning(f"Unverified email attempted access: {email}")
+            return None
+        
         if not is_email_authorized(email):
             logger.warning(f"Unauthorized email attempted access: {email}")
             return None
@@ -99,38 +112,12 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="Invalid or unauthorized token")
     return decoded_token
 
-# --- CORS Configuration ---
-def get_allowed_cors_origins() -> List[str]:
-    """Return the list of allowed CORS origins for frontend access."""
-    origins = set()
-    env_cors = os.environ.get("CORS_ORIGINS")
-    if env_cors:
-        origins.update(o.strip().rstrip('/') for o in env_cors.split(",") if o.strip())
-        
-    frontend_url = os.environ.get("FRONTEND_URL")
-    if frontend_url:
-        origins.update(o.strip().rstrip('/') for o in frontend_url.split(",") if o.strip())
-        
-    # Standard development origins
-    origins.update({
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-    })
-    return list(origins)
-
-ALLOWED_ORIGINS = get_allowed_cors_origins()
-ALLOWED_ORIGINS_SET = set(ALLOWED_ORIGINS)
-
-# Add CORS middleware
+# Add CORS middleware with restricted origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -152,8 +139,8 @@ class StreamingTranscriptionSession:
         self.websocket = websocket
         self.is_active = True
         self.recognizer_name = f"projects/{project_id}/locations/{location}/recognizers/_"
-        # Use thread-safe queue for audio data
-        self.audio_queue = queue.Queue()
+        # Use bounded thread-safe queue for audio data (prevent OOM)
+        self.audio_queue = queue.Queue(maxsize=100)
         self.response_queue = asyncio.Queue()
         self.streaming_thread = None
         # Store the main event loop for cross-thread communication
@@ -387,7 +374,11 @@ async def websocket_transcribe(websocket: WebSocket):
                 return
             
             user_email = decoded_token.get('email')
-            session_id = init_data.get("session_id", datetime.now().strftime("%Y%m%d-%H%M%S"))
+            raw_session_id = init_data.get("session_id", datetime.now().strftime("%Y%m%d-%H%M%S"))
+            # Sanitize session_id to prevent CRLF log injection
+            session_id = re.sub(r'[^a-zA-Z0-9_\-]', '', str(raw_session_id))[:64]
+            if not session_id:
+                session_id = datetime.now().strftime("%Y%m%d-%H%M%S")
             logger.info(f"Authenticated session initialized: {session_id} for user: {user_email}")
             logger.info(f"Client config: {init_data.get('config', {})}")
         else:

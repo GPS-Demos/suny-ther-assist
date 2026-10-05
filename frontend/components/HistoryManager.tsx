@@ -52,25 +52,42 @@ function HistoryManager<T>({
 
   // Add to history when currentData changes
   useEffect(() => {
-    if (currentData && JSON.stringify(currentData) !== '{}') {
+    if (!currentData) return;
+
+    // Check if object is empty safely without crashing on non-serializable objects
+    if (typeof currentData === 'object' && currentData !== null && Object.keys(currentData as object).length === 0) {
+      return;
+    }
+
+    try {
+      const currentSerialized = JSON.stringify(currentData);
+      if (currentSerialized === '{}') return;
+
       setHistory(prev => {
+        // Check if data is the same as the last entry
+        if (prev.length > 0) {
+          try {
+            const lastEntry = prev[0];
+            if (JSON.stringify(lastEntry.data) === currentSerialized) {
+              return prev;
+            }
+          } catch {
+            // Ignore comparison errors
+          }
+        }
+
+        const uniqueId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         const newEntry: HistoryEntry<T> = {
-          id: Date.now().toString(),
+          id: uniqueId,
           timestamp: new Date(),
           data: currentData,
         };
-        
-        // Check if data is the same as the last entry
-        if (prev.length > 0) {
-          const lastEntry = prev[0];
-          if (JSON.stringify(lastEntry.data) === JSON.stringify(currentData)) {
-            return prev;
-          }
-        }
-        
+
         // Add new entry and limit history size
         return [newEntry, ...prev].slice(0, maxHistory);
       });
+    } catch {
+      // Gracefully ignore serialization errors
     }
   }, [currentData, maxHistory]);
 
