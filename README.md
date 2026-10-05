@@ -102,7 +102,7 @@ export const firebaseConfig = {
   }
 }
 ```
-5. Grant you default compute engine service account project editor access
+5. *(Optional / Not needed if using Terraform)* Grant your default compute engine service account access (Terraform provisions dedicated, least-privilege service accounts for each service instead).
 
 ### Deploy Services
 

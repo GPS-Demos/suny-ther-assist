@@ -4,8 +4,9 @@ This Terraform configuration automates the deployment of the Ther-Assist applica
 
 ## What This Automates
 
-**GCP Project APIs**
+**GCP Project APIs & IAM**
 - ✅ Automatically enable all required GCP APIs (Cloud Functions, Cloud Run, Speech-to-Text v2, Vertex AI, Discovery Engine, Generative Language, Artifact Registry, Cloud Build, Compute Engine, Storage, IAM, Identity Toolkit)
+- ✅ Dedicated least-privilege service accounts for each component (`therapy-analysis-sa`, `storage-access-sa`, `streaming-transcription-sa`, `frontend-sa`), eliminating overly broad `roles/editor` grants
 
 **Step 4: Backend Deployments**
 - ✅ Deploy Therapy Analysis Function (Cloud Function)

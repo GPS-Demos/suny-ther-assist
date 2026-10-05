@@ -64,7 +64,11 @@ resource "google_project_service" "apis" {
   disable_on_destroy = false
 }
 
-# Create service account for storage access function
+# ==============================================================================
+# Service Accounts and Least-Privilege IAM Roles
+# ==============================================================================
+
+# 1. Storage Access Function Service Account
 resource "google_service_account" "storage_access_sa" {
   account_id   = "storage-access-sa"
   display_name = "Storage Access Function Service Account"
@@ -73,18 +77,75 @@ resource "google_service_account" "storage_access_sa" {
   depends_on = [google_project_service.apis]
 }
 
-# Grant Storage Object Viewer role to service account
-resource "google_project_iam_member" "storage_access_sa_binding" {
+resource "google_project_iam_member" "storage_access_roles" {
+  for_each = toset([
+    "roles/storage.objectViewer",
+    "roles/logging.logWriter"
+  ])
+
   project = var.project_id
-  role    = "roles/storage.objectViewer"
+  role    = each.key
   member  = "serviceAccount:${google_service_account.storage_access_sa.email}"
 }
 
-# Grant Project Editor role to service account
-resource "google_project_iam_member" "storage_access_sa_editor" {
+# 2. Therapy Analysis Function Service Account
+resource "google_service_account" "therapy_analysis_sa" {
+  account_id   = "therapy-analysis-sa"
+  display_name = "Therapy Analysis Function Service Account"
+  project      = var.project_id
+
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_project_iam_member" "therapy_analysis_roles" {
+  for_each = toset([
+    "roles/aiplatform.user",
+    "roles/discoveryengine.viewer",
+    "roles/logging.logWriter"
+  ])
+
   project = var.project_id
-  role    = "roles/editor"
-  member  = "serviceAccount:${google_service_account.storage_access_sa.email}"
+  role    = each.key
+  member  = "serviceAccount:${google_service_account.therapy_analysis_sa.email}"
+}
+
+# 3. Streaming Transcription Cloud Run Service Account
+resource "google_service_account" "streaming_transcription_sa" {
+  account_id   = "streaming-transcription-sa"
+  display_name = "Streaming Transcription Cloud Run Service Account"
+  project      = var.project_id
+
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_project_iam_member" "streaming_transcription_roles" {
+  for_each = toset([
+    "roles/speech.client",
+    "roles/logging.logWriter"
+  ])
+
+  project = var.project_id
+  role    = each.key
+  member  = "serviceAccount:${google_service_account.streaming_transcription_sa.email}"
+}
+
+# 4. Frontend Cloud Run Service Account
+resource "google_service_account" "frontend_sa" {
+  account_id   = "frontend-sa"
+  display_name = "Frontend Cloud Run Service Account"
+  project      = var.project_id
+
+  depends_on = [google_project_service.apis]
+}
+
+resource "google_project_iam_member" "frontend_roles" {
+  for_each = toset([
+    "roles/logging.logWriter"
+  ])
+
+  project = var.project_id
+  role    = each.key
+  member  = "serviceAccount:${google_service_account.frontend_sa.email}"
 }
 
 # Create ZIP archive for therapy analysis function
@@ -124,7 +185,7 @@ resource "google_cloudfunctions2_function" "therapy_analysis" {
     max_instance_count    = 100
     available_memory      = "1Gi"
     timeout_seconds       = 540
-    service_account_email = google_service_account.storage_access_sa.email
+    service_account_email = google_service_account.therapy_analysis_sa.email
     environment_variables = {
       GOOGLE_CLOUD_PROJECT = var.project_id
       FRONTEND_URL         = "https://ther-assist-frontend-${data.google_project.current.number}.${var.region}.run.app"
@@ -133,7 +194,8 @@ resource "google_cloudfunctions2_function" "therapy_analysis" {
   
   depends_on = [
     google_project_service.apis,
-    google_storage_bucket_object.therapy_analysis_source
+    google_storage_bucket_object.therapy_analysis_source,
+    google_project_iam_member.therapy_analysis_roles
   ]
 }
 
@@ -169,7 +231,8 @@ resource "google_cloudfunctions2_function" "storage_access" {
   
   depends_on = [
     google_project_service.apis,
-    google_storage_bucket_object.storage_access_source
+    google_storage_bucket_object.storage_access_source,
+    google_project_iam_member.storage_access_roles
   ]
 }
 
@@ -243,6 +306,8 @@ resource "google_cloud_run_v2_service" "streaming_transcription" {
   project  = var.project_id
 
   template {
+    service_account = google_service_account.streaming_transcription_sa.email
+
     containers {
       image = "gcr.io/${var.project_id}/therapy-streaming-transcription:latest"
       
@@ -273,7 +338,8 @@ resource "google_cloud_run_v2_service" "streaming_transcription" {
 
   depends_on = [
     google_project_service.apis,
-    time_sleep.wait_for_streaming_image
+    time_sleep.wait_for_streaming_image,
+    google_project_iam_member.streaming_transcription_roles
   ]
 }
 
@@ -284,6 +350,8 @@ resource "google_cloud_run_v2_service" "frontend" {
   project  = var.project_id
 
   template {
+    service_account = google_service_account.frontend_sa.email
+
     containers {
       image = "gcr.io/${var.project_id}/ther-assist-frontend:latest"
       
@@ -306,7 +374,8 @@ resource "google_cloud_run_v2_service" "frontend" {
 
   depends_on = [
     google_project_service.apis,
-    time_sleep.wait_for_frontend_image
+    time_sleep.wait_for_frontend_image,
+    google_project_iam_member.frontend_roles
   ]
 }
 

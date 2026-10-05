@@ -37,15 +37,32 @@ output "websocket_url" {
   value       = "wss://${google_cloud_run_v2_service.streaming_transcription.name}-${data.google_project.current.number}.${var.region}.run.app/ws/transcribe"
 }
 
+output "service_accounts" {
+  description = "Dedicated least-privilege service accounts created for the services"
+  value = {
+    therapy_analysis_sa        = google_service_account.therapy_analysis_sa.email
+    storage_access_sa          = google_service_account.storage_access_sa.email
+    streaming_transcription_sa = google_service_account.streaming_transcription_sa.email
+    frontend_sa                = google_service_account.frontend_sa.email
+  }
+}
+
 output "deployment_summary" {
   description = "Summary of deployed services"
   value = {
     project_id             = var.project_id
-    region                = var.region
+    region                 = var.region
     therapy_analysis_url   = "https://${var.region}-${var.project_id}.cloudfunctions.net/${google_cloudfunctions2_function.therapy_analysis.name}"
     storage_access_url     = "https://${var.region}-${var.project_id}.cloudfunctions.net/${google_cloudfunctions2_function.storage_access.name}"
     streaming_service_url  = "https://${google_cloud_run_v2_service.streaming_transcription.name}-${data.google_project.current.number}.${var.region}.run.app"
-    frontend_url          = "https://${google_cloud_run_v2_service.frontend.name}-${data.google_project.current.number}.${var.region}.run.app"
-    websocket_url         = "wss://${google_cloud_run_v2_service.streaming_transcription.name}-${data.google_project.current.number}.${var.region}.run.app/ws/transcribe"
+    frontend_url           = "https://${google_cloud_run_v2_service.frontend.name}-${data.google_project.current.number}.${var.region}.run.app"
+    websocket_url          = "wss://${google_cloud_run_v2_service.streaming_transcription.name}-${data.google_project.current.number}.${var.region}.run.app/ws/transcribe"
+    service_accounts = {
+      therapy_analysis_sa        = google_service_account.therapy_analysis_sa.email
+      storage_access_sa          = google_service_account.storage_access_sa.email
+      streaming_transcription_sa = google_service_account.streaming_transcription_sa.email
+      frontend_sa                = google_service_account.frontend_sa.email
+    }
   }
 }
+
