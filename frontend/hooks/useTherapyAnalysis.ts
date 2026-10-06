@@ -61,7 +61,6 @@ export const useTherapyAnalysis = ({
         }
       });
 
-      const responseTime = performance.now() - startTime;
       const text = response.data;
       
       if (text) {
@@ -75,20 +74,23 @@ export const useTherapyAnalysis = ({
             if (analysis.alert || analysis.session_metrics || analysis.pathway_indicators) {
               onAnalysis(analysis as AnalysisResponse);
             }
-          } catch (e) {
+          } catch {
             console.error('[Analysis] Parse error occurred');
           }
         }
       }
     } catch (error: unknown) {
+      const responseTime = `${(performance.now() - startTime).toFixed(0)}ms`;
       if (axios.isAxiosError(error)) {
         console.error('[Analysis] ❌ Request failed:', {
+          analysisType,
           message: error.message,
           status: error.response?.status,
-          data: error.response?.data
+          data: error.response?.data,
+          responseTime
         });
       } else {
-        console.error('[Analysis] ❌ Request failed:', error);
+        console.error('[Analysis] ❌ Request failed:', { analysisType, responseTime, error });
       }
     }
   }, [onAnalysis, ANALYSIS_API, authToken]);

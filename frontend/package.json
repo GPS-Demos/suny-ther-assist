@@ -14,24 +14,37 @@
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.14.16",
     "@mui/material": "^5.14.17",
-    "axios": "^1.11.0",
+    "axios": "^1.20.0",
     "date-fns": "^4.1.0",
-    "firebase": "^12.1.0",
+    "firebase": "^12.19.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^10.1.0",
-    "recharts": "^2.12.7"
+    "recharts": "^2.15.4"
   },
   "devDependencies": {
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",
-    "@typescript-eslint/eslint-plugin": "^6.10.0",
-    "@typescript-eslint/parser": "^6.10.0",
-    "@vitejs/plugin-react": "^4.1.1",
-    "eslint": "^8.53.0",
+    "@typescript-eslint/eslint-plugin": "~8.69.0",
+    "@typescript-eslint/parser": "~8.69.0",
+    "@vitejs/plugin-react": "^4.6.0",
+    "eslint": "^8.57.1",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.4",
     "typescript": "^5.2.2",
-    "vite": "^5.4.0"
+    "vite": "^7.3.6"
+  },
+  "overrides": {
+    "protobufjs": "^7.6.6",
+    "@grpc/grpc-js": "^1.14.5",
+    "websocket-driver": "^0.7.5",
+    "websocket-extensions": "^0.1.4",
+    "rollup": "^4.63.3",
+    "postcss": "^8.5.28",
+    "browserslist": "~4.28.9",
+    "flatted": "^3.4.4",
+    "d3-color": "^3.1.0",
+    "extend": "^3.0.2",
+    "@babel/core": "^7.29.7"
   }
 }

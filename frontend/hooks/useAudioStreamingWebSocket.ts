@@ -328,7 +328,7 @@ export const useAudioStreamingWebSocket = ({
           // Disconnect any existing connections to avoid conflicts
           try {
             audioSourceRef.current.disconnect();
-          } catch (e) {
+          } catch {
             // Ignore disconnect errors
           }
 
