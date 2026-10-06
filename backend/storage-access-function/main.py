@@ -41,7 +41,10 @@ except Exception as e:
     logging.error(f"Error initializing Firebase Admin SDK: {e}", exc_info=True)
 
 # --- Load Authorization Configuration from Environment ---
-ALLOWED_DOMAINS = set(os.environ.get('AUTH_ALLOWED_DOMAINS', '').split(',')) if os.environ.get('AUTH_ALLOWED_DOMAINS') else set()
+_allowed_domains_env = os.environ.get('AUTH_ALLOWED_DOMAINS')
+ALLOWED_DOMAINS = {
+    d.strip().lower() for d in _allowed_domains_env.split(',') if d.strip()
+} if _allowed_domains_env else {"google.com"}
 ALLOWED_EMAILS = set(os.environ.get('AUTH_ALLOWED_EMAILS', '').split(',')) if os.environ.get('AUTH_ALLOWED_EMAILS') else set()
 def get_allowed_cors_origins() -> list[str]:
     """Return the list of allowed CORS origins for frontend access."""
@@ -174,16 +177,32 @@ def verify_firebase_token(token: str):
 # Initialize Storage client
 storage_client = storage.Client()
 
-def _get_cors_headers(request):
+def get_cors_headers(request, methods: str = "GET, POST, OPTIONS") -> Tuple[Dict[str, str], Optional[Tuple]]:
+    """
+    Generate CORS headers dynamically based on request origin and allowlist.
+    Returns:
+        (headers, error_response)
+        If the origin is disallowed on a cross-origin request, error_response is returned.
+        Otherwise, error_response is None and headers contains the appropriate CORS headers.
+    """
     origin = request.headers.get('Origin', '').strip()
     clean_origin = origin.rstrip('/')
-    allowed_origin = origin if clean_origin in ALLOWED_ORIGINS else (ALLOWED_ORIGINS[0] if ALLOWED_ORIGINS else '')
-    return {
-        'Access-Control-Allow-Origin': allowed_origin,
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+
+    base_headers = {
+        'Access-Control-Allow-Methods': methods,
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Max-Age': '3600'
+        'Access-Control-Max-Age': '3600',
+        'Vary': 'Origin',
     }
+
+    if origin:
+        if clean_origin not in ALLOWED_ORIGINS:
+            logging.warning(f"CORS request blocked for unauthorized origin: {origin}")
+            return base_headers, (jsonify({'error': 'CORS origin not allowed'}), 403, base_headers)
+
+        base_headers['Access-Control-Allow-Origin'] = origin
+
+    return base_headers, None
 
 def is_bucket_authorized(bucket_name: str) -> bool:
     """Validate bucket name against authorized bucket allowlist"""
@@ -204,8 +223,6 @@ def storage_access(request):
     HTTP Cloud Function to access Google Cloud Storage files.
     Provides secure access to citation documents stored in GCS.
     """
-    headers = _get_cors_headers(request)
-    
     # CORS handling
     headers, error_response = get_cors_headers(request, methods='GET, POST, OPTIONS')
     if error_response:
@@ -314,8 +331,6 @@ def storage_access_metadata(request):
     Alternative endpoint to get file metadata without downloading the entire file.
     Useful for checking file existence and getting file info.
     """
-    
-    headers = _get_cors_headers(request)
     
     # CORS handling
     headers, error_response = get_cors_headers(request, methods='GET, OPTIONS')
