@@ -60,17 +60,34 @@ try:
 except Exception as e:
     logger.error(f"Error initializing Firebase Admin SDK: {e}", exc_info=True)
 
-# --- Load Authorization Configuration from Environment ---
-ALLOWED_DOMAINS = set(os.environ.get('AUTH_ALLOWED_DOMAINS', '').split(',')) if os.environ.get('AUTH_ALLOWED_DOMAINS') else set()
+# --- CORS & Authorization Configuration from Environment ---
+_allowed_domains_env = os.environ.get('AUTH_ALLOWED_DOMAINS')
+ALLOWED_DOMAINS = {
+    d.strip().lower() for d in _allowed_domains_env.split(',') if d.strip()
+} if _allowed_domains_env else {"google.com"}
 ALLOWED_EMAILS = set(os.environ.get('AUTH_ALLOWED_EMAILS', '').split(',')) if os.environ.get('AUTH_ALLOWED_EMAILS') else set()
-ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.environ.get(
-        "ALLOWED_ORIGINS",
-        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
-    ).split(",")
-    if origin.strip()
-]
+
+def get_allowed_cors_origins() -> list[str]:
+    """Return the list of allowed CORS origins for frontend access."""
+    origins = set()
+    for env_var in ("ALLOWED_ORIGINS", "CORS_ORIGINS", "FRONTEND_URL"):
+        val = os.environ.get(env_var)
+        if val:
+            origins.update(o.strip().rstrip('/') for o in val.split(",") if o.strip())
+        
+    # Standard development origins
+    origins.update({
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    })
+    return list(origins)
+
+ALLOWED_ORIGINS = get_allowed_cors_origins()
+ALLOWED_ORIGINS_SET = set(ALLOWED_ORIGINS)
 
 def is_email_authorized(email: Optional[str]) -> bool:
     """Check if email belongs to an authorized domain (@google.com)."""

@@ -46,14 +46,26 @@ except Exception as e:
 # --- Load Authorization Configuration from Environment ---
 ALLOWED_DOMAINS = set(os.environ.get('AUTH_ALLOWED_DOMAINS', '').split(',')) if os.environ.get('AUTH_ALLOWED_DOMAINS') else set()
 ALLOWED_EMAILS = set(os.environ.get('AUTH_ALLOWED_EMAILS', '').split(',')) if os.environ.get('AUTH_ALLOWED_EMAILS') else set()
-ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.environ.get(
-        "ALLOWED_ORIGINS",
-        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
-    ).split(",")
-    if origin.strip()
-]
+def get_allowed_cors_origins() -> Set[str]:
+    """Return the set of allowed CORS origins for frontend access."""
+    origins = set()
+    for env_var in ("ALLOWED_ORIGINS", "CORS_ORIGINS", "FRONTEND_URL"):
+        val = os.environ.get(env_var)
+        if val:
+            origins.update(o.strip().rstrip('/') for o in val.split(",") if o.strip())
+        
+    # Standard development origins
+    origins.update({
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    })
+    return origins
+
+ALLOWED_ORIGINS = list(get_allowed_cors_origins())
 
 def sanitize_prompt_text(text: Any) -> str:
     """Sanitize user input before formatting into prompt templates to prevent prompt injection."""
@@ -179,28 +191,6 @@ TRANSCRIPT_RAG_TOOL = types.Tool(
 )
 
 # --- CORS Configuration ---
-def get_allowed_cors_origins() -> Set[str]:
-    """Return the set of allowed CORS origins for frontend access."""
-    origins = set()
-    env_cors = os.environ.get("CORS_ORIGINS")
-    if env_cors:
-        origins.update(o.strip().rstrip('/') for o in env_cors.split(",") if o.strip())
-        
-    frontend_url = os.environ.get("FRONTEND_URL")
-    if frontend_url:
-        origins.update(o.strip().rstrip('/') for o in frontend_url.split(",") if o.strip())
-        
-    # Standard development origins
-    origins.update({
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-    })
-    return origins
-
 def get_cors_headers(request, methods: str = "GET, POST") -> Tuple[Dict[str, str], Optional[Tuple]]:
     """
     Generate CORS headers dynamically based on request origin and allowlist.
@@ -236,8 +226,9 @@ def therapy_analysis(request):
     Requires Firebase authentication.
     """
     # --- CORS Handling ---
-    request_origin = request.headers.get('Origin', '')
-    allowed_origin = request_origin if request_origin in ALLOWED_ORIGINS else (ALLOWED_ORIGINS[0] if ALLOWED_ORIGINS else '')
+    request_origin = request.headers.get('Origin', '').strip()
+    clean_origin = request_origin.rstrip('/')
+    allowed_origin = request_origin if clean_origin in ALLOWED_ORIGINS else (ALLOWED_ORIGINS[0] if ALLOWED_ORIGINS else '')
 
     if request.method == 'OPTIONS':
         headers = {

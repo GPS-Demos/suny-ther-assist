@@ -43,14 +43,25 @@ except Exception as e:
 # --- Load Authorization Configuration from Environment ---
 ALLOWED_DOMAINS = set(os.environ.get('AUTH_ALLOWED_DOMAINS', '').split(',')) if os.environ.get('AUTH_ALLOWED_DOMAINS') else set()
 ALLOWED_EMAILS = set(os.environ.get('AUTH_ALLOWED_EMAILS', '').split(',')) if os.environ.get('AUTH_ALLOWED_EMAILS') else set()
-ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.environ.get(
-        "ALLOWED_ORIGINS",
-        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
-    ).split(",")
-    if origin.strip()
-]
+def get_allowed_cors_origins() -> list[str]:
+    """Return the list of allowed CORS origins for frontend access."""
+    origins = set()
+    for env_var in ("ALLOWED_ORIGINS", "CORS_ORIGINS", "FRONTEND_URL"):
+        val = os.environ.get(env_var)
+        if val:
+            origins.update(o.strip().rstrip('/') for o in val.split(",") if o.strip())
+        
+    origins.update({
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    })
+    return list(origins)
+
+ALLOWED_ORIGINS = get_allowed_cors_origins()
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "")
 ALLOWED_BUCKETS = set(filter(None, [
     os.environ.get('TARGET_BUCKET'),
@@ -164,8 +175,9 @@ def verify_firebase_token(token: str):
 storage_client = storage.Client()
 
 def _get_cors_headers(request):
-    origin = request.headers.get('Origin', '')
-    allowed_origin = origin if origin in ALLOWED_ORIGINS else (ALLOWED_ORIGINS[0] if ALLOWED_ORIGINS else '')
+    origin = request.headers.get('Origin', '').strip()
+    clean_origin = origin.rstrip('/')
+    allowed_origin = origin if clean_origin in ALLOWED_ORIGINS else (ALLOWED_ORIGINS[0] if ALLOWED_ORIGINS else '')
     return {
         'Access-Control-Allow-Origin': allowed_origin,
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',

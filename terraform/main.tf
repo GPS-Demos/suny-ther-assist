@@ -148,6 +148,32 @@ resource "google_project_iam_member" "frontend_roles" {
   member  = "serviceAccount:${google_service_account.frontend_sa.email}"
 }
 
+# 5. Default Compute Engine / Cloud Build Service Account permissions
+# Required by Cloud Functions (Gen 2) builds and Cloud Build jobs to access source storage, write logs, and push images
+resource "google_project_iam_member" "default_compute_build_roles" {
+  for_each = toset([
+    "roles/cloudbuild.builds.builder",
+    "roles/storage.admin",
+    "roles/logging.logWriter",
+    "roles/artifactregistry.writer"
+  ])
+
+  project = var.project_id
+  role    = each.key
+  member  = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+
+  depends_on = [google_project_service.apis]
+}
+
+# Wait for build service account IAM role propagation
+resource "time_sleep" "wait_for_build_sa_propagation" {
+  create_duration = "10s"
+
+  depends_on = [
+    google_project_iam_member.default_compute_build_roles
+  ]
+}
+
 # Create ZIP archive for therapy analysis function
 data "archive_file" "therapy_analysis_zip" {
   type        = "zip"
@@ -195,7 +221,8 @@ resource "google_cloudfunctions2_function" "therapy_analysis" {
   depends_on = [
     google_project_service.apis,
     google_storage_bucket_object.therapy_analysis_source,
-    google_project_iam_member.therapy_analysis_roles
+    google_project_iam_member.therapy_analysis_roles,
+    time_sleep.wait_for_build_sa_propagation
   ]
 }
 
@@ -232,7 +259,8 @@ resource "google_cloudfunctions2_function" "storage_access" {
   depends_on = [
     google_project_service.apis,
     google_storage_bucket_object.storage_access_source,
-    google_project_iam_member.storage_access_roles
+    google_project_iam_member.storage_access_roles,
+    time_sleep.wait_for_build_sa_propagation
   ]
 }
 
@@ -289,7 +317,10 @@ resource "null_resource" "build_streaming_service" {
     EOT
   }
   
-  depends_on = [google_project_service.apis]
+  depends_on = [
+    google_project_service.apis,
+    time_sleep.wait_for_build_sa_propagation
+  ]
 }
 
 # Add a delay to ensure the image is available in the registry
@@ -461,7 +492,8 @@ EOF
     google_cloudfunctions2_function.therapy_analysis,
     google_cloudfunctions2_function.storage_access,
     google_cloud_run_v2_service.streaming_transcription,
-    local_file.frontend_env
+    local_file.frontend_env,
+    time_sleep.wait_for_build_sa_propagation
   ]
 }
 

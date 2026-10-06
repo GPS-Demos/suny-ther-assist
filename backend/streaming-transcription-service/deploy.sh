@@ -51,7 +51,7 @@ gcloud run deploy ${SERVICE_NAME} \
     --timeout 3600 \
     --max-instances 100 \
     --concurrency 1000 \
-    --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID}" \
+    --update-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID}" \
     --quiet
 
 # Get service URL
